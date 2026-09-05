@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - SmartBiz AI{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+    <aside class="hidden md:block w-56 shrink-0">
+      <div class="card p-4 space-y-2 text-sm">
+        <a class="block text-primary-700 font-semibold" href="{% url 'dashboard' %}">Dashboard</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'products:list' %}">Products</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'sales:list' %}">Sales</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'expenses:list' %}">Expenses</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'inventory:dashboard' %}">Inventory</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'customers:list' %}">Customers</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'analytics:sales' %}">Analytics</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'ai_engine:home' %}">AI insights</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'reports:list' %}">Reports</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'businesses:settings' %}">Business</a>
+        <a class="block text-gray-600 hover:text-primary-700" href="{% url 'accounts:logout' %}">Log out</a>
+      </div>
+    </aside>
+    <div class="flex-1 min-w-0">
+      {% block page %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

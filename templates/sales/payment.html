@@ -1,0 +1,6 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<h1 class="text-2xl font-bold text-primary-700 mb-4">{{ title }}</h1>
+<p class="mb-3 text-sm">Balance due: KSh {{ sale.balance_due }}</p>
+<form method="post" class="card space-y-3">{% csrf_token %}{{ form.as_p }}<button class="btn-primary">Save payment</button></form>
+{% endblock %}

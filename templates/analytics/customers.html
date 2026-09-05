@@ -1,0 +1,6 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<h1 class="text-2xl font-bold text-primary-700 mb-4">{{ title }}</h1>
+<p class="text-sm mb-3">{{ total_customers }} customers · {{ new_customers }} new in 30 days · retention {{ retention_rate|floatformat:1 }}%</p>
+<div class="card">{% for c in top_customers %}<p class="text-sm py-1">{{ c.name }} — KSh {{ c.total_spent }}</p>{% empty %}<p class="text-gray-500">No customer sales yet.</p>{% endfor %}</div>
+{% endblock %}

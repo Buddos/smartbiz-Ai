@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Page Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'inventory:stock_counts' %}" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold text-primary-700">{{ stock_count.count_number }}</h1>
+                        <p class="text-gray-600">Stock count for {{ stock_count.count_date|date:"F d, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 sm:mt-0 flex gap-2">
+                {% if stock_count.status == 'DRAFT' %}
+                    <button onclick="completeCount()" class="btn-success text-sm">
+                        <i class="fas fa-check mr-2"></i>Complete Count
+                    </button>
+                {% endif %}
+                <span class="px-3 py-1 rounded-full text-sm 
+                    {% if stock_count.status == 'DRAFT' %}bg-gray-100 text-gray-700
+                    {% elif stock_count.status == 'IN_PROGRESS' %}bg-warning-100 text-warning-700
+                    {% elif stock_count.status == 'COMPLETED' %}bg-success-100 text-success-700
+                    {% else %}bg-insight-100 text-insight-700{% endif %}">
+                    {{ stock_count.get_status_display }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div class="card text-center">
+                <p class="text-2xl font-bold text-primary-700">{{ items.count }}</p>
+                <p class="text-xs text-gray-500">Items Counted</p>
+            </div>
+            <div class="card text-center">
+                <p class="text-2xl font-bold text-gray-700">KSh {{ stock_count.expected_total|floatformat:0 }}</p>
+                <p class="text-xs text-gray-500">Expected Value</p>
+            </div>
+            <div class="card text-center">
+                <p class="text-2xl font-bold text-gray-700">KSh {{ stock_count.actual_total|floatformat:0 }}</p>
+                <p class="text-xs text-gray-500">Actual Value</p>
+            </div>
+            <div class="card text-center border-l-4 
+                {% if stock_count.difference_total >= 0 %}border-success-500{% else %}border-danger-500{% endif %}">
+                <p class="text-2xl font-bold 
+                    {% if stock_count.difference_total >= 0 %}text-success-600{% else %}text-danger-600{% endif %}">
+                    {% if stock_count.difference_total >= 0 %}+{% endif %}KSh {{ stock_count.difference_total|floatformat:0 }}
+                </p>
+                <p class="text-xs text-gray-500">Difference</p>
+            </div>
+        </div>
+
+        <!-- Add Item Form (if draft) -->
+        {% if stock_count.status == 'DRAFT' %}
+        <div class="card mb-6">
+            <h3 class="text-base font-semibold text-primary-700 mb-4">
+                <i class="fas fa-plus-circle text-primary-500 mr-2"></i>Add Item to Count
+            </h3>
+            <form method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {% csrf_token %}
+                <div>
+                    <select name="product" class="input-field" required>
+                        <option value="">Select Product</option>
+                        {% for product in available_products %}
+                            <option value="{{ product.id }}">{{ product.name }} ({{ product.sku }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <input type="number" name="counted_quantity" class="input-field" 
+                           placeholder="Counted Quantity" min="0" required>
+                </div>
+                <div>
+                    <button type="submit" class="btn-primary w-full">
+                        <i class="fas fa-plus mr-2"></i>Add Item
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Items Table -->
+        <div class="card overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Expected</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Counted</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Difference</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Unit Cost</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Value Diff</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for item in items %}
+                        <tr>
+                            <td class="px-4 py-3">
+                                <p class="text-sm font-medium text-gray-900">{{ item.product.name }}</p>
+                                <p class="text-xs text-gray-500">{{ item.product.sku }}</p>
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-600">
+                                {{ item.expected_quantity }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-medium text-gray-900">
+                                {{ item.counted_quantity }}
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-medium 
+                                {% if item.difference >= 0 %}text-success-600{% else %}text-danger-600{% endif %}">
+                                {% if item.difference >= 0 %}+{% endif %}{{ item.difference }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-sm text-gray-600">
+                                KSh {{ item.unit_cost|floatformat:2 }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-sm font-medium 
+                                {% if item.difference_value >= 0 %}text-success-600{% else %}text-danger-600{% endif %}">
+                                {% if item.difference_value >= 0 %}+{% endif %}KSh {{ item.difference_value|floatformat:0 }}
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <span class="px-2 py-1 rounded-full text-xs 
+                                    {% if item.difference == 0 %}bg-success-100 text-success-700
+                                    {% else %}bg-warning-100 text-warning-700{% endif %}">
+                                    {% if item.difference == 0 %}Match{% else %}Variance{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-4 py-12 text-center text-gray-500">
+                                <i class="fas fa-boxes text-4xl text-gray-300 mb-2 block"></i>
+                                No items added yet
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function completeCount() {
+        if (confirm('Are you sure you want to complete this stock count? This will adjust inventory levels.')) {
+            fetch('{% url "inventory:stock_count_complete" stock_count.id %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error completing stock count: ' + data.error);
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-primary-700">My Profile</h1>
+            <p class="text-gray-600">Manage your personal information and preferences</p>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Profile Card -->
+            <div class="lg:col-span-1">
+                <div class="card text-center">
+                    <div class="relative inline-block">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}" 
+                                 class="h-32 w-32 rounded-full object-cover mx-auto border-4 border-primary-100">
+                        {% else %}
+                            <div class="h-32 w-32 rounded-full bg-primary-100 flex items-center justify-center mx-auto border-4 border-primary-100">
+                                <span class="text-4xl font-bold text-primary-500">
+                                    {{ user.first_name|first }}{{ user.last_name|first }}
+                                </span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h2 class="mt-4 text-xl font-semibold text-primary-700">{{ user.full_name }}</h2>
+                    <p class="text-gray-600 text-sm">{{ user.get_role_display }}</p>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Status</span>
+                            <span class="{% if user.is_active %}text-success-500{% else %}text-danger-500{% endif %}">
+                                {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-500">Member since</span>
+                            <span class="text-gray-700">{{ user.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        {% if user.business %}
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-500">Business</span>
+                            <span class="text-gray-700 font-medium">{{ user.business.name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Edit Profile Form -->
+            <div class="lg:col-span-2">
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                        <i class="fas fa-edit text-primary-500 mr-2"></i>Edit Profile
+                    </h3>
+                    
+                    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                        {% csrf_token %}
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <input type="text" name="first_name" id="first_name" 
+                                       value="{{ form.first_name.value|default:'' }}"
+                                       class="input-field">
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <input type="text" name="last_name" id="last_name" 
+                                       value="{{ form.last_name.value|default:'' }}"
+                                       class="input-field">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                            <input type="email" name="email" id="email" 
+                                   value="{{ form.email.value|default:'' }}"
+                                   class="input-field">
+                        </div>
+                        
+                        <div>
+                            <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input type="tel" name="phone_number" id="phone_number" 
+                                   value="{{ form.phone_number.value|default:'' }}"
+                                   class="input-field">
+                        </div>
+                        
+                        <div>
+                            <label for="profile_picture" class="block text-sm font-medium text-gray-700 mb-1">Profile Picture</label>
+                            <input type="file" name="profile_picture" id="profile_picture" 
+                                   class="input-field">
+                            <p class="mt-1 text-xs text-gray-500">Upload a profile picture (JPG, PNG, GIF)</p>
+                        </div>
+                        
+                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                            <a href="{% url 'dashboard' %}" class="btn-outline">Cancel</a>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save mr-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="card mt-6">
+                    <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                        <i class="fas fa-history text-primary-500 mr-2"></i>Recent Activity
+                    </h3>
+                    
+                    {% if activities %}
+                        <div class="space-y-3">
+                            {% for activity in activities %}
+                                <div class="flex items-center text-sm">
+                                    <div class="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center mr-3">
+                                        <i class="fas 
+                                            {% if activity.action == 'LOGIN' %}fa-sign-in-alt text-primary-500
+                                            {% elif activity.action == 'LOGOUT' %}fa-sign-out-alt text-gray-400
+                                            {% elif activity.action == 'CREATE' %}fa-plus-circle text-success-500
+                                            {% elif activity.action == 'UPDATE' %}fa-pen text-accent-500
+                                            {% elif activity.action == 'DELETE' %}fa-trash text-danger-500
+                                            {% else %}fa-eye text-insight-500{% endif %}">
+                                        </i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <span class="font-medium">{{ activity.get_action_display }}</span>
+                                        <span class="text-gray-600">{{ activity.model_name }}</span>
+                                    </div>
+                                    <span class="text-gray-400 text-xs">{{ activity.timestamp|timesince }} ago</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-500 text-sm">No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

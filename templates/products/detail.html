@@ -1,0 +1,12 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<div class="flex justify-between mb-4">
+  <h1 class="text-2xl font-bold text-primary-700">{{ product.name }}</h1>
+  <a class="btn-outline" href="{% url 'products:update' product.id %}">Edit</a>
+</div>
+<div class="card text-sm space-y-1">
+  <p>SKU {{ product.sku }} · Stock {{ product.current_stock }} · Reorder {{ product.reorder_level }}</p>
+  <p>Buy KSh {{ product.purchase_price }} · Sell KSh {{ product.selling_price }}</p>
+  {% if product.is_low_stock %}<p class="text-danger-600">At or below reorder level — review before restocking.</p>{% endif %}
+</div>
+{% endblock %}

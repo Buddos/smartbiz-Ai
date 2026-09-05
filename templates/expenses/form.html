@@ -1,0 +1,5 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<h1 class="text-2xl font-bold text-primary-700 mb-4">{{ title }}</h1>
+<form method="post" enctype="multipart/form-data" class="card space-y-3">{% csrf_token %}{{ form.as_p }}<button class="btn-primary">Save</button></form>
+{% endblock %}

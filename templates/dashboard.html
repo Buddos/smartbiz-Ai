@@ -1,0 +1,134 @@
+<!-- templates/dashboard.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Top Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="h-8 w-8 bg-primary-500 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-bolt text-white text-sm"></i>
+                        </div>
+                        <span class="ml-2 text-xl font-bold text-primary-700">SmartBiz</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="p-2 rounded-lg hover:bg-gray-100">
+                        <i class="fas fa-bell text-gray-500"></i>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right hidden sm:block">
+                            <p class="text-sm font-medium text-gray-700">{{ user.full_name }}</p>
+                            <p class="text-xs text-gray-500">{{ user.get_role_display }}</p>
+                        </div>
+                        <a href="{% url 'accounts:profile' %}" class="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center hover:bg-primary-200 transition-colors">
+                            <span class="text-sm font-medium text-primary-600">
+                                {{ user.first_name|first }}{{ user.last_name|first }}
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome -->
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-primary-700">Good morning, {{ user.first_name }}</h1>
+            <p class="text-gray-600">Here's what's happening with your business today</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="card">
+                <p class="text-sm text-gray-500">Revenue</p>
+                <p class="text-2xl font-bold text-primary-700">KSh 486,200</p>
+                <p class="text-sm text-success-500"><i class="fas fa-arrow-up mr-1"></i>+12% vs last month</p>
+            </div>
+            <div class="card">
+                <p class="text-sm text-gray-500">Expenses</p>
+                <p class="text-2xl font-bold text-accent-600">KSh 211,400</p>
+                <p class="text-sm text-gray-500"><i class="fas fa-arrow-up mr-1"></i>+3% vs last month</p>
+            </div>
+            <div class="card">
+                <p class="text-sm text-gray-500">Net Profit</p>
+                <p class="text-2xl font-bold text-primary-700">KSh 274,800</p>
+                <p class="text-sm text-success-500"><i class="fas fa-arrow-up mr-1"></i>+18% vs last month</p>
+            </div>
+            <div class="card border-l-4 border-danger-500">
+                <p class="text-sm text-gray-500">Low Stock Items</p>
+                <p class="text-2xl font-bold text-danger-500">7</p>
+                <p class="text-sm text-danger-500"><i class="fas fa-exclamation-triangle mr-1"></i>Needs attention</p>
+            </div>
+        </div>
+
+        <!-- Charts and Insights -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Chart -->
+            <div class="lg:col-span-2 card">
+                <h3 class="text-lg font-semibold text-primary-700 mb-4">Sales Trend</h3>
+                <div class="h-64 flex items-end gap-2">
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 40%"></div>
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 55%"></div>
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 48%"></div>
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 70%"></div>
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 65%"></div>
+                    <div class="flex-1 bg-primary-500 rounded-t hover:bg-primary-600 transition-colors" style="height: 90%"></div>
+                    <div class="flex-1 bg-primary-200 rounded-t hover:bg-primary-300 transition-colors" style="height: 78%"></div>
+                </div>
+                <div class="flex justify-between mt-2 text-sm text-gray-500">
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+                    <span>Sun</span>
+                </div>
+            </div>
+
+            <!-- Insights -->
+            <div class="card">
+                <h3 class="text-lg font-semibold text-primary-700 mb-4">Insights & Alerts</h3>
+                <div class="space-y-3">
+                    <div class="p-3 bg-danger-50 rounded-lg border border-danger-200">
+                        <div class="flex items-start gap-2">
+                            <i class="fas fa-exclamation-triangle text-danger-500 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-medium text-danger-700">Low Stock Alert</p>
+                                <p class="text-xs text-danger-600">Cooking oil will run out in 3 days</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-accent-50 rounded-lg border border-accent-200">
+                        <div class="flex items-start gap-2">
+                            <i class="fas fa-chart-line text-accent-500 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-medium text-accent-700">Sales Opportunity</p>
+                                <p class="text-xs text-accent-600">Weekend sales up 22%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-warning-50 rounded-lg border border-warning-200">
+                        <div class="flex items-start gap-2">
+                            <i class="fas fa-clock text-warning-500 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-medium text-warning-700">Pending Review</p>
+                                <p class="text-xs text-warning-600">3 expense entries awaiting approval</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

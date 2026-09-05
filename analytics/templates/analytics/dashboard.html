@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - SmartBiz AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: all 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .trend-up { color: #639922; }
+    .trend-down { color: #A32D2D; }
+    .insight-card {
+        border-left: 4px solid #0F6E56;
+        transition: all 0.2s;
+    }
+    .insight-card:hover {
+        background: #f8fafc;
+    }
+    .insight-card.critical { border-left-color: #A32D2D; }
+    .insight-card.warning { border-left-color: #BA7517; }
+    .insight-card.success { border-left-color: #639922; }
+    .insight-card.info { border-left-color: #7F77DD; }
+
+    .reference-dashboard-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 100; width: 240px; padding: 20px 16px; overflow-y: auto; background: #fff; border-right: 1px solid #F3F4F6; }
+    .reference-dashboard-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; margin-bottom: 16px; border-bottom: 1px solid #F3F4F6; color: #04342C; font-size: 20px; font-weight: 800; text-decoration: none; }
+    .reference-dashboard-logo .icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #0F6E56; color: #fff; }
+    .reference-dashboard-logo span { color: #0F6E56; }
+    .reference-dashboard-nav-title { padding: 8px 12px 4px; color: #9CA3AF; font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+    .reference-dashboard-nav { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 2px; border-radius: 8px; color: #4A1B0C; font-size: 14px; font-weight: 500; text-decoration: none; }
+    .reference-dashboard-nav:hover, .reference-dashboard-nav.active { background: #E1F5EE; color: #0F6E56; }
+    .reference-dashboard-nav i { width: 20px; text-align: center; }
+    .reference-dashboard-main { margin-left: 240px; }
+    .reference-dashboard-header { display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 32px; background: #fff; border-bottom: 1px solid #F3F4F6; }
+    .reference-dashboard-menu { display: none; border: 0; background: none; color: #4A1B0C; cursor: pointer; font-size: 20px; }
+    .reference-dashboard-header-tools { display: flex; align-items: center; gap: 16px; }
+    .reference-dashboard-header-tools .search { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid #F3F4F6; border-radius: 12px; background: #F9FAFB; }
+    .reference-dashboard-header-tools input { width: 180px; border: 0; outline: 0; background: transparent; }
+    .reference-dashboard-header-tools button, .reference-dashboard-header-tools .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; text-decoration: none; }
+    .reference-dashboard-profile { position: relative; }
+    .reference-dashboard-profile-menu { display: none; position: absolute; top: 48px; right: 0; z-index: 120; width: 190px; padding: 8px; border: 1px solid #F3F4F6; border-radius: 12px; background: #fff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1); }
+    .reference-dashboard-profile-menu.open { display: block; }
+    .reference-dashboard-profile-menu .profile-summary { padding: 8px 10px; border-bottom: 1px solid #F3F4F6; color: #04342C; font-size: 13px; font-weight: 600; }
+    .reference-dashboard-profile-menu a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: #4A1B0C; font-size: 13px; text-decoration: none; }
+    .reference-dashboard-profile-menu a:hover { background: #E1F5EE; color: #0F6E56; }
+    .reference-dashboard-user { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 16px 12px; border-top: 1px solid #F3F4F6; color: #04342C; font-size: 13px; }
+    .reference-dashboard-user .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; }
+    @media (max-width: 768px) {
+        .reference-dashboard-sidebar { transform: translateX(-100%); width: 280px; transition: transform .3s ease; }
+        .reference-dashboard-sidebar.open { transform: translateX(0); }
+        .reference-dashboard-main { margin-left: 0; }
+        .reference-dashboard-header { padding: 0 16px; }
+        .reference-dashboard-menu { display: block; }
+        .reference-dashboard-header-tools .search { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<aside class="reference-dashboard-sidebar" id="referenceDashboardSidebar">
+    <a href="{% url 'dashboard' %}" class="reference-dashboard-logo"><span class="icon"><i class="fas fa-bolt"></i></span>Smart<span>Biz</span> AI</a>
+    <div class="reference-dashboard-nav-title">Main</div>
+    <a href="{% url 'dashboard' %}" class="reference-dashboard-nav active"><i class="fas fa-th-large"></i>Dashboard</a>
+    <a href="{% url 'products:list' %}" class="reference-dashboard-nav"><i class="fas fa-box"></i>Products</a>
+    <a href="{% url 'sales:list' %}" class="reference-dashboard-nav"><i class="fas fa-receipt"></i>Sales</a>
+    <a href="{% url 'inventory:dashboard' %}" class="reference-dashboard-nav"><i class="fas fa-warehouse"></i>Inventory{% if low_stock_count %}<span class="ml-auto">{{ low_stock_count }}</span>{% endif %}</a>
+    <a href="{% url 'customers:list' %}" class="reference-dashboard-nav"><i class="fas fa-users"></i>Customers</a>
+    <div class="reference-dashboard-nav-title">Analytics</div>
+    <a href="{% url 'analytics:sales' %}" class="reference-dashboard-nav"><i class="fas fa-chart-line"></i>Sales Analytics</a>
+    <a href="{% url 'analytics:financial' %}" class="reference-dashboard-nav"><i class="fas fa-file-invoice-dollar"></i>Financial</a>
+    <a href="{% url 'products:categories' %}" class="reference-dashboard-nav"><i class="fas fa-tags"></i>Categories</a>
+    <div class="reference-dashboard-nav-title">AI &amp; Insights</div>
+    <a href="#dashboard-insights" class="reference-dashboard-nav"><i class="fas fa-brain"></i>AI Insights</a>
+    <a href="{% url 'ai_engine:home' %}" class="reference-dashboard-nav"><i class="fas fa-robot"></i>Assistant</a>
+    <a href="{% url 'reports:list' %}" class="reference-dashboard-nav"><i class="fas fa-chart-pie"></i>Reports</a>
+    <div class="reference-dashboard-user"><div class="avatar">{{ user.first_name|default:user.email|first|upper }}</div><div>{{ user.get_full_name|default:user.email }}<br><small class="text-gray-500">{{ user.get_role_display|default:'Business User' }}</small></div></div>
+</aside>
+<div class="reference-dashboard-main">
+    <header class="reference-dashboard-header">
+        <div class="flex items-center gap-4"><button class="reference-dashboard-menu" id="referenceDashboardMenu" aria-label="Open menu"><i class="fas fa-bars"></i></button><div><h1 class="text-xl font-bold text-primary-700">Dashboard</h1><p class="text-sm text-gray-500 hidden sm:block">Welcome back, {{ user.first_name|default:user.email }}! Here's your business overview</p></div></div>
+        <div class="reference-dashboard-header-tools"><div class="search"><i class="fas fa-search text-gray-400"></i><input type="search" placeholder="Search..." aria-label="Search"></div><button aria-label="Notifications"><i class="fas fa-bell"></i></button><div class="reference-dashboard-profile"><button class="avatar" id="referenceDashboardProfileButton" aria-label="Open account menu" aria-expanded="false">{{ user.first_name|default:user.email|first|upper }}</button><div class="reference-dashboard-profile-menu" id="referenceDashboardProfileMenu"><div class="profile-summary">{{ user.get_full_name|default:user.email }}</div>{% if user.role == 'OWNER' or user.role == 'MANAGER' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-cog"></i>Settings</a><a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a><a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i>Log out</a></div></div></div>
+    </header>
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Page Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-primary-700">
+                    <i class="fas fa-chart-pie text-primary-500 mr-2"></i>Dashboard
+                </h1>
+                <p class="text-gray-600">Welcome back, {{ user.first_name }}! Here's your business overview</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex gap-2">
+                <button onclick="generateInsights()" class="btn-accent inline-flex items-center text-sm">
+                    <i class="fas fa-brain mr-2"></i>Generate Insights
+                </button>
+                <a href="{% url 'analytics:financial' %}" class="btn-outline text-sm">
+                    <i class="fas fa-file-invoice mr-2"></i>View Reports
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Revenue -->
+            <div class="card stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Revenue</p>
+                        <p class="text-2xl font-bold text-primary-700">KSh {{ total_revenue|floatformat:0 }}</p>
+                        <p class="text-sm {% if revenue_growth >= 0 %}text-success-500{% else %}text-danger-500{% endif %}">
+                            <i class="fas {% if revenue_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} mr-1"></i>
+                            {{ revenue_growth|floatformat:1 }}% vs last month
+                        </p>
+                    </div>
+                    <div class="stat-icon bg-primary-50">
+                        <i class="fas fa-kenya-shilling text-primary-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales -->
+            <div class="card stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Sales</p>
+                        <p class="text-2xl font-bold text-primary-700">{{ total_sales }}</p>
+                        <p class="text-sm text-gray-500">KSh {{ average_order_value|floatformat:0 }} avg</p>
+                    </div>
+                    <div class="stat-icon bg-accent-50">
+                        <i class="fas fa-receipt text-accent-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profit -->
+            <div class="card stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Net Profit</p>
+                        <p class="text-2xl font-bold text-success-600">KSh {{ total_profit|floatformat:0 }}</p>
+                        <p class="text-sm text-gray-500">Revenue: KSh {{ total_revenue|floatformat:0 }}</p>
+                    </div>
+                    <div class="stat-icon bg-success-50">
+                        <i class="fas fa-chart-line text-success-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers -->
+            <div class="card stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Customers</p>
+                        <p class="text-2xl font-bold text-primary-700">{{ total_customers }}</p>
+                        <p class="text-sm text-success-500"><i class="fas fa-user-plus mr-1"></i>{{ new_customers }} new</p>
+                    </div>
+                    <div class="stat-icon bg-insight-50">
+                        <i class="fas fa-users text-insight-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary Stats Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div class="card stat-card">
+                <p class="text-xs text-gray-500">Products</p>
+                <p class="text-xl font-bold text-primary-700">{{ total_products }}</p>
+            </div>
+            <div class="card stat-card border-l-4 border-warning-500">
+                <p class="text-xs text-gray-500">Low Stock</p>
+                <p class="text-xl font-bold text-warning-700">{{ low_stock_count }}</p>
+            </div>
+            <div class="card stat-card border-l-4 border-danger-500">
+                <p class="text-xs text-gray-500">Out of Stock</p>
+                <p class="text-xl font-bold text-danger-700">{{ out_of_stock_count }}</p>
+            </div>
+            <div class="card stat-card">
+                <p class="text-xs text-gray-500">Expenses</p>
+                <p class="text-xl font-bold text-accent-600">KSh {{ total_expenses|floatformat:0 }}</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Sales Trend Chart -->
+            <div class="lg:col-span-2 card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-primary-700">
+                        <i class="fas fa-chart-area text-primary-500 mr-2"></i>Sales Trend
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="changePeriod('7d')" class="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 period-btn active:bg-primary-500 active:text-white">7d</button>
+                        <button onclick="changePeriod('30d')" class="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 period-btn active:bg-primary-500 active:text-white">30d</button>
+                        <button onclick="changePeriod('90d')" class="text-xs px-3 py-1 rounded border border-gray-300 hover:bg-gray-50 period-btn active:bg-primary-500 active:text-white">90d</button>
+                    </div>
+                </div>
+                <div class="h-64 relative">
+                    <canvas id="salesChart"></canvas>
+                </div>
+                <div class="flex justify-between mt-2 text-xs text-gray-500">
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+                    <span>Sun</span>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="card">
+                <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                    <i class="fas fa-credit-card text-primary-500 mr-2"></i>Payment Methods
+                </h3>
+                <div class="space-y-3">
+                    {% for method in payment_methods %}
+                    <div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">{{ method.payment_method }}</span>
+                            <span class="font-medium text-gray-900">KSh {{ method.total|floatformat:0 }}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                               <div class="bg-primary-500 h-1.5 rounded-full" 
+                                   style="width: {% if total_revenue %}{% widthratio method.total total_revenue 100 %}{% else %}0{% endif %}%"></div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 text-center py-4">No payment data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Top Products -->
+            <div class="card">
+                <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                    <i class="fas fa-trophy text-accent-500 mr-2"></i>Top Products
+                </h3>
+                <div class="space-y-3">
+                    {% for product in top_products|slice:":5" %}
+                    <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-gray-400 w-6">{{ forloop.counter }}</span>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ product.product__name }}</p>
+                                <p class="text-xs text-gray-500">{{ product.total_sold|default:0 }} sold</p>
+                            </div>
+                        </div>
+                        <span class="text-sm font-medium text-primary-700">KSh {{ product.total_revenue|floatformat:0 }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 text-center py-4">No product data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Insights -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-primary-700">
+                        <i class="fas fa-lightbulb text-insight-500 mr-2"></i>Insights
+                    </h3>
+                    {% if unread_insights > 0 %}
+                    <span class="px-2 py-1 rounded-full text-xs bg-danger-100 text-danger-700">{{ unread_insights }} new</span>
+                    {% endif %}
+                </div>
+                <div class="space-y-3">
+                    {% for insight in recent_insights %}
+                    <div class="insight-card {{ insight.severity|lower }} p-3 rounded-lg bg-gray-50">
+                        <div class="flex items-start gap-3">
+                            <i class="fas 
+                                {% if insight.severity == 'CRITICAL' %}fa-exclamation-circle text-danger-500
+                                {% elif insight.severity == 'WARNING' %}fa-exclamation-triangle text-warning-500
+                                {% elif insight.severity == 'SUCCESS' %}fa-check-circle text-success-500
+                                {% else %}fa-info-circle text-insight-500{% endif %} 
+                                mt-1">
+                            </i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900">{{ insight.title }}</p>
+                                <p class="text-xs text-gray-600 mt-1">{{ insight.description|truncatechars:100 }}</p>
+                                <p class="text-xs text-gray-400 mt-1">{{ insight.generated_at|timesince }} ago</p>
+                            </div>
+                            {% if not insight.is_read %}
+                            <button onclick="markRead('{{ insight.id }}')" 
+                                    class="text-xs text-primary-500 hover:text-primary-700">
+                                Mark read
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 text-center py-4">No insights yet. Generate some!</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Sales -->
+        <div class="mt-6 card" id="dashboard-insights">
+            <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                <i class="fas fa-tags text-primary-500 mr-2"></i>Sales by Category
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {% for category in sales_by_category|slice:":8" %}
+                <div class="p-3 bg-gray-50 rounded-lg text-center">
+                    <p class="text-sm font-medium text-gray-900">{{ category.product__category__name|default:"Uncategorized" }}</p>
+                    <p class="text-xs text-gray-500">{{ category.total_quantity|default:0 }} items</p>
+                    <p class="text-sm font-bold text-primary-700">KSh {{ category.total_sales|floatformat:0 }}</p>
+                </div>
+                {% empty %}
+                <p class="text-sm text-gray-500 col-span-full text-center py-4">No category data available</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const referenceDashboardMenu = document.getElementById('referenceDashboardMenu');
+    const referenceDashboardSidebar = document.getElementById('referenceDashboardSidebar');
+    if (referenceDashboardMenu) referenceDashboardMenu.addEventListener('click', () => referenceDashboardSidebar.classList.toggle('open'));
+    const referenceDashboardProfileButton = document.getElementById('referenceDashboardProfileButton');
+    const referenceDashboardProfileMenu = document.getElementById('referenceDashboardProfileMenu');
+    referenceDashboardProfileButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = referenceDashboardProfileMenu.classList.toggle('open');
+        referenceDashboardProfileButton.setAttribute('aria-expanded', isOpen);
+    });
+    document.addEventListener('click', (event) => {
+        if (!event.target.closest('.reference-dashboard-profile')) {
+            referenceDashboardProfileMenu.classList.remove('open');
+            referenceDashboardProfileButton.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Sales Chart
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    // Sample data - replace with actual data from backend
+    const salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Revenue',
+                data: [12000, 15000, 18000, 22000, 25000, 30000, 28000],
+                borderColor: '#0F6E56',
+                backgroundColor: 'rgba(15, 110, 86, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Sales Count',
+                data: [8, 12, 15, 18, 22, 25, 20],
+                borderColor: '#D85A30',
+                backgroundColor: 'rgba(216, 90, 48, 0.1)',
+                fill: true,
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        font: { size: 11 }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KSh ' + value.toLocaleString();
+                        }
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Period filter
+    function changePeriod(period) {
+        document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        // Fetch new data for period
+        fetch(`/analytics/api/dashboard-data/?period=${period}`)
+            .then(response => response.json())
+            .then(data => {
+                // Update chart with new data
+                // Implementation depends on your API response structure
+            });
+    }
+
+    // Generate Insights
+    function generateInsights() {
+        fetch('{% url "analytics:generate_insights" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+
+    // Mark insight as read
+    function markRead(insightId) {
+        fetch(`/analytics/insights/${insightId}/read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+    }
+</script>
+{% endblock %}

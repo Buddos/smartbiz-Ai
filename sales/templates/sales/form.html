@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - SmartBiz AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formset-item {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border: 1px solid #e5e7eb;
+    }
+    .formset-item:hover {
+        border-color: #0F6E56;
+    }
+    .formset-item .delete-row {
+        color: #A32D2D;
+        cursor: pointer;
+    }
+    .formset-item .delete-row:hover {
+        color: #752121;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'sales:list' %}" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+                    <p class="text-gray-600">Enter sale details below</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <div class="card">
+            <form method="POST" id="saleForm" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Customer Information -->
+                <div>
+                    <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                        <i class="fas fa-user text-primary-500 mr-2"></i>Customer Information
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="customer" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                            <select name="customer" id="customer" class="input-field">
+                                <option value="">Walk-in Customer</option>
+                                {% for customer in form.fields.customer.queryset %}
+                                    <option value="{{ customer.id }}" 
+                                        {% if form.customer.value == customer.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ customer.name }} - {{ customer.phone }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                            <input type="text" name="customer_name" id="customer_name"
+                                   value="{{ form.customer_name.value|default:'' }}"
+                                   class="input-field" placeholder="Walk-in Customer">
+                        </div>
+                        <div>
+                            <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                            <input type="text" name="customer_phone" id="customer_phone"
+                                   value="{{ form.customer_phone.value|default:'' }}"
+                                   class="input-field" placeholder="Phone number">
+                        </div>
+                        <div>
+                            <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" name="customer_email" id="customer_email"
+                                   value="{{ form.customer_email.value|default:'' }}"
+                                   class="input-field" placeholder="Email address">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sale Items -->
+                <div>
+                    <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                        <i class="fas fa-shopping-cart text-primary-500 mr-2"></i>Sale Items
+                    </h3>
+                    
+                    {{ formset.management_form }}
+                    
+                    <div id="formsetContainer">
+                        {% for item_form in formset %}
+                            <div class="formset-item">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    {{ item_form.id }}
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Product</label>
+                                        {{ item_form.product }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Quantity</label>
+                                        {{ item_form.quantity }}
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">Unit Price</label>
+                                        {{ item_form.unit_price }}
+                                    </div>
+                                    <div class="flex items-end justify-between">
+                                        <div class="flex-1">
+                                            <p class="text-xs text-gray-500 mb-1">Subtotal</p>
+                                            <p class="text-sm font-medium text-primary-700 subtotal">KSh 0.00</p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            {% if item_form.instance.pk %}
+                                                <label class="text-xs text-gray-500">
+                                                    {{ item_form.DELETE }} Remove
+                                                </label>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="button" id="addItem" class="btn-outline text-sm mt-2">
+                        <i class="fas fa-plus mr-2"></i>Add Item
+                    </button>
+                </div>
+
+                <!-- Payment Information -->
+                <div>
+                    <h3 class="text-lg font-semibold text-primary-700 mb-4">
+                        <i class="fas fa-credit-card text-primary-500 mr-2"></i>Payment Information
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                            <select name="payment_method" id="payment_method" class="input-field">
+                                {% for value, label in form.fields.payment_method.choices %}
+                                    <option value="{{ value }}" 
+                                        {% if form.payment_method.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="delivery_address" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
+                            <textarea name="delivery_address" id="delivery_address" rows="2"
+                                      class="input-field">{{ form.delivery_address.value|default:'' }}</textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" id="notes" rows="2"
+                                      class="input-field">{{ form.notes.value|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Subtotal:</span>
+                        <span class="font-medium" id="summarySubtotal">KSh 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Tax (16%):</span>
+                        <span class="font-medium" id="summaryTax">KSh 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Discount:</span>
+                        <span class="font-medium" id="summaryDiscount">KSh 0.00</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+                        <span class="text-primary-700">Total:</span>
+                        <span class="text-primary-700" id="summaryTotal">KSh 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                    <a href="{% url 'sales:list' %}" class="btn-outline">Cancel</a>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if sale %}Update Sale{% else %}Create Sale{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add item row
+    document.getElementById('addItem').addEventListener('click', function() {
+        const formset = document.getElementById('id_sale_items-TOTAL_FORMS');
+        const total = parseInt(formset.value);
+        const container = document.getElementById('formsetContainer');
+        
+        // Get the last formset item and clone it
+        const lastItem = container.querySelector('.formset-item:last-child');
+        if (!lastItem) return;
+        
+        const newItem = lastItem.cloneNode(true);
+        
+        // Update IDs and names
+        const regex = new RegExp(`-${total-1}-`, 'g');
+        newItem.innerHTML = newItem.innerHTML.replace(regex, `-${total}-`);
+        
+        // Clear values
+        newItem.querySelectorAll('input, select').forEach(input => {
+            if (input.type !== 'hidden' && input.type !== 'checkbox') {
+                input.value = '';
+            }
+        });
+        
+        container.appendChild(newItem);
+        formset.value = total + 1;
+    });
+
+    // Calculate totals
+    function calculateTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('.formset-item').forEach(item => {
+            const quantity = parseInt(item.querySelector('input[name$="-quantity"]').value) || 0;
+            const price = parseFloat(item.querySelector('input[name$="-unit_price"]').value) || 0;
+            const itemSubtotal = quantity * price;
+            subtotal += itemSubtotal;
+            item.querySelector('.subtotal').textContent = `KSh ${itemSubtotal.toFixed(2)}`;
+        });
+        
+        const tax = subtotal * 0.16;
+        const total = subtotal + tax;
+        
+        document.getElementById('summarySubtotal').textContent = `KSh ${subtotal.toFixed(2)}`;
+        document.getElementById('summaryTax').textContent = `KSh ${tax.toFixed(2)}`;
+        document.getElementById('summaryTotal').textContent = `KSh ${total.toFixed(2)}`;
+    }
+    
+    // Event listeners for calculation
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('input[name$="-quantity"], input[name$="-unit_price"]')) {
+            calculateTotals();
+        }
+    });
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.matches('input[name$="-quantity"], input[name$="-unit_price"]')) {
+            calculateTotals();
+        }
+    });
+    
+    // Initial calculation
+    calculateTotals();
+</script>
+{% endblock %}

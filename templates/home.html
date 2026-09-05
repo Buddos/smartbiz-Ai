@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Smartbiz - Run your business smarter{% endblock %}
+
+{% block extra_css %}
+<style>
+  .smartbiz-home { --home-teal-900:#04342C; --home-teal-700:#0F6E56; --home-mint-100:#E1F5EE; --home-clay-500:#D85A30; --home-paper:#F6F7F5; --home-ink:#16211E; --home-ink-soft:#4C5A56; --home-line:#DDE4E1; background:var(--home-paper); color:var(--home-ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; }
+  .smartbiz-home *, .smartbiz-home *::before, .smartbiz-home *::after { box-sizing:border-box; }
+  .smartbiz-home a { color:inherit; }
+  .smartbiz-home .home-wrap { max-width:1120px; margin:0 auto; padding:0 32px; }
+  .smartbiz-home .home-header { position:absolute; top:0; left:0; right:0; z-index:3; }
+  .smartbiz-home .home-nav { display:flex; align-items:center; justify-content:space-between; padding:26px 32px; }
+  .smartbiz-home .home-logo { display:flex; align-items:center; gap:10px; color:var(--home-teal-900); font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:600; text-decoration:none; }
+  .smartbiz-home .home-logo-mark { width:26px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:7px; background:var(--home-teal-700); }
+  .smartbiz-home .home-logo-mark svg { width:14px; height:14px; }
+  .smartbiz-home .home-nav-link { padding:9px 18px; border:1px solid var(--home-teal-900); border-radius:8px; color:var(--home-teal-900); font-size:14px; font-weight:500; text-decoration:none; transition:background .15s ease,color .15s ease; }
+  .smartbiz-home .home-nav-link:hover { background:var(--home-teal-900); color:#fff; }
+  .smartbiz-home .home-hero { position:relative; overflow:hidden; padding:150px 0 96px; background:linear-gradient(135deg, rgba(15,110,86,0.92) 0%, rgba(62,154,128,0.82) 35%, rgba(225,245,238,0.94) 100%); }
+  .smartbiz-home .home-hero::before { content:""; position:absolute; inset:0; background-image:linear-gradient(90deg, rgba(225,245,238,0.92) 0%, rgba(225,245,238,0.76) 20%, rgba(225,245,238,0.36) 42%, rgba(225,245,238,0.18) 100%), url("{% static 'images/smartbiz.png' %}"); background-position:center right; background-repeat:no-repeat; background-size:cover; opacity:0.95; }
+  .smartbiz-home .home-hero-inner { position:relative; z-index:1; max-width:560px; }
+  .smartbiz-home .home-eyebrow { margin:0 0 18px; color:var(--home-teal-700); font-size:14px; font-weight:500; }
+  .smartbiz-home h1 { margin:0 0 20px; color:var(--home-teal-900); font-family:'Space Grotesk',sans-serif; font-size:clamp(34px,5vw,50px); font-weight:600; letter-spacing:-.01em; line-height:1.12; }
+  .smartbiz-home .home-hero-copy { max-width:440px; margin:0 0 32px; color:var(--home-ink-soft); font-size:17px; line-height:1.6; }
+  .smartbiz-home .home-cta-row { display:flex; align-items:center; gap:18px; }
+  .smartbiz-home .home-primary-btn { display:inline-block; padding:14px 26px; border-radius:9px; background:var(--home-teal-700); color:#fff; font-size:15px; font-weight:500; text-decoration:none; transition:background .15s ease; }
+  .smartbiz-home .home-primary-btn:hover { background:var(--home-teal-900); }
+  .smartbiz-home .home-cta-note { color:var(--home-ink-soft); font-size:13px; }
+  .smartbiz-home .home-strip { border-top:1px solid var(--home-line); border-bottom:1px solid var(--home-line); background:#fff; }
+  .smartbiz-home .home-strip .home-wrap { display:flex; flex-wrap:wrap; gap:40px; padding-top:34px; padding-bottom:34px; }
+  .smartbiz-home .home-strip-item { display:flex; align-items:center; gap:12px; flex:1 1 220px; }
+  .smartbiz-home .home-strip-icon { width:34px; height:34px; display:flex; align-items:center; justify-content:center; flex-shrink:0; border-radius:8px; background:var(--home-mint-100); }
+  .smartbiz-home .home-strip-icon svg { width:17px; height:17px; }
+  .smartbiz-home .home-strip-text { color:var(--home-ink); font-size:14px; line-height:1.4; }
+  .smartbiz-home .home-strip-text strong { display:block; margin-bottom:1px; font-weight:600; }
+  .smartbiz-home .home-strip-text span { color:var(--home-ink-soft); font-weight:400; }
+  .smartbiz-home .home-footer { padding:44px 0 36px; }
+  .smartbiz-home .home-footer-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding-bottom:28px; margin-bottom:20px; border-bottom:1px solid var(--home-line); }
+  .smartbiz-home .home-footer-links { display:flex; gap:26px; }
+  .smartbiz-home .home-footer-links a { color:var(--home-ink-soft); font-size:14px; text-decoration:none; }
+  .smartbiz-home .home-footer-links a:hover { color:var(--home-teal-900); }
+  .smartbiz-home .home-footer-bottom { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; color:var(--home-ink-soft); font-size:13px; }
+  .smartbiz-home :focus-visible { outline:2px solid var(--home-teal-700); outline-offset:2px; }
+  @media (max-width:640px) { .smartbiz-home .home-nav { padding:20px; } .smartbiz-home .home-wrap { padding:0 20px; } .smartbiz-home .home-hero { padding:120px 0 64px; } .smartbiz-home .home-cta-row { flex-direction:column; align-items:flex-start; gap:10px; } .smartbiz-home .home-strip .home-wrap { flex-direction:column; gap:22px; padding-top:28px; padding-bottom:28px; } .smartbiz-home .home-footer-row { flex-direction:column; align-items:flex-start; } }
++  @media (prefers-reduced-motion:reduce) { .smartbiz-home * { transition:none !important; } }
++</style>
++<link rel="preconnect" href="https://fonts.googleapis.com">
++<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
++{% endblock %}
++
++{% block content %}
++<div class="smartbiz-home">
++  <header class="home-header"><nav class="home-nav"><a class="home-logo" href="{% url 'home' %}"><span class="home-logo-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V10L12 4L20 10V20" stroke="#E1F5EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Smartbiz</a><a class="home-nav-link" href="{% url 'accounts:login' %}">Log in</a></nav></header>
++  <section class="home-hero"><div class="home-wrap"><div class="home-hero-inner"><p class="home-eyebrow">For small business owners</p><h1>Run your shop with a little help from AI</h1><p class="home-hero-copy">Track sales, expenses, and stock in one place. Smartbiz watches the numbers and tells you what needs attention before it becomes a problem.</p><div class="home-cta-row"><a class="home-primary-btn" href="{% url 'accounts:register' %}">Get started</a><span class="home-cta-note">Free for your first 30 days</span></div></div></div></section>
++  <section class="home-strip"><div class="home-wrap"><div class="home-strip-item"><span class="home-strip-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12l5 5L20 6" stroke="#0F6E56" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div class="home-strip-text"><strong>One dashboard</strong><span>Sales, expenses, and stock together</span></div></div><div class="home-strip-item"><span class="home-strip-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20M12 2L7 7M12 2l5 5" stroke="#0F6E56" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div class="home-strip-text"><strong>Early warnings</strong><span>Low stock and unusual costs, caught fast</span></div></div><div class="home-strip-item"><span class="home-strip-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#0F6E56" stroke-width="2.2"/><path d="M12 8v5l3 2" stroke="#0F6E56" stroke-width="2.2" stroke-linecap="round"/></svg></span><div class="home-strip-text"><strong>Plain-language answers</strong><span>Ask the assistant anything about your business</span></div></div></div></section>
++  <footer class="home-footer"><div class="home-wrap"><div class="home-footer-row"><a class="home-logo" href="{% url 'home' %}" style="font-size:16px"><span class="home-logo-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20V10L12 4L20 10V20" stroke="#E1F5EE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Smartbiz</a><nav class="home-footer-links"><a href="{% url 'accounts:register' %}">Product</a><a href="{% url 'accounts:register' %}">Pricing</a><a href="{% url 'accounts:login' %}">Support</a><a href="{% url 'accounts:register' %}">Privacy</a></nav></div><div class="home-footer-bottom"><span>© 2026 Smartbiz. Built for small business owners.</span><span>Nairobi, Kenya</span></div></div></footer>
++</div>
++{% endblock %}

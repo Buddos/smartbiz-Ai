@@ -1,0 +1,12 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<div class="flex justify-between mb-4">
+  <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+  <a class="btn-primary" href="{% url 'reports:generate' %}?start={{ start }}&end={{ end }}&type=PERFORMANCE">Generate performance report</a>
+</div>
+<div class="card">
+  {% for r in reports %}
+  <p class="py-2 border-b"><a class="text-primary-700" href="{% url 'reports:detail' r.id %}">{{ r.title }}</a></p>
+  {% empty %}<p class="text-gray-500">No reports yet.</p>{% endfor %}
+</div>
+{% endblock %}

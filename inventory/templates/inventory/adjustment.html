@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Stock Adjustment - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Page Header -->
+        <div class="mb-6">
+            <div class="flex items-center gap-3">
+                <a href="{% url 'inventory:dashboard' %}" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-primary-700">
+                        <i class="fas fa-sliders-h text-primary-500 mr-2"></i>Stock Adjustment
+                    </h1>
+                    <p class="text-gray-600">Quickly adjust product stock levels</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Product -->
+                <div>
+                    <label for="product" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-box text-primary-500 mr-2"></i>Product
+                    </label>
+                    <select name="product" id="product" class="input-field" required>
+                        <option value="">Select a product</option>
+                        {% for product in form.fields.product.queryset %}
+                            <option value="{{ product.id }}" 
+                                    data-stock="{{ product.current_stock }}">
+                                {{ product.name }} ({{ product.sku }}) - Stock: {{ product.current_stock }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Adjustment Type -->
+                <div>
+                    <label for="adjustment_type" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-exchange-alt text-primary-500 mr-2"></i>Adjustment Type
+                    </label>
+                    <select name="adjustment_type" id="adjustment_type" class="input-field" required>
+                        <option value="add">Add Stock</option>
+                        <option value="subtract">Subtract Stock</option>
+                        <option value="set">Set Stock</option>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        <span id="adjustmentHint">Add stock to current inventory</span>
+                    </p>
+                </div>
+
+                <!-- Quantity -->
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-hashtag text-primary-500 mr-2"></i>Quantity
+                    </label>
+                    <input type="number" name="quantity" id="quantity" 
+                           class="input-field" min="1" required 
+                           placeholder="Enter quantity">
+                    <p class="mt-1 text-xs text-gray-500" id="currentStockInfo"></p>
+                </div>
+
+                <!-- Reason -->
+                <div>
+                    <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-pen text-primary-500 mr-2"></i>Reason
+                    </label>
+                    <textarea name="reason" id="reason" rows="3" 
+                              class="input-field" placeholder="Why is this adjustment being made?"></textarea>
+                </div>
+
+                <!-- Preview -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Preview</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Current Stock:</span>
+                            <span class="font-medium text-gray-900" id="previewCurrent">-</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Adjustment:</span>
+                            <span class="font-medium text-accent-600" id="previewAdjustment">-</span>
+                        </div>
+                        <div class="col-span-2 border-t border-gray-200 pt-2">
+                            <span class="text-gray-500">New Stock:</span>
+                            <span class="font-bold text-primary-700" id="previewNew">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                    <a href="{% url 'inventory:dashboard' %}" class="btn-outline">Cancel</a>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check mr-2"></i>Apply Adjustment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const productSelect = document.getElementById('product');
+    const adjustmentType = document.getElementById('adjustment_type');
+    const quantityInput = document.getElementById('quantity');
+    const adjustmentHint = document.getElementById('adjustmentHint');
+    const currentStockInfo = document.getElementById('currentStockInfo');
+    const previewCurrent = document.getElementById('previewCurrent');
+    const previewAdjustment = document.getElementById('previewAdjustment');
+    const previewNew = document.getElementById('previewNew');
+
+    // Update hints when adjustment type changes
+    adjustmentType.addEventListener('change', function() {
+        const hints = {
+            'add': 'Add stock to current inventory',
+            'subtract': 'Remove stock from current inventory',
+            'set': 'Set inventory to this exact quantity'
+        };
+        adjustmentHint.textContent = hints[this.value] || '';
+        updatePreview();
+    });
+
+    // Update preview when any value changes
+    productSelect.addEventListener('change', updatePreview);
+    quantityInput.addEventListener('input', updatePreview);
+    adjustmentType.addEventListener('change', updatePreview);
+
+    function updatePreview() {
+        const product = productSelect.options[productSelect.selectedIndex];
+        const currentStock = product ? parseInt(product.dataset.stock) || 0 : 0;
+        const quantity = parseInt(quantityInput.value) || 0;
+        const type = adjustmentType.value;
+        
+        // Update current stock info
+        currentStockInfo.textContent = `Current stock: ${currentStock} units`;
+        previewCurrent.textContent = currentStock;
+        
+        let newStock = currentStock;
+        let adjustmentText = '';
+        
+        if (type === 'add') {
+            newStock = currentStock + quantity;
+            adjustmentText = `+${quantity}`;
+        } else if (type === 'subtract') {
+            newStock = Math.max(0, currentStock - quantity);
+            adjustmentText = `-${quantity}`;
+        } else if (type === 'set') {
+            newStock = quantity;
+            adjustmentText = `Set to ${quantity}`;
+        }
+        
+        previewAdjustment.textContent = adjustmentText;
+        previewNew.textContent = newStock;
+    }
+</script>
+{% endblock %}

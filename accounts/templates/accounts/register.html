@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Logo -->
+        <div class="text-center">
+            <div class="mx-auto h-16 w-16 bg-teal-600 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-bolt text-white text-3xl"></i>
+            </div>
+            <h2 class="mt-6 text-3xl font-bold text-teal-900">Create Account</h2>
+            <p class="mt-2 text-sm text-gray-600">Start running your business smarter</p>
+        </div>
+        
+        <!-- Registration Form -->
+        <div class="card">
+            <form method="POST" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                        <input type="text" name="first_name" id="first_name" required 
+                               class="input-field mt-1" placeholder="John">
+                    </div>
+                    <div>
+                        <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                        <input type="text" name="last_name" id="last_name" required 
+                               class="input-field mt-1" placeholder="Doe">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                          <input type="email" name="email" id="email" required 
+                              value="{{ form.email.value|default:'' }}"
+                              class="input-field mt-1 {% if form.email.errors %}border-danger-500{% endif %}"
+                              placeholder="smartbiz@gmail.com" autocomplete="email">
+                          {% for error in form.email.errors %}<p class="mt-1 text-sm text-danger-600">{{ error }}</p>{% endfor %}
+                </div>
+                
+                <div>
+                    <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="tel" name="phone_number" id="phone_number" 
+                           class="input-field mt-1" placeholder="+254 700 000 000 or 0700 000 000">
+                </div>
+                
+                <div>
+                    <label for="password1" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" name="password1" id="password1" required 
+                           class="input-field mt-1" placeholder="Create a strong password">
+                    <p class="mt-1 text-xs text-gray-500">At least 8 characters, including uppercase and lowercase letters, a number, and a special character.</p>
+                </div>
+                
+                <div>
+                    <label for="password2" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                    <input type="password" name="password2" id="password2" required 
+                           class="input-field mt-1" placeholder="Confirm your password">
+                </div>
+                
+                <div>
+                    <label for="role" class="block text-sm font-medium text-gray-700">I am a</label>
+                    <select name="role" id="role" class="input-field mt-1">
+                        <option value="OWNER">Business Owner</option>
+                        <option value="MANAGER">Business Manager</option>
+                        <option value="STAFF">Staff Member</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full btn-accent py-3 text-base font-medium">
+                    <i class="fas fa-user-plus mr-2"></i>Create Account
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                    Already have an account? 
+                    <a href="{% url 'accounts:login' %}" class="text-teal-600 hover:text-teal-500 font-medium">
+                        Sign in
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

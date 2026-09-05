@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Create User - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-6">
+            <a href="{% url 'accounts:users_list' %}" class="text-sm text-primary-600"><i class="fas fa-arrow-left mr-1"></i>Back to users</a>
+            <h1 class="mt-3 text-2xl font-bold text-primary-700">Create User</h1>
+            <p class="text-gray-600">Add an authorized user to the platform or your business.</p>
+        </div>
+        <div class="card">
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                {% if form.non_field_errors %}<div class="text-sm text-danger-600">{{ form.non_field_errors }}</div>{% endif %}
+                {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                    {{ field }}
+                    {% for error in field.errors %}<p class="mt-1 text-sm text-danger-600">{{ error }}</p>{% endfor %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn-primary"><i class="fas fa-user-plus mr-2"></i>Create user</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

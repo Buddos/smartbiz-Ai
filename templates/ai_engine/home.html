@@ -1,0 +1,51 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<div class="flex justify-between mb-6">
+  <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+  <div class="flex gap-2">
+    <form method="post" action="{% url 'ai_engine:generate' %}">{% csrf_token %}<button class="btn-outline">Generate insights</button></form>
+    <form method="post" action="{% url 'ai_engine:forecast' %}">{% csrf_token %}<button class="btn-primary">Run forecast</button></form>
+  </div>
+</div>
+<p class="text-sm text-gray-600 mb-4">Insights are ranked from explainable rules and current business data. Forecasts are estimates, not guarantees.</p>
+{% if not has_business %}
+<div class="card mb-6 border-l-4 border-warning-500">
+  <p class="font-medium text-warning-700">Set up your business to use the live AI assistant.</p>
+  <p class="text-sm text-gray-600 mt-1">The assistant reads your current sales, expenses, products, and inventory. No data is queried until a business is connected.</p>
+  <a href="{% url 'businesses:setup' %}" class="btn-primary inline-block mt-3">Set up business</a>
+</div>
+{% endif %}
+<div class="grid lg:grid-cols-2 gap-4 mb-6">
+  <div class="card">
+    <h2 class="font-semibold mb-3">Insights</h2>
+    {% for i in insights %}
+    <div class="mb-3 text-sm border-b pb-3"><div class="flex items-center justify-between"><p class="font-medium">{{ i.title }}</p><span class="text-xs text-gray-500">Score {{ i.score|floatformat:2 }} · {{ i.get_source_display }}</span></div><p class="text-gray-600">{{ i.observation }}</p><p class="text-insight-700">{{ i.interpretation }}</p><div class="flex gap-3 mt-2"><form method="post" action="{% url 'ai_engine:insight_feedback' i.id 'ACCEPTED' %}">{% csrf_token %}<button class="text-success-700">Accept</button></form><form method="post" action="{% url 'ai_engine:insight_feedback' i.id 'DISMISSED' %}">{% csrf_token %}<button class="text-danger-700">Dismiss</button></form></div></div>
+    {% empty %}<p class="text-gray-500 text-sm">Generate insights after you have sales and stock data.</p>{% endfor %}
+  </div>
+  <div class="card">
+    <h2 class="font-semibold mb-3">Recommendations</h2>
+    {% for r in recommendations %}
+    <div class="mb-3 text-sm">
+      <p class="font-medium">{{ r.title }}</p>
+      <p class="text-gray-600">{{ r.suggestion }}</p>
+      <form method="post" action="{% url 'ai_engine:rec_status' r.id 'DONE' %}">{% csrf_token %}<button class="text-primary-700">Mark done</button></form>
+    </div>
+    {% empty %}<p class="text-gray-500 text-sm">No open recommendations.</p>{% endfor %}
+  </div>
+</div>
+{% if forecast %}
+<div class="card mb-6 text-sm">
+  <p class="font-semibold">Latest {{ forecast.metric }} forecast ({{ forecast.horizon_days }} days)</p>
+  <p>Predicted total: KSh {{ forecast.predicted_value }} using {{ forecast.model_name }}.</p>
+  {% if forecast.mae %}<p>MAE {{ forecast.mae|floatformat:2 }} · RMSE {{ forecast.rmse|floatformat:2 }} · MAPE {{ forecast.mape|floatformat:1 }}%</p>{% endif %}
+  <p class="text-gray-500">{{ forecast.notes }}</p>
+</div>
+{% endif %}
+<div class="card">
+  <h2 class="font-semibold mb-3">Ask about your data</h2>
+  <form method="post" action="{% url 'ai_engine:assistant' %}" class="space-y-3">{% csrf_token %}{{ form.as_p }}<button class="btn-primary">Ask</button></form>
+  {% for q in queries %}
+  <div class="mt-4 text-sm border-t pt-3"><p class="font-medium">{{ q.question }}</p><p class="whitespace-pre-line text-gray-700">{{ q.answer }}</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

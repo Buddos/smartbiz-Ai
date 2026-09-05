@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SmartBiz AI{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#E1F5EE',
+                            100: '#B3E5D6',
+                            200: '#80D4BE',
+                            300: '#4DC3A6',
+                            400: '#26B28F',
+                            500: '#0F6E56',
+                            600: '#0D5F49',
+                            700: '#0A4D3B',
+                            800: '#083B2D',
+                            900: '#052A1F',
+                        },
+                        accent: {
+                            50: '#FAECE7',
+                            100: '#F5D9D0',
+                            200: '#F0C6B8',
+                            300: '#EBB3A0',
+                            400: '#E6A088',
+                            500: '#D85A30',
+                            600: '#C04A2A',
+                            700: '#993C1D',
+                            800: '#7A3017',
+                            900: '#5B2411',
+                        },
+                        insight: {
+                            50: '#EEEDFE',
+                            100: '#DDDBFD',
+                            200: '#CCC9FC',
+                            300: '#BBB7FB',
+                            400: '#AAA5FA',
+                            500: '#7F77DD',
+                            600: '#665EC4',
+                            700: '#4D46A8',
+                            800: '#342E8C',
+                            900: '#1B1670',
+                        },
+                        success: {
+                            50: '#EAF3DE',
+                            100: '#D5E7BD',
+                            200: '#BFDB9C',
+                            300: '#AACF7B',
+                            400: '#94C35A',
+                            500: '#639922',
+                            600: '#4F7A1B',
+                            700: '#3B6D11',
+                            800: '#27460B',
+                            900: '#132305',
+                        },
+                        danger: {
+                            50: '#FCEBEB',
+                            100: '#F9D7D7',
+                            200: '#F6C3C3',
+                            300: '#F3AFAF',
+                            400: '#F09B9B',
+                            500: '#A32D2D',
+                            600: '#8C2727',
+                            700: '#752121',
+                            800: '#5E1B1B',
+                            900: '#471515',
+                        },
+                        warning: {
+                            50: '#FAEEDA',
+                            100: '#F5DDB5',
+                            200: '#F0CC90',
+                            300: '#EBBB6B',
+                            400: '#E6AA46',
+                            500: '#BA7517',
+                            600: '#9B6113',
+                            700: '#7C4D0F',
+                            800: '#5D3A0B',
+                            900: '#3E2707',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .btn-primary {
+            background-color: #0F6E56;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            background-color: #0A4D3B;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(15, 110, 86, 0.2);
+        }
+        
+        .btn-accent {
+            background-color: #D85A30;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-accent:hover {
+            background-color: #C04A2A;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(216, 90, 48, 0.2);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            color: #0F6E56;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            border: 2px solid #0F6E56;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-outline:hover {
+            background-color: #0F6E56;
+            color: white;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #E5E7EB;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 14px;
+            background-color: white;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #0F6E56;
+            box-shadow: 0 0 0 3px rgba(15, 110, 86, 0.1);
+        }
+        .input-field.error {
+            border-color: #A32D2D;
+            box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.1);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #E1F5EE 0%, #FAECE7 100%);
+        }
+        
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <main>
+        <!-- Messages -->
+        {% if messages %}
+            <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full">
+                {% for message in messages %}
+                    <div class="px-4 py-3 rounded-lg shadow-lg border animate-slide-in 
+                        {% if message.tags == 'success' %}bg-success-50 text-success-700 border-success-200
+                        {% elif message.tags == 'error' %}bg-danger-50 text-danger-700 border-danger-200
+                        {% elif message.tags == 'warning' %}bg-warning-50 text-warning-700 border-warning-200
+                        {% else %}bg-primary-50 text-primary-700 border-primary-200{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas 
+                                {% if message.tags == 'success' %}fa-check-circle
+                                {% elif message.tags == 'error' %}fa-exclamation-circle
+                                {% elif message.tags == 'warning' %}fa-exclamation-triangle
+                                {% else %}fa-info-circle{% endif %} 
+                                mr-2"></i>
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script>
+        // Auto-dismiss messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.animate-slide-in').forEach(el => {
+                setTimeout(() => {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateX(100%)';
+                    el.style.transition = 'all 0.3s ease-out';
+                    setTimeout(() => el.remove(), 300);
+                }, 5000);
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

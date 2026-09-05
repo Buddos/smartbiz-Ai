@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Set Up Your Business - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-accent-500 rounded-2xl shadow-lg mb-4">
+                <i class="fas fa-store text-white text-2xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-primary-700">Set Up Your Business</h1>
+            <p class="mt-2 text-gray-600">Let's get your business started on SmartBiz AI</p>
+        </div>
+        
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-center mb-8">
+            <div class="flex items-center space-x-2">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                    <span class="ml-2 text-sm font-medium text-primary-600">Business</span>
+                </div>
+                <div class="w-12 h-0.5 bg-primary-200"></div>
+                <div class="flex items-center opacity-50">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-bold">2</div>
+                    <span class="ml-2 text-sm text-gray-500">Products</span>
+                </div>
+                <div class="w-12 h-0.5 bg-gray-200"></div>
+                <div class="flex items-center opacity-50">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-bold">3</div>
+                    <span class="ml-2 text-sm text-gray-500">Complete</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Setup Form -->
+        <div class="card">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Business Name -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-store text-primary-500 mr-2"></i>Business Name
+                    </label>
+                    <input type="text" name="name" id="name" required
+                           value="{{ form.name.value|default:'' }}"
+                           class="input-field"
+                           placeholder="e.g., Amina's Grocery Store">
+                    {% if form.name.errors %}
+                        <p class="mt-1 text-sm text-danger-500">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Business Type -->
+                    <div>
+                        <label for="business_type" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-tag text-primary-500 mr-2"></i>Business Type
+                        </label>
+                        <select name="business_type" id="business_type" class="input-field">
+                            <option value="RETAIL" {% if form.business_type.value == 'RETAIL' %}selected{% endif %}>Retail Shop</option>
+                            <option value="RESTAURANT" {% if form.business_type.value == 'RESTAURANT' %}selected{% endif %}>Restaurant</option>
+                            <option value="SALON" {% if form.business_type.value == 'SALON' %}selected{% endif %}>Salon/Barbershop</option>
+                            <option value="WHOLESALE" {% if form.business_type.value == 'WHOLESALE' %}selected{% endif %}>Wholesale</option>
+                            <option value="SERVICE" {% if form.business_type.value == 'SERVICE' %}selected{% endif %}>Service Business</option>
+                            <option value="ELECTRONICS" {% if form.business_type.value == 'ELECTRONICS' %}selected{% endif %}>Electronics Shop</option>
+                            <option value="BOUTIQUE" {% if form.business_type.value == 'BOUTIQUE' %}selected{% endif %}>Boutique</option>
+                            <option value="HARDWARE" {% if form.business_type.value == 'HARDWARE' %}selected{% endif %}>Hardware Shop</option>
+                            <option value="OTHER" {% if form.business_type.value == 'OTHER' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Business Size -->
+                    <div>
+                        <label for="business_size" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-users text-primary-500 mr-2"></i>Business Size
+                        </label>
+                        <select name="business_size" id="business_size" class="input-field">
+                            <option value="MICRO" {% if form.business_size.value == 'MICRO' %}selected{% endif %}>Micro (1-5 employees)</option>
+                            <option value="SMALL" {% if form.business_size.value == 'SMALL' %}selected{% endif %}>Small (6-20 employees)</option>
+                            <option value="MEDIUM" {% if form.business_size.value == 'MEDIUM' %}selected{% endif %}>Medium (21-50 employees)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-envelope text-primary-500 mr-2"></i>Business Email
+                        </label>
+                        <input type="email" name="email" id="email" required
+                               value="{{ form.email.value|default:'' }}"
+                               class="input-field"
+                               placeholder="business@email.com">
+                    </div>
+                    
+                    <!-- Phone -->
+                    <div>
+                        <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-phone text-primary-500 mr-2"></i>Phone Number
+                        </label>
+                        <input type="tel" name="phone_number" id="phone_number" required
+                               value="{{ form.phone_number.value|default:'' }}"
+                               class="input-field"
+                               placeholder="+254 700 000 000">
+                    </div>
+                </div>
+                
+                <!-- Address -->
+                <div>
+                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-map-marker-alt text-primary-500 mr-2"></i>Address
+                    </label>
+                    <textarea name="address" id="address" rows="2"
+                              class="input-field" placeholder="Street address">{{ form.address.value|default:'' }}</textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        <input type="text" name="city" id="city"
+                               value="{{ form.city.value|default:'' }}"
+                               class="input-field" placeholder="Nairobi">
+                    </div>
+                    <div>
+                        <label for="county" class="block text-sm font-medium text-gray-700 mb-1">County</label>
+                        <input type="text" name="county" id="county"
+                               value="{{ form.county.value|default:'' }}"
+                               class="input-field" placeholder="Nairobi County">
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-info-circle text-primary-500 mr-2"></i>Description
+                    </label>
+                    <textarea name="description" id="description" rows="3"
+                              class="input-field" placeholder="Tell us about your business...">{{ form.description.value|default:'' }}</textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Registration Number -->
+                    <div>
+                        <label for="registration_number" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-id-card text-primary-500 mr-2"></i>Registration Number
+                        </label>
+                        <input type="text" name="registration_number" id="registration_number"
+                               value="{{ form.registration_number.value|default:'' }}"
+                               class="input-field" placeholder="Optional">
+                    </div>
+                    
+                    <!-- Tax ID -->
+                    <div>
+                        <label for="tax_id" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-file-invoice text-primary-500 mr-2"></i>Tax ID (KRA PIN)
+                        </label>
+                        <input type="text" name="tax_id" id="tax_id"
+                               value="{{ form.tax_id.value|default:'' }}"
+                               class="input-field" placeholder="Optional">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Currency -->
+                    <div>
+                        <label for="currency" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-money-bill-wave text-primary-500 mr-2"></i>Currency
+                        </label>
+                        <select name="currency" id="currency" class="input-field">
+                            <option value="KES" {% if form.currency.value == 'KES' %}selected{% endif %}>KES - Kenyan Shilling</option>
+                            <option value="USD" {% if form.currency.value == 'USD' %}selected{% endif %}>USD - US Dollar</option>
+                            <option value="EUR" {% if form.currency.value == 'EUR' %}selected{% endif %}>EUR - Euro</option>
+                            <option value="GBP" {% if form.currency.value == 'GBP' %}selected{% endif %}>GBP - British Pound</option>
+                            <option value="UGX" {% if form.currency.value == 'UGX' %}selected{% endif %}>UGX - Ugandan Shilling</option>
+                            <option value="TZS" {% if form.currency.value == 'TZS' %}selected{% endif %}>TZS - Tanzanian Shilling</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Timezone -->
+                    <div>
+                        <label for="timezone" class="block text-sm font-medium text-gray-700 mb-1">
+                            <i class="fas fa-clock text-primary-500 mr-2"></i>Timezone
+                        </label>
+                        <select name="timezone" id="timezone" class="input-field">
+                            <option value="Africa/Nairobi" {% if form.timezone.value == 'Africa/Nairobi' %}selected{% endif %}>Africa/Nairobi (EAT)</option>
+                            <option value="Africa/Cairo" {% if form.timezone.value == 'Africa/Cairo' %}selected{% endif %}>Africa/Cairo</option>
+                            <option value="Africa/Lagos" {% if form.timezone.value == 'Africa/Lagos' %}selected{% endif %}>Africa/Lagos</option>
+                            <option value="Africa/Johannesburg" {% if form.timezone.value == 'Africa/Johannesburg' %}selected{% endif %}>Africa/Johannesburg</option>
+                            <option value="UTC" {% if form.timezone.value == 'UTC' %}selected{% endif %}>UTC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-200">
+                    <a href="{% url 'onboarding' %}" class="btn-outline">Skip for now</a>
+                    <button type="submit" class="btn-primary py-3 px-6 text-base">
+                        <i class="fas fa-rocket mr-2"></i>Create Business
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Help Text -->
+        <div class="mt-6 text-center text-sm text-gray-500">
+            <i class="fas fa-shield-alt text-primary-500 mr-1"></i>
+            Your business data is secure and private
+        </div>
+    </div>
+</div>
+{% endblock %}

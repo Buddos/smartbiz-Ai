@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventory Alerts - SmartBiz AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Page Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-primary-700">
+                    <i class="fas fa-bell text-primary-500 mr-2"></i>Inventory Alerts
+                </h1>
+                <p class="text-gray-600">Monitor stock alerts and take action</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex gap-2">
+                <button onclick="checkAlerts()" class="btn-primary text-sm">
+                    <i class="fas fa-sync mr-2"></i>Check for Alerts
+                </button>
+                <div class="flex gap-1">
+                    <a href="?status=ACTIVE" class="px-3 py-1 rounded text-sm border border-gray-300 hover:bg-gray-50 {% if status_filter == 'ACTIVE' %}bg-primary-500 text-white border-primary-500{% endif %}">Active</a>
+                    <a href="?status=RESOLVED" class="px-3 py-1 rounded text-sm border border-gray-300 hover:bg-gray-50 {% if status_filter == 'RESOLVED' %}bg-primary-500 text-white border-primary-500{% endif %}">Resolved</a>
+                    <a href="?status=ALL" class="px-3 py-1 rounded text-sm border border-gray-300 hover:bg-gray-50 {% if status_filter == 'ALL' %}bg-primary-500 text-white border-primary-500{% endif %}">All</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts List -->
+        <div class="space-y-4">
+            {% for alert in alerts %}
+            <div class="card border-l-4 
+                {% if alert.severity == 'CRITICAL' %}border-danger-500
+                {% elif alert.severity == 'WARNING' %}border-warning-500
+                {% else %}border-insight-500{% endif %}">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs px-2 py-1 rounded-full 
+                                {% if alert.severity == 'CRITICAL' %}bg-danger-100 text-danger-700
+                                {% elif alert.severity == 'WARNING' %}bg-warning-100 text-warning-700
+                                {% else %}bg-insight-100 text-insight-700{% endif %}">
+                                {{ alert.get_severity_display }}
+                            </span>
+                            <span class="text-xs text-gray-500">{{ alert.get_alert_type_display }}</span>
+                            <span class="text-xs text-gray-400">{{ alert.created_at|timesince }} ago</span>
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-900 mt-2">{{ alert.product.name }}</h3>
+                        <p class="text-sm text-gray-600">{{ alert.message }}</p>
+                        <div class="flex items-center gap-4 mt-2">
+                            <span class="text-xs text-gray-500">
+                                Current: <span class="font-medium">{{ alert.current_value }}</span>
+                            </span>
+                            <span class="text-xs text-gray-500">
+                                Threshold: <span class="font-medium">{{ alert.threshold_value }}</span>
+                            </span>
+                            <a href="{% url 'products:detail' alert.product.id %}" 
+                               class="text-xs text-primary-500 hover:text-primary-700">
+                                View Product
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{% url 'inventory:adjustment' %}" class="btn-primary text-xs">
+                            <i class="fas fa-sliders-h mr-1"></i>Adjust
+                        </a>
+                        <form method="POST" action="{% url 'inventory:alert_resolve' alert.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-outline text-xs">
+                                <i class="fas fa-check mr-1"></i>Resolve
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="card text-center py-12">
+                <i class="fas fa-check-circle text-success-500 text-5xl mb-4"></i>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">No Alerts</h3>
+                <p class="text-gray-500">All products are at healthy stock levels</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function checkAlerts() {
+        fetch('{% url "inventory:api_check_alerts" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.alerts_created > 0) {
+                location.reload();
+            } else {
+                alert('No new alerts found. All stock levels are healthy.');
+            }
+        });
+    }
+</script>
+{% endblock %}

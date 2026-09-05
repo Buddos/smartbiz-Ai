@@ -1,0 +1,13 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<div class="flex justify-between mb-4">
+  <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+  <a class="btn-primary" href="{% url 'sales:payment' sale.id %}">Record payment</a>
+</div>
+<div class="card mb-4 text-sm">
+  <p>{{ sale.sale_number }} · {{ sale.customer_name|default:"Walk-in" }} · KSh {{ sale.total }} · {{ sale.payment_status }}</p>
+</div>
+<div class="card">
+  {% for item in items %}<p class="text-sm py-1">{{ item.product_name }} × {{ item.quantity }} = KSh {{ item.total }}</p>{% endfor %}
+</div>
+{% endblock %}

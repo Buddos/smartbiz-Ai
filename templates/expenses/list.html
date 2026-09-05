@@ -1,0 +1,14 @@
+{% extends 'layouts/app.html' %}
+{% block page %}
+<div class="flex justify-between mb-4">
+  <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
+  <div class="flex gap-2"><a class="btn-outline" href="{% url 'expenses:category_create' %}">Category</a><a class="btn-primary" href="{% url 'expenses:create' %}">Add expense</a></div>
+</div>
+<p class="mb-4 text-gray-600">Total: KSh {{ total }}</p>
+<form method="get" class="card mb-4"><input class="input-field" name="search" value="{{ search }}" placeholder="Search expenses"></form>
+<div class="card">
+  {% for e in page_obj %}
+  <div class="flex justify-between border-b py-2 text-sm"><span>{{ e.expense_date }} · {{ e.title }}</span><span>KSh {{ e.amount }} <a class="text-primary-700" href="{% url 'expenses:update' e.id %}">Edit</a></span></div>
+  {% empty %}<p class="text-gray-500">No expenses recorded.</p>{% endfor %}
+</div>
+{% endblock %}
