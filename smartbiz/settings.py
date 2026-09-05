@@ -1,10 +1,36 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-change-this-in-production"
-DEBUG = True
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-in-production")
+DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "t")
+
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".vercel.app",
+    ".now.sh",
+]
+
+if allowed_hosts_env := os.environ.get("ALLOWED_HOSTS"):
+    ALLOWED_HOSTS.extend(
+        [host.strip() for host in allowed_hosts_env.split(",") if host.strip() and host.strip() not in ALLOWED_HOSTS]
+    )
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.vercel.app",
+    "https://*.now.sh",
+]
+
+if csrf_origins_env := os.environ.get("CSRF_TRUSTED_ORIGINS"):
+    CSRF_TRUSTED_ORIGINS.extend(
+        [origin.strip() for origin in csrf_origins_env.split(",") if origin.strip() and origin.strip() not in CSRF_TRUSTED_ORIGINS]
+    )
+
+# Required behind Vercel reverse proxy for HTTPS detection
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
