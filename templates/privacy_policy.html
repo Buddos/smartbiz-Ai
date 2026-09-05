@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Privacy Policy - SmartBiz AI{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  .legal-page {
+    --brand-teal-900: #04342C;
+    --brand-teal-700: #0F6E56;
+    --brand-teal-600: #0D5F49;
+    --brand-mint-100: #E1F5EE;
+    --brand-mint-50: #F2FAF7;
+    --brand-clay-500: #D85A30;
+    --brand-ink: #16211E;
+    --brand-ink-muted: #4B5563;
+    --brand-border: #E5E7EB;
+    --brand-bg: #F8FAFC;
+    background: var(--brand-bg);
+    color: var(--brand-ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .legal-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--brand-border);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+
+  .legal-nav-wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .legal-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--brand-teal-900);
+    text-decoration: none;
+  }
+
+  .legal-logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--brand-teal-700);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .legal-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .legal-nav-link {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--brand-ink-muted);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  .legal-nav-link:hover {
+    color: var(--brand-teal-900);
+    background: var(--brand-mint-50);
+  }
+
+  .legal-nav-cta {
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: var(--brand-teal-700);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  .legal-nav-cta:hover {
+    background: var(--brand-teal-900);
+  }
+
+  .legal-hero {
+    background: linear-gradient(135deg, #04342C 0%, #0F6E56 100%);
+    color: #ffffff;
+    padding: 64px 24px 56px;
+    text-align: center;
+  }
+
+  .legal-hero-wrap {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .legal-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(225, 245, 238, 0.15);
+    border: 1px solid rgba(225, 245, 238, 0.3);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--brand-mint-100);
+    margin-bottom: 20px;
+  }
+
+  .legal-hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(32px, 5vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 16px;
+    line-height: 1.2;
+  }
+
+  .legal-hero-subtitle {
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 600px;
+    margin: 0 auto 20px;
+    line-height: 1.6;
+  }
+
+  .legal-meta {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 13px;
+    color: var(--brand-mint-100);
+  }
+
+  .legal-body {
+    max-width: 840px;
+    margin: -24px auto 60px;
+    padding: 0 24px;
+    width: 100%;
+    flex: 1;
+  }
+
+  .legal-card {
+    background: #ffffff;
+    border: 1px solid var(--brand-border);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    padding: 48px;
+  }
+
+  @media (max-width: 640px) {
+    .legal-card {
+      padding: 24px;
+    }
+  }
+
+  .legal-card section {
+    margin-bottom: 36px;
+  }
+
+  .legal-card section:last-child {
+    margin-bottom: 0;
+  }
+
+  .legal-card h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--brand-teal-900);
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--brand-mint-100);
+  }
+
+  .legal-card p {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #374151;
+    margin: 0 0 14px;
+  }
+
+  .legal-card ul {
+    margin: 0 0 16px 20px;
+    padding: 0;
+  }
+
+  .legal-card li {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+
+  .legal-callout {
+    background: var(--brand-mint-50);
+    border-left: 4px solid var(--brand-teal-700);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+
+  .legal-callout p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--brand-teal-900);
+    font-weight: 500;
+  }
+
+  .legal-footer {
+    background: #ffffff;
+    border-top: 1px solid var(--brand-border);
+    padding: 32px 24px;
+    margin-top: auto;
+  }
+
+  .legal-footer-wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--brand-ink-muted);
+  }
+
+  .legal-footer-links {
+    display: flex;
+    gap: 20px;
+  }
+
+  .legal-footer-links a {
+    color: var(--brand-ink-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .legal-footer-links a:hover {
+    color: var(--brand-teal-900);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-page">
+  <!-- Header -->
+  <header class="legal-header">
+    <div class="legal-nav-wrap">
+      <a href="{% url 'home' %}" class="legal-logo">
+        <span class="legal-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#E1F5EE" stroke="#E1F5EE" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        SmartBiz AI
+      </a>
+      <div class="legal-nav-actions">
+        <a href="{% url 'home' %}" class="legal-nav-link">Home</a>
+        <a href="{% url 'terms_conditions' %}" class="legal-nav-link">Terms & Conditions</a>
+        <a href="{% url 'accounts:login' %}" class="legal-nav-link">Sign in</a>
+        <a href="{% url 'accounts:register' %}" class="legal-nav-cta">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="legal-hero">
+    <div class="legal-hero-wrap">
+      <div class="legal-tag">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Trust & Security
+      </div>
+      <h1>Privacy Policy</h1>
+      <p class="legal-hero-subtitle">
+        Your business data, financial records, and operational metrics belong to you. Here is exactly how we handle, protect, and isolate your information.
+      </p>
+      <div class="legal-meta">
+        <span>Effective Date: September 2026</span>
+        <span>•</span>
+        <span>Version 1.2</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Content Card -->
+  <main class="legal-body">
+    <div class="legal-card">
+      <section>
+        <h2>1. Introduction</h2>
+        <p>
+          SmartBiz AI ("we", "our", or "us") provides retail management, inventory tracking, analytics, and artificial intelligence-assisted business recommendations. We are committed to safeguarding the privacy and confidential business operations of every shop owner, manager, and staff member who uses our platform.
+        </p>
+        <p>
+          This Privacy Policy describes what information we collect when you access our web application, register an account, record sales or inventory, and how that information is used, stored, and protected.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Information We Collect</h2>
+        <p>To provide high-accuracy analytics and operational tooling, SmartBiz AI collects information in the following categories:</p>
+        <ul>
+          <li><strong>Account & Profile Information:</strong> Full name, email address, phone number, encrypted password credentials, business role (Owner, Manager, Staff), and business profile details.</li>
+          <li><strong>Business & Transaction Data:</strong> Product inventories, stock levels, wholesale and retail pricing, sales records, customer lists, and operating expense entries created through your business workspace.</li>
+          <li><strong>AI Queries & Insights Data:</strong> Prompts submitted to the SmartBiz AI assistant, generated performance summaries, inventory forecast inquiries, and financial health reports.</li>
+          <li><strong>Technical & Session Data:</strong> IP addresses, browser types, session timestamps, device identifiers, and login activity logs used for security auditing and account protection.</li>
+        </ul>
+      </section>
+
+      <div class="legal-callout">
+        <p>🔒 <strong>Strict Data Isolation:</strong> Your business records, revenue figures, and inventory details are kept strictly segregated by business account. We never share or sell your business numbers to competitors or third-party marketers.</p>
+      </div>
+
+      <section>
+        <h2>3. How We Use Your Information</h2>
+        <p>We process your data strictly to operate and enhance your retail management experience:</p>
+        <ul>
+          <li>Providing real-time analytics dashboards, profit margin calculations, and inventory tracking.</li>
+          <li>Triggering automated proactive alerts (e.g., low stock warnings, reorder suggestions, unusual expenses).</li>
+          <li>Generating contextual AI insights and plain-language summaries specific to your business performance.</li>
+          <li>Authenticating user sessions, preventing unauthorized access, and maintaining audit logs of critical updates.</li>
+          <li>Sending essential transactional messages, including verification emails, security notifications, and password resets.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>4. Artificial Intelligence & Proprietary Business Data</h2>
+        <p>
+          SmartBiz AI integrates machine learning and intelligent models to analyze your business trends and provide recommendations.
+        </p>
+        <ul>
+          <li><strong>No Model Training On Private Data:</strong> Your proprietary sales, profit margins, and inventory quantities are not used to train public or external AI models.</li>
+          <li><strong>Isolated Inference:</strong> When you request AI analysis, only the relevant numerical summaries and prompts are securely processed in isolated execution contexts.</li>
+          <li><strong>Advisory Nature:</strong> AI-generated forecasts and suggestions are supplementary tools intended to assist your operational judgment.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Data Security & Storage</h2>
+        <p>
+          We implement industry-standard administrative, physical, and technical safeguards to ensure the confidentiality and integrity of your data:
+        </p>
+        <ul>
+          <li><strong>Encryption:</strong> All data in transit between your browser and our servers is secured using modern TLS/HTTPS encryption.</li>
+          <li><strong>Password Security:</strong> Passwords are cryptographically salted and hashed using standard PBKDF2/SHA-256 algorithms and are never stored in plaintext.</li>
+          <li><strong>Role-Based Access Controls:</strong> Granular permissions ensure that only authorized personnel within your business (Owner, Manager, Staff) have access to sensitive financial metrics.</li>
+          <li><strong>Session Management:</strong> Active login sessions and security tokens are tracked with automatic expiration and deactivation capabilities.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Data Ownership & User Rights</h2>
+        <p>You retain full ownership of all data you upload or generate in SmartBiz AI. You have the right to:</p>
+        <ul>
+          <li>Access, review, and modify your personal profile and business operational details at any time.</li>
+          <li>Export your sales reports, customer logs, and inventory data in standard formats (CSV, PDF).</li>
+          <li>Request complete deletion or deactivation of your account and associated database records upon closing your business account.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Cookies & Session Storage</h2>
+        <p>
+          SmartBiz AI utilizes secure, HTTP-only session cookies and CSRF tokens strictly required for system functionality, user authentication, and CSRF protection. We do not use invasive third-party cross-site advertising trackers.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Contact Us</h2>
+        <p>
+          If you have questions, concerns, or requests regarding this Privacy Policy or your data, please contact our support team at:
+        </p>
+        <p>
+          <strong>Email:</strong> support@smartbiz.ai<br>
+          <strong>Location:</strong> Nairobi, Kenya
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="legal-footer">
+    <div class="legal-footer-wrap">
+      <span>© 2026 SmartBiz AI. All rights reserved.</span>
+      <div class="legal-footer-links">
+        <a href="{% url 'home' %}">Home</a>
+        <a href="{% url 'terms_conditions' %}">Terms & Conditions</a>
+        <a href="{% url 'accounts:login' %}">Sign in</a>
+        <a href="{% url 'accounts:register' %}">Register</a>
+      </div>
+    </div>
+  </footer>
+</div>
+{% endblock %}

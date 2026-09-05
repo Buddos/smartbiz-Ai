@@ -4,12 +4,14 @@ from django.contrib import admin
 from django.urls import include, path
 
 from analytics.views import business_admin_dashboard_view, dashboard_view
-from smartbiz.views import home, onboarding
+from smartbiz.views import home, onboarding, privacy_policy, terms_conditions
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", home, name="home"),
     path("onboarding/", onboarding, name="onboarding"),
+    path("privacy-policy/", privacy_policy, name="privacy_policy"),
+    path("terms-and-conditions/", terms_conditions, name="terms_conditions"),
     path("dashboard/", dashboard_view, name="dashboard"),
     path("dashboard/admin/", business_admin_dashboard_view, name="business_admin"),
     path("accounts/", include("accounts.urls")),

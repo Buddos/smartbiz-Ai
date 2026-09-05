@@ -1,94 +1,725 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Login - SmartBiz AI{% endblock %}
+{% block title %}Sign In - SmartBiz AI{% endblock %}
+
+{% block extra_css %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* Reset & Base Scoping for Auth Pages */
+  .auth-viewport {
+    --sb-teal-900: #04342C;
+    --sb-teal-800: #084D3C;
+    --sb-teal-700: #0F6E56;
+    --sb-teal-600: #138367;
+    --sb-teal-500: #1E9E7D;
+    --sb-mint-100: #E1F5EE;
+    --sb-mint-50: #F2FAF7;
+    --sb-clay-500: #D85A30;
+    --sb-ink: #111827;
+    --sb-ink-muted: #4B5563;
+    --sb-ink-light: #6B7280;
+    --sb-border: #E5E7EB;
+    --sb-border-hover: #D1D5DB;
+    --sb-card-bg: #FFFFFF;
+    --sb-bg: #F8FAFC;
+    --sb-danger: #DC2626;
+    --sb-danger-bg: #FEF2F2;
+    --sb-danger-border: #FECACA;
+    --sb-success: #16A34A;
+    --sb-success-bg: #F0FDF4;
+
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--sb-bg);
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(225, 245, 238, 0.7) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(250, 236, 231, 0.5) 0px, transparent 50%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--sb-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .auth-viewport *,
+  .auth-viewport *::before,
+  .auth-viewport *::after {
+    box-sizing: border-box;
+  }
+
+  .auth-container {
+    width: 100%;
+    max-width: 1100px;
+    margin: 32px auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  @media (max-width: 960px) {
+    .auth-container {
+      grid-template-columns: 1fr;
+      max-width: 500px;
+      gap: 32px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+  }
+
+  /* Left Brand Showcase Column */
+  .auth-brand-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px 0;
+  }
+
+  @media (max-width: 960px) {
+    .auth-brand-side {
+      text-align: center;
+      align-items: center;
+      padding: 12px 0 0;
+    }
+  }
+
+  .auth-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    margin-bottom: 24px;
+  }
+
+  .auth-brand-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--sb-teal-700), var(--sb-teal-900));
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 16px -4px rgba(15, 110, 86, 0.35);
+  }
+
+  .auth-brand-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--sb-teal-900);
+    letter-spacing: -0.02em;
+  }
+
+  .auth-brand-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 3.5vw, 38px);
+    font-weight: 700;
+    color: var(--sb-teal-900);
+    line-height: 1.2;
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-brand-desc {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--sb-ink-muted);
+    margin: 0 0 32px;
+    max-width: 420px;
+  }
+
+  .auth-features-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  @media (max-width: 960px) {
+    .auth-features-list {
+      display: none; /* Keep mobile view compact & focused on login form */
+    }
+  }
+
+  .auth-feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .auth-feature-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--sb-mint-100);
+    color: var(--sb-teal-700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .auth-feature-text h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sb-ink);
+    margin: 0 0 2px;
+  }
+
+  .auth-feature-text p {
+    font-size: 13px;
+    color: var(--sb-ink-light);
+    margin: 0;
+  }
+
+  .auth-trust-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #FFFFFF;
+    border: 1px solid var(--sb-border);
+    border-radius: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    width: fit-content;
+  }
+
+  @media (max-width: 960px) {
+    .auth-trust-pill {
+      display: none;
+    }
+  }
+
+  .auth-trust-avatars {
+    display: flex;
+  }
+
+  .auth-avatar-circle {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-left: -6px;
+  }
+  .auth-avatar-circle:first-child { margin-left: 0; background: #0F6E56; }
+  .auth-avatar-circle:nth-child(2) { background: #D85A30; }
+  .auth-avatar-circle:nth-child(3) { background: #2563EB; }
+
+  .auth-trust-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--sb-ink-muted);
+  }
+  .auth-trust-label strong {
+    color: var(--sb-teal-900);
+    font-weight: 600;
+  }
+
+  /* Right Auth Card Column */
+  .auth-card-panel {
+    background: #FFFFFF;
+    border: 1px solid var(--sb-border);
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    padding: 40px;
+    position: relative;
+  }
+
+  @media (max-width: 640px) {
+    .auth-card-panel {
+      padding: 28px 20px;
+      border-radius: 16px;
+    }
+  }
+
+  /* Auth Switcher Tabs */
+  .auth-tabs {
+    display: flex;
+    background: #F1F5F9;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 28px;
+  }
+
+  .auth-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--sb-ink-muted);
+    transition: all 0.2s ease;
+  }
+
+  .auth-tab-btn.active {
+    background: #FFFFFF;
+    color: var(--sb-teal-900);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  .auth-card-header {
+    margin-bottom: 24px;
+  }
+
+  .auth-card-header h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--sb-ink);
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .auth-card-header p {
+    font-size: 14px;
+    color: var(--sb-ink-light);
+    margin: 0;
+  }
+
+  /* Alerts & Messages */
+  .auth-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .auth-alert-error {
+    background: var(--sb-danger-bg);
+    border: 1px solid var(--sb-danger-border);
+    color: #991B1B;
+  }
+
+  .auth-alert-success {
+    background: var(--sb-success-bg);
+    border: 1px solid #BBF7D0;
+    color: #166534;
+  }
+
+  /* Form Elements */
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .auth-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .auth-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sb-ink);
+  }
+
+  .auth-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .auth-input-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--sb-ink-light);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-input {
+    width: 100%;
+    height: 46px;
+    padding: 0 14px 0 42px;
+    border: 1.5px solid var(--sb-border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--sb-ink);
+    background: #FFFFFF;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .auth-input:focus {
+    border-color: var(--sb-teal-700);
+    box-shadow: 0 0 0 4px rgba(15, 110, 86, 0.12);
+  }
+
+  .auth-input::placeholder {
+    color: #9CA3AF;
+  }
+
+  .auth-input-toggle {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    color: var(--sb-ink-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: color 0.2s;
+  }
+  .auth-input-toggle:hover {
+    color: var(--sb-ink);
+  }
+
+  .auth-row-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+
+  .auth-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--sb-ink-muted);
+    user-select: none;
+  }
+
+  .auth-checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--sb-teal-700);
+    cursor: pointer;
+    margin: 0;
+  }
+
+  .auth-forgot-link {
+    color: var(--sb-teal-700);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .auth-forgot-link:hover {
+    color: var(--sb-teal-900);
+    text-decoration: underline;
+  }
+
+  /* Submit Button */
+  .auth-submit-btn {
+    width: 100%;
+    height: 48px;
+    background: linear-gradient(135deg, var(--sb-teal-700) 0%, var(--sb-teal-800) 100%);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(15, 110, 86, 0.25);
+    transition: all 0.2s ease;
+  }
+
+  .auth-submit-btn:hover {
+    background: linear-gradient(135deg, var(--sb-teal-600) 0%, var(--sb-teal-700) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(15, 110, 86, 0.35);
+  }
+
+  .auth-submit-btn:active {
+    transform: translateY(0);
+  }
+
+  .auth-card-footer {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--sb-ink-light);
+    border-top: 1px solid var(--sb-border);
+    padding-top: 20px;
+  }
+
+  .auth-card-footer a {
+    color: var(--sb-teal-700);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .auth-card-footer a:hover {
+    text-decoration: underline;
+  }
+
+  .auth-legal-note {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #9CA3AF;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  .auth-legal-note a {
+    color: var(--sb-ink-muted);
+    text-decoration: underline;
+  }
+  .auth-legal-note a:hover {
+    color: var(--sb-teal-700);
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <!-- Logo -->
-        <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-teal-600 rounded-2xl flex items-center justify-center">
-                <i class="fas fa-bolt text-white text-3xl"></i>
-            </div>
-            <h2 class="mt-6 text-3xl font-bold text-teal-900">SmartBiz AI</h2>
-            <p class="mt-2 text-sm text-gray-600">Run your business smarter</p>
+<div class="auth-viewport">
+  <div class="auth-container">
+    
+    <!-- Left Column: Branding Showcase -->
+    <div class="auth-brand-side">
+      <a href="{% url 'home' %}" class="auth-brand-badge">
+        <div class="auth-brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="#E1F5EE" stroke="#E1F5EE" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
         </div>
-        
-        <!-- Login Form -->
-        <div class="card">
-            <form method="POST" class="space-y-6">
-                {% csrf_token %}
-                
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
-                    <div class="mt-1 relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-envelope text-gray-400"></i>
-                        </div>
-                        <input type="email" name="email" id="email" required 
-                               class="input-field pl-10"
-                               placeholder="smartbiz@gmail.com">
-                    </div>
-                </div>
-                
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                    <div class="mt-1 relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-lock text-gray-400"></i>
-                        </div>
-                        <input type="password" name="password" id="password" required 
-                               class="input-field pl-10"
-                               placeholder="••••••••">
-                           <p class="mt-1 text-xs text-gray-500">Password must be at least 8 characters</p>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <input type="checkbox" name="remember" id="remember" 
-                               class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded">
-                        <label for="remember" class="ml-2 block text-sm text-gray-700">Remember me</label>
-                    </div>
-                    
-                    <div class="text-sm">
-                        <a href="{% url 'accounts:password_reset' %}" class="text-teal-600 hover:text-teal-500">
-                            Forgot password?
-                        </a>
-                    </div>
-                </div>
-                
-                <button type="submit" class="w-full btn-primary py-3 text-base font-medium">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Sign in
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600">
-                    Don't have an account? 
-                    <a href="{% url 'accounts:register' %}" class="text-teal-600 hover:text-teal-500 font-medium">
-                        Register now
-                    </a>
-                </p>
-            </div>
+        <span class="auth-brand-name">SmartBiz AI</span>
+      </a>
+
+      <h1 class="auth-brand-title">Run your shop with intelligent retail AI.</h1>
+      <p class="auth-brand-desc">
+        Sign in to manage sales, track inventory, catch unexpected costs early, and unlock instant AI business forecasts.
+      </p>
+
+      <!-- Key Value Features -->
+      <div class="auth-features-list">
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <h4>Live Financial Analytics</h4>
+            <p>Real-time revenue, gross margin, and expense tracking in one place.</p>
+          </div>
         </div>
-        
-        <!-- Features -->
-        <div class="grid grid-cols-3 gap-4 text-center text-sm text-gray-600">
-            <div>
-                <i class="fas fa-chart-line text-teal-600 text-xl"></i>
-                <p class="mt-1">Analytics</p>
-            </div>
-            <div>
-                <i class="fas fa-brain text-teal-600 text-xl"></i>
-                <p class="mt-1">AI Insights</p>
-            </div>
-            <div>
-                <i class="fas fa-shield-alt text-teal-600 text-xl"></i>
-                <p class="mt-1">Secure</p>
-            </div>
+
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M12 2L7 7M12 2l5 5"></path>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <h4>Early Anomaly Detection</h4>
+            <p>Smart alerts warn you about low stock and unusual expense spikes.</p>
+          </div>
         </div>
+
+        <div class="auth-feature-item">
+          <div class="auth-feature-icon-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <div class="auth-feature-text">
+            <h4>Secure Multi-Role Access</h4>
+            <p>Separated permissions for Business Owners, Managers, and Staff.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Social Proof Badge -->
+      <div class="auth-trust-pill">
+        <div class="auth-trust-avatars">
+          <div class="auth-avatar-circle">K</div>
+          <div class="auth-avatar-circle">J</div>
+          <div class="auth-avatar-circle">S</div>
+        </div>
+        <span class="auth-trust-label">Trusted by <strong>500+ businesses</strong> across Kenya</span>
+      </div>
     </div>
+
+    <!-- Right Column: Login Card -->
+    <div class="auth-card-panel">
+      <!-- Tabs Switcher -->
+      <div class="auth-tabs">
+        <a href="{% url 'accounts:login' %}" class="auth-tab-btn active">Sign In</a>
+        <a href="{% url 'accounts:register' %}" class="auth-tab-btn">Register</a>
+      </div>
+
+      <div class="auth-card-header">
+        <h2>Welcome back</h2>
+        <p>Enter your email and password to access your account</p>
+      </div>
+
+      <!-- Form Errors / Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="auth-alert {% if message.tags == 'error' %}auth-alert-error{% else %}auth-alert-success{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0; margin-top:2px;">
+              {% if message.tags == 'error' %}
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              {% else %}
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              {% endif %}
+            </svg>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="POST" action="{% url 'accounts:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="auth-form" id="loginForm">
+        {% csrf_token %}
+
+        <!-- Email Field -->
+        <div class="auth-field-group">
+          <label for="id_email" class="auth-label">Email Address</label>
+          <div class="auth-input-wrapper">
+            <span class="auth-input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+              </svg>
+            </span>
+            <input 
+              type="email" 
+              name="email" 
+              id="id_email" 
+              class="auth-input" 
+              placeholder="you@business.com" 
+              value="{{ form.email.value|default:'' }}" 
+              required 
+              autocomplete="email"
+              autofocus
+            >
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="auth-field-group">
+          <label for="id_password" class="auth-label">Password</label>
+          <div class="auth-input-wrapper">
+            <span class="auth-input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input 
+              type="password" 
+              name="password" 
+              id="id_password" 
+              class="auth-input" 
+              placeholder="••••••••" 
+              required 
+              autocomplete="current-password"
+            >
+            <button type="button" class="auth-input-toggle" id="togglePasswordBtn" aria-label="Toggle password visibility">
+              <!-- Eye Icon -->
+              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <!-- Eye Slash Icon (Hidden by default) -->
+              <svg id="eyeSlashIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Options: Remember Me & Forgot Password -->
+        <div class="auth-row-options">
+          <label class="auth-checkbox-label">
+            <input type="checkbox" name="remember" id="id_remember">
+            <span>Remember me</span>
+          </label>
+          <a href="{% url 'accounts:password_reset' %}" class="auth-forgot-link">Forgot password?</a>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="auth-submit-btn" id="submitBtn">
+          <span>Sign In</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Card Switcher Footer -->
+      <div class="auth-card-footer">
+        Don't have an account? <a href="{% url 'accounts:register' %}">Create account</a>
+      </div>
+
+      <!-- Legal Links -->
+      <div class="auth-legal-note">
+        By continuing, you agree to our 
+        <a href="{% url 'terms_conditions' %}">Terms &amp; Conditions</a> and 
+        <a href="{% url 'privacy_policy' %}">Privacy Policy</a>.
+      </div>
+    </div>
+
+  </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    // Password show/hide toggle
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('id_password');
+    const eyeIcon = document.getElementById('eyeIcon');
+    const eyeSlashIcon = document.getElementById('eyeSlashIcon');
+
+    if (toggleBtn && passwordInput) {
+      toggleBtn.addEventListener('click', function() {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        eyeIcon.style.display = isPassword ? 'none' : 'block';
+        eyeSlashIcon.style.display = isPassword ? 'block' : 'none';
+      });
+    }
+
+    // Button loading animation state
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    if (form && submitBtn) {
+      form.addEventListener('submit', function() {
+        submitBtn.style.opacity = '0.85';
+        submitBtn.style.pointerEvents = 'none';
+        submitBtn.innerHTML = '<span>Signing in...</span>';
+      });
+    }
+  })();
+</script>
 {% endblock %}

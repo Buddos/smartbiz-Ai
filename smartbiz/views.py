@@ -15,6 +15,17 @@ def onboarding(request):
     return render(request, "onboarding.html")
 
 
+def privacy_policy(request):
+    """Privacy Policy page."""
+    return render(request, "privacy_policy.html")
+
+
+def terms_conditions(request):
+    """Terms and Conditions page."""
+    return render(request, "terms_conditions.html")
+
+
+
 def custom_404(request, exception):
     """Custom 404 error page."""
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
