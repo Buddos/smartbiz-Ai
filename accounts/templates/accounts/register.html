@@ -36,6 +36,7 @@
     width: 100%;
     margin: 0;
     padding: 24px 0;
+    position: relative;
     background-color: var(--sb-bg);
     background-image: 
       radial-gradient(at 0% 0%, rgba(225, 245, 238, 0.7) 0px, transparent 50%),
@@ -54,6 +55,43 @@
     box-sizing: border-box;
   }
 
+  /* Back to Home Button */
+  .auth-home-btn {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: #FFFFFF;
+    border: 1px solid var(--sb-border);
+    border-radius: 999px;
+    color: var(--sb-ink-muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+    z-index: 40;
+  }
+
+  .auth-home-btn:hover {
+    color: var(--sb-teal-900);
+    border-color: var(--sb-teal-700);
+    background: var(--sb-mint-50);
+    transform: translateX(-3px);
+    box-shadow: 0 4px 10px rgba(15, 110, 86, 0.12);
+  }
+
+  .auth-home-btn svg.home-arrow {
+    transition: transform 0.2s ease;
+  }
+
+  .auth-home-btn:hover svg.home-arrow {
+    transform: translateX(-2px);
+  }
+
   .auth-container {
     width: 100%;
     max-width: 1140px;
@@ -66,10 +104,18 @@
   }
 
   @media (max-width: 960px) {
+    .auth-home-btn {
+      top: 14px;
+      left: 14px;
+      padding: 7px 14px;
+      font-size: 12px;
+    }
+
     .auth-container {
       grid-template-columns: 1fr;
       max-width: 540px;
       gap: 28px;
+      margin: 48px auto 16px;
       padding: 0 16px;
     }
   }
@@ -527,6 +573,19 @@
 
 {% block content %}
 <div class="auth-viewport">
+  <!-- Back to Home Arrow -->
+  <a href="{% url 'home' %}" class="auth-home-btn" title="Back to Home">
+    <svg class="home-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.85;">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </svg>
+    <span>Home</span>
+  </a>
+
   <div class="auth-container">
     
     <!-- Left Column: Branding Showcase -->

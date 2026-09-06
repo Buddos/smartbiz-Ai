@@ -1,4 +1,6 @@
 import os
+import shutil
+import urllib.parse
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,12 +87,48 @@ TEMPLATES = [
 WSGI_APPLICATION = "smartbiz.wsgi.application"
 ASGI_APPLICATION = "smartbiz.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+database_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+
+if database_url:
+    url = urllib.parse.urlparse(database_url)
+    query_params = urllib.parse.parse_qs(url.query)
+    options = {}
+    if "sslmode" in query_params:
+        options["sslmode"] = query_params["sslmode"][0]
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": url.path.lstrip("/"),
+            "USER": url.username or "",
+            "PASSWORD": url.password or "",
+            "HOST": url.hostname or "",
+            "PORT": str(url.port or 5432),
+            "OPTIONS": options,
+        }
     }
-}
+else:
+    # SQLite configuration:
+    # On Vercel serverless functions, the deployment directory (/var/task) is read-only.
+    # SQLite needs a writable location (/tmp) to open connections and write lock/journal files.
+    sqlite_db_path = BASE_DIR / "db.sqlite3"
+    is_vercel = bool(os.environ.get("VERCEL")) or str(BASE_DIR).startswith("/var/task")
+
+    if is_vercel:
+        tmp_db_path = Path("/tmp/db.sqlite3")
+        if sqlite_db_path.exists() and not tmp_db_path.exists():
+            try:
+                shutil.copy2(sqlite_db_path, tmp_db_path)
+            except Exception:
+                pass
+        sqlite_db_path = tmp_db_path
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": sqlite_db_path,
+        }
+    }
+
 
 AUTH_USER_MODEL = "accounts.User"
 
