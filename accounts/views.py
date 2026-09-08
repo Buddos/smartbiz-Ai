@@ -4,10 +4,9 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.http import JsonResponse
-from django.core.mail import send_mail
 from django.urls import reverse
-from django.utils.encoding import force_bytes, force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Q
@@ -35,22 +34,10 @@ def registration_view(request):
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            user.is_active = False
-            user.is_email_verified = False
+            user.is_active = True
+            user.is_email_verified = True
             user.save(update_fields=['is_active', 'is_email_verified'])
-
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            verification_url = request.build_absolute_uri(
-                reverse('accounts:verify_email', kwargs={'uidb64': uid, 'token': token})
-            )
-            send_mail(
-                'Verify your SmartBiz AI account',
-                f'Open this link to verify your account:\n\n{verification_url}',
-                None,
-                [user.email],
-            )
-            messages.success(request, 'Registration successful. Check your email to verify your account before signing in.')
+            messages.success(request, 'Registration successful. You can now sign in.')
             return redirect('accounts:login')
     else:
         form = UserRegistrationForm()
@@ -176,6 +163,26 @@ def profile_view(request):
     })
 
 @login_required
+def settings_view(request):
+    """View and update personal application settings."""
+    user = request.user
+    if request.method == 'POST':
+        preferences = dict(user.preferences or {})
+        preferences.update({
+            'email_notifications': request.POST.get('email_notifications') == 'on',
+            'sms_notifications': request.POST.get('sms_notifications') == 'on',
+            'compact_navigation': request.POST.get('compact_navigation') == 'on',
+        })
+        user.preferences = preferences
+        user.save(update_fields=['preferences', 'updated_at'])
+        messages.success(request, 'Your settings were saved successfully.')
+        return redirect('accounts:settings')
+    return render(request, 'accounts/settings.html', {
+        'preferences': user.preferences or {},
+        'title': 'Settings',
+    })
+
+@login_required
 @role_required(['OWNER', 'ADMIN', 'SUPER_ADMIN'])
 def user_list_view(request):
     """List all users for a business."""
@@ -212,8 +219,12 @@ def user_list_view(request):
 @role_required(['OWNER', 'ADMIN', 'SUPER_ADMIN'])
 def user_create_view(request):
     """Create a new user."""
-    is_superuser = request.user.is_superuser
-    allowed_roles = ['ADMIN'] if is_superuser else ['MANAGER', 'STAFF']
+    is_system_admin = request.user.is_superuser or request.user.role == 'SUPER_ADMIN'
+    allowed_roles = (
+        [role for role, _ in User.ROLE_CHOICES]
+        if is_system_admin
+        else ['MANAGER', 'STAFF', 'ACCOUNTANT']
+    )
     if request.method == 'POST':
         form = UserRegistrationForm(
             request.POST,
@@ -223,7 +234,7 @@ def user_create_view(request):
         )
         if form.is_valid():
             user = form.save()
-            user.business = None if is_superuser else request.user.business
+            user.business = None if is_system_admin else request.user.business
             user.save()
             
             UserActivity.objects.create(
@@ -251,8 +262,8 @@ def user_update_view(request, user_id):
     user = get_object_or_404(User, id=user_id)
     
     # Check permissions
-    is_superuser = request.user.is_superuser
-    if not is_superuser:
+    is_system_admin = request.user.is_superuser or request.user.role == 'SUPER_ADMIN'
+    if not is_system_admin:
         if user.business != request.user.business:
             messages.error(request, 'You do not have permission to edit this user.')
             return redirect('accounts:users_list')
@@ -262,7 +273,7 @@ def user_update_view(request, user_id):
             request.POST,
             request.FILES,
             instance=user,
-            allowed_roles=None if is_superuser else ['MANAGER', 'STAFF'],
+            allowed_roles=None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT'],
         )
         if form.is_valid():
             changes = {field: getattr(user, field) for field in ['email', 'role']}
@@ -284,7 +295,7 @@ def user_update_view(request, user_id):
     else:
         form = UserUpdateForm(
             instance=user,
-            allowed_roles=None if is_superuser else ['MANAGER', 'STAFF'],
+            allowed_roles=None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT'],
         )
     
     return render(request, 'accounts/user_update.html', {
@@ -304,7 +315,7 @@ def user_delete_view(request, user_id):
         return redirect('accounts:users_list')
     
     # Check permissions
-    if request.user.role != 'SUPER_ADMIN':
+    if request.user.role != 'SUPER_ADMIN' and not request.user.is_superuser:
         if user.business != request.user.business:
             messages.error(request, 'You do not have permission to delete this user.')
             return redirect('accounts:users_list')

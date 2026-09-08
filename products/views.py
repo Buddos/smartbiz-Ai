@@ -14,12 +14,13 @@ import json
 from .models import Product, Category, ProductVariant, ProductImage
 from .forms import ProductForm, CategoryForm, ProductSearchForm, ProductBulkUploadForm
 from accounts.models import UserActivity
-from accounts.decorators import business_required, role_required
+from accounts.decorators import business_required, permission_required, role_required
 
 # === Category Views ===
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def category_list_view(request):
     """List all product categories."""
     categories = Category.objects.filter(
@@ -34,6 +35,7 @@ def category_list_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def category_create_view(request):
     """Create a new category."""
     if request.method == 'POST':
@@ -66,6 +68,7 @@ def category_create_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def category_update_view(request, category_id):
     """Update a category."""
     category = get_object_or_404(Category, id=category_id, business=request.user.business)
@@ -88,6 +91,7 @@ def category_update_view(request, category_id):
 @login_required
 @business_required
 @require_POST
+@permission_required('manage_products')
 def category_delete_view(request, category_id):
     """Delete a category."""
     category = get_object_or_404(Category, id=category_id, business=request.user.business)
@@ -105,6 +109,7 @@ def category_delete_view(request, category_id):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_list_view(request):
     """List all products with search and filters."""
     business = request.user.business
@@ -171,6 +176,7 @@ def product_list_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_create_view(request):
     """Create a new product."""
     if request.method == 'POST':
@@ -207,6 +213,7 @@ def product_create_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_detail_view(request, product_id):
     """View product details."""
     product = get_object_or_404(Product, id=product_id, business=request.user.business)
@@ -229,6 +236,7 @@ def product_detail_view(request, product_id):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_update_view(request, product_id):
     """Update a product."""
     product = get_object_or_404(Product, id=product_id, business=request.user.business)
@@ -263,6 +271,7 @@ def product_update_view(request, product_id):
 @login_required
 @business_required
 @require_POST
+@permission_required('manage_products')
 def product_delete_view(request, product_id):
     """Delete a product."""
     product = get_object_or_404(Product, id=product_id, business=request.user.business)
@@ -283,6 +292,7 @@ def product_delete_view(request, product_id):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_bulk_upload_view(request):
     """Bulk upload products via CSV."""
     if request.method == 'POST':
@@ -360,6 +370,7 @@ def product_bulk_upload_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def product_export_view(request):
     """Export products to CSV."""
     products = Product.objects.filter(business=request.user.business)
@@ -395,6 +406,7 @@ def product_export_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def get_product_by_barcode(request):
     """Get product details by barcode (for POS)."""
     barcode = request.GET.get('barcode')
@@ -420,6 +432,7 @@ def get_product_by_barcode(request):
 
 @login_required
 @business_required
+@permission_required('manage_products')
 def update_stock(request):
     """Update product stock via AJAX."""
     if request.method != 'POST':

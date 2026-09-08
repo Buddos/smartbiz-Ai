@@ -10,6 +10,7 @@ from .models import Business, BusinessSettings, BusinessBranch
 from .forms import BusinessSetupForm, BusinessUpdateForm, BusinessSettingsForm, BusinessBranchForm
 from accounts.models import UserActivity
 from accounts.decorators import role_required, business_required
+from .capabilities import CAPABILITY_REGISTRY, CATEGORY_PRESETS, capabilities_for_business
 
 @login_required
 def business_setup(request):
@@ -27,6 +28,11 @@ def business_setup(request):
                 # Create the business
                 business = form.save(commit=False)
                 business.created_by = request.user
+                requested_capabilities = request.POST.getlist('capabilities')
+                business.enabled_capabilities = [
+                    capability_id for capability_id in requested_capabilities
+                    if capability_id in CAPABILITY_REGISTRY
+                ] or CATEGORY_PRESETS.get(business.business_type, [])
                 business.save()
                 
                 # Create default settings
@@ -55,6 +61,8 @@ def business_setup(request):
     
     return render(request, 'businesses/setup.html', {
         'form': form,
+        'capability_registry': CAPABILITY_REGISTRY,
+        'category_presets': CATEGORY_PRESETS,
         'title': 'Set Up Your Business'
     })
 
@@ -88,12 +96,19 @@ def business_settings_view(request):
     
     # Get settings
     settings, created = BusinessSettings.objects.get_or_create(business=business)
+    branches = BusinessBranch.objects.filter(business=business).order_by('-is_main', 'name')
+    recent_invoices = business.sales.select_related('customer').order_by('-sale_date')[:8]
+    capabilities = capabilities_for_business(business)
     settings_form = BusinessSettingsForm(instance=settings)
     
     return render(request, 'businesses/settings.html', {
         'business': business,
         'form': form,
         'settings_form': settings_form,
+        'branches': branches,
+        'recent_invoices': recent_invoices,
+        'capabilities': capabilities,
+        'capability_registry': CAPABILITY_REGISTRY,
         'title': 'Business Settings'
     })
 
@@ -110,6 +125,19 @@ def business_settings_save(request):
         form.save()
         return JsonResponse({'success': True, 'message': 'Settings saved successfully!'})
     return JsonResponse({'success': False, 'errors': form.errors})
+
+@login_required
+@business_required
+@require_POST
+def capabilities_save(request):
+    """Enable or disable capability modules without re-onboarding."""
+    business = request.user.business
+    requested = request.POST.getlist('capabilities')
+    valid = set(CAPABILITY_REGISTRY)
+    business.enabled_capabilities = [capability_id for capability_id in requested if capability_id in valid]
+    business.save(update_fields=['enabled_capabilities', 'updated_at'])
+    messages.success(request, 'Your business capabilities and navigation were updated.')
+    return redirect('businesses:settings')
 
 @login_required
 @role_required(['SUPER_ADMIN', 'ADMIN'])

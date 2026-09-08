@@ -5,7 +5,7 @@ from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from accounts.decorators import business_required
+from accounts.decorators import business_required, permission_required
 from accounts.models import UserActivity
 from .forms import ExpenseCategoryForm, ExpenseForm
 from .models import Expense, ExpenseCategory
@@ -29,6 +29,7 @@ def ensure_default_categories(business):
 
 @login_required
 @business_required
+@permission_required('review_expenses')
 def expense_list_view(request):
     business = request.user.business
     ensure_default_categories(business)
@@ -52,6 +53,7 @@ def expense_list_view(request):
 
 @login_required
 @business_required
+@permission_required('submit_expenses')
 def expense_create_view(request):
     ensure_default_categories(request.user.business)
     if request.method == "POST":
@@ -77,6 +79,7 @@ def expense_create_view(request):
 
 @login_required
 @business_required
+@permission_required('submit_expenses')
 def expense_update_view(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, business=request.user.business)
     if request.method == "POST":
@@ -95,6 +98,7 @@ def expense_update_view(request, expense_id):
 @login_required
 @business_required
 @require_POST
+@permission_required('approve_expenses')
 def expense_delete_view(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, business=request.user.business)
     expense.delete()
@@ -104,6 +108,7 @@ def expense_delete_view(request, expense_id):
 
 @login_required
 @business_required
+@permission_required('approve_expenses')
 def category_create_view(request):
     if request.method == "POST":
         form = ExpenseCategoryForm(request.POST)

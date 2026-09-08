@@ -32,3 +32,18 @@ def business_required(view_func):
         
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def permission_required(permission):
+    """Restrict a view to users granted the named business capability."""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('accounts:login')
+            if not request.user.has_permission(permission):
+                messages.error(request, 'You do not have permission to access this page.')
+                return redirect('dashboard')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator

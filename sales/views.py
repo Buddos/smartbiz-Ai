@@ -1,7 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.core.mail import EmailMessage
+from django.http import HttpResponse
+from io import BytesIO
+from xml.sax.saxutils import escape
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
 from django.db.models import Q, Sum, Count, Avg
@@ -16,12 +27,13 @@ from .forms import SaleForm, SaleItemFormSet, PaymentForm, ReturnForm, SaleSearc
 from products.models import Product
 from customers.models import Customer
 from accounts.models import UserActivity
-from accounts.decorators import business_required, role_required
+from accounts.decorators import business_required, permission_required, role_required
 
 # === Sale Views ===
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def sale_list_view(request):
     """List all sales with search and filters."""
     business = request.user.business
@@ -98,9 +110,11 @@ def sale_list_view(request):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def sale_create_view(request):
     """Create a new sale."""
     business = request.user.business
+    invoice_mode = request.GET.get('mode') == 'invoice' or request.POST.get('mode') == 'invoice'
     
     if request.method == 'POST':
         form = SaleForm(request.POST, business=business)
@@ -139,7 +153,7 @@ def sale_create_view(request):
                     user_agent=request.META.get('HTTP_USER_AGENT', '')
                 )
                 
-                messages.success(request, f'Sale #{sale.sale_number} created successfully!')
+                messages.success(request, f'Invoice #{sale.sale_number} created successfully!' if invoice_mode else f'Sale #{sale.sale_number} created successfully!')
                 return redirect('sales:detail', sale_id=sale.id)
     else:
         form = SaleForm(business=business)
@@ -148,11 +162,13 @@ def sale_create_view(request):
     return render(request, 'sales/form.html', {
         'form': form,
         'formset': formset,
-        'title': 'New Sale',
+        'title': 'Create Invoice' if invoice_mode else 'New Sale',
+        'invoice_mode': invoice_mode,
     })
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def sale_detail_view(request, sale_id):
     """View sale details."""
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
@@ -175,6 +191,116 @@ def sale_detail_view(request, sale_id):
 
 @login_required
 @business_required
+@permission_required('record_sales')
+@require_POST
+def send_invoice_view(request, sale_id):
+    """Email a rendered invoice to the client's saved email address."""
+    sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
+    recipient = sale.customer_email or (sale.customer.email if sale.customer else '')
+    if not recipient:
+        messages.error(request, 'Add a client email before sending this invoice.')
+        return redirect('sales:detail', sale_id=sale.id)
+    business_settings = getattr(sale.business, 'settings', None)
+    html = render_to_string('sales/invoice.html', {
+        'sale': sale,
+        'items': sale.sale_items.all(),
+        'business': sale.business,
+        'settings': business_settings,
+    })
+    email = EmailMessage(
+        subject=f'Invoice {sale.sale_number} from {sale.business.name}',
+        body=html,
+        to=[recipient],
+    )
+    email.content_subtype = 'html'
+    email.send(fail_silently=False)
+    messages.success(request, f'Invoice sent to {recipient}.')
+    return redirect('sales:detail', sale_id=sale.id)
+
+@login_required
+@business_required
+@permission_required('record_sales')
+def invoice_pdf_view(request, sale_id):
+    """Download a complete, client-ready PDF invoice."""
+    sale = get_object_or_404(
+        Sale.objects.select_related('business', 'customer'),
+        id=sale_id,
+        business=request.user.business,
+    )
+    business = sale.business
+    invoice_settings = getattr(business, 'settings', None)
+    items = sale.sale_items.all()
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=16 * mm,
+        bottomMargin=16 * mm,
+        title=f'Invoice {sale.sale_number}',
+        author=business.name,
+    )
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='InvoiceSmall', parent=styles['Normal'], fontSize=8.5, leading=11, textColor=colors.HexColor('#5c6c66')))
+    styles.add(ParagraphStyle(name='InvoiceLabel', parent=styles['Normal'], fontSize=8, leading=10, textColor=colors.HexColor('#71817a'), uppercase=True))
+    styles.add(ParagraphStyle(name='InvoiceRight', parent=styles['Normal'], fontSize=9, leading=12, alignment=TA_RIGHT))
+    styles.add(ParagraphStyle(name='InvoiceTotal', parent=styles['Normal'], fontSize=11, leading=14, fontName='Helvetica-Bold'))
+    story = []
+
+    business_lines = [Paragraph('<b><font color="#0f6e56" size="18">SmartBiz AI</font></b>', styles['Normal']), Paragraph(f'<b><font color="#17211e" size="16">{escape(business.name)}</font></b>', styles['Normal'])]
+    if business.address or business.city:
+        business_lines.append(Paragraph(f'{escape(business.address or "")}{", " if business.address and business.city else ""}{escape(business.city or "")}', styles['InvoiceSmall']))
+    business_lines.append(Paragraph(f'{escape(business.phone_number or "")} {"·" if business.phone_number and business.email else ""} {escape(business.email or "")}', styles['InvoiceSmall']))
+    if business.logo and business.logo.name:
+        try:
+            logo = Image(business.logo.path, width=16 * mm, height=16 * mm)
+            logo.hAlign = 'LEFT'
+            business_lines.insert(0, logo)
+        except (OSError, AttributeError):
+            pass
+    invoice_lines = [Paragraph('<font size="25">INVOICE</font>', styles['Normal']), Paragraph(f'{sale.sale_number}', styles['InvoiceSmall']), Paragraph(f'Sale date: {sale.sale_date.strftime("%d/%m/%Y")}', styles['InvoiceSmall']), Paragraph(f'Printed: {timezone.localtime().strftime("%d/%m/%Y %H:%M")}', styles['InvoiceSmall'])]
+    header = Table([[business_lines, invoice_lines]], colWidths=[115 * mm, 55 * mm])
+    header.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('ALIGN', (1, 0), (1, 0), 'RIGHT'), ('BOTTOMPADDING', (0, 0), (-1, -1), 10), ('LINEBELOW', (0, 0), (-1, 0), 0.6, colors.HexColor('#dfe7e3'))]))
+    story.extend([header, Spacer(1, 8 * mm)])
+
+    recipient = sale.customer_name or (sale.customer.name if sale.customer else 'Walk-in Client')
+    recipient_contact = sale.customer_email or (sale.customer.email if sale.customer else '')
+    bill_to = [Paragraph('BILL TO', styles['InvoiceLabel']), Paragraph(f'<b>{escape(recipient)}</b>', styles['Normal']), Paragraph(f'{escape(recipient_contact)}{" · " if recipient_contact and sale.customer_phone else ""}{escape(sale.customer_phone or "")}', styles['InvoiceSmall'])]
+    payment_details = [Paragraph('PAYMENT DETAILS', styles['InvoiceLabel']), Paragraph(f'{escape(invoice_settings.invoice_terms) if invoice_settings and invoice_settings.invoice_terms else "Payment due according to agreed terms."}', styles['InvoiceSmall']), Paragraph(f'Status: {sale.get_payment_status_display()}', styles['InvoiceSmall'])]
+    info_table = Table([[bill_to, payment_details]], colWidths=[85 * mm, 85 * mm])
+    info_table.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#cdd6d1')), ('LINEBEFORE', (1, 0), (1, 0), 0.5, colors.HexColor('#cdd6d1')), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8), ('TOPPADDING', (0, 0), (-1, -1), 8), ('BOTTOMPADDING', (0, 0), (-1, -1), 8)]))
+    story.extend([info_table, Spacer(1, 7 * mm)])
+
+    table_data = [[Paragraph('<b>No</b>', styles['InvoiceSmall']), Paragraph('<b>Description</b>', styles['InvoiceSmall']), Paragraph('<b>Qty</b>', styles['InvoiceSmall']), Paragraph('<b>Unit Price (KSh)</b>', styles['InvoiceSmall']), Paragraph('<b>Amount (KSh)</b>', styles['InvoiceSmall'])]]
+    for item in items:
+        table_data.append([str(len(table_data)), Paragraph(escape(item.product_name), styles['Normal']), str(item.quantity), f'{item.unit_price:,.2f}', f'{item.total:,.2f}'])
+    invoice_table = Table(table_data, colWidths=[12 * mm, 66 * mm, 20 * mm, 35 * mm, 37 * mm], repeatRows=1)
+    invoice_table.setStyle(TableStyle([('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#dfe7e3')), ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f8f6')), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ALIGN', (2, 1), (-1, -1), 'RIGHT'), ('TOPPADDING', (0, 0), (-1, -1), 8), ('BOTTOMPADDING', (0, 0), (-1, -1), 8)]))
+    story.extend([invoice_table, Spacer(1, 7 * mm)])
+
+    totals = [['Subtotal', f'KSh {sale.subtotal:,.2f}'], ['Tax', f'KSh {sale.tax:,.2f}']]
+    if sale.discount:
+        totals.append(['Discount', f'- KSh {sale.discount:,.2f}'])
+    totals.append(['Total Amount Due', f'KSh {sale.total:,.2f}'])
+    totals_table = Table([[Paragraph(label, styles['InvoiceTotal'] if label == 'Total Amount Due' else styles['Normal']), Paragraph(value, styles['InvoiceTotal'] if label == 'Total Amount Due' else styles['Normal'])] for label, value in totals], colWidths=[125 * mm, 45 * mm])
+    totals_table.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'RIGHT'), ('LINEABOVE', (0, -1), (-1, -1), 0.7, colors.HexColor('#9bb8aa')), ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5)]))
+    story.append(totals_table)
+    if invoice_settings and (invoice_settings.invoice_terms or invoice_settings.invoice_footer):
+        notes = [Paragraph('<b>NOTES</b>', styles['InvoiceLabel'])]
+        if invoice_settings.invoice_terms:
+            notes.append(Paragraph(f'<b>Payment terms:</b> {escape(invoice_settings.invoice_terms)}', styles['InvoiceSmall']))
+        if invoice_settings.invoice_footer:
+            notes.append(Paragraph(escape(invoice_settings.invoice_footer), styles['InvoiceSmall']))
+        story.extend([Spacer(1, 10 * mm), Table([[notes]], colWidths=[170 * mm], style=TableStyle([('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#dfe7e3')), ('TOPPADDING', (0, 0), (-1, -1), 8)]))])
+    document.build(story)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{sale.sale_number}.pdf"'
+    return response
+
+@login_required
+@business_required
+@permission_required('record_sales')
 def sale_update_view(request, sale_id):
     """Update a sale."""
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
@@ -225,6 +351,7 @@ def sale_update_view(request, sale_id):
 @login_required
 @business_required
 @require_POST
+@permission_required('record_sales')
 def sale_delete_view(request, sale_id):
     """Delete a sale (only if not paid)."""
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
@@ -250,6 +377,7 @@ def sale_delete_view(request, sale_id):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def payment_create_view(request, sale_id):
     """Process a payment for a sale."""
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
@@ -298,6 +426,7 @@ def payment_create_view(request, sale_id):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def payment_receipt_view(request, payment_id):
     """View and print payment receipt."""
     payment = get_object_or_404(Payment, id=payment_id, business=request.user.business)
@@ -314,6 +443,7 @@ def payment_receipt_view(request, payment_id):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def return_create_view(request, sale_id):
     """Process a return for a sale."""
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
@@ -361,6 +491,7 @@ def return_create_view(request, sale_id):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def get_sale_stats(request):
     """Get sales statistics for dashboard."""
     business = request.user.business
@@ -411,6 +542,7 @@ def get_sale_stats(request):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def get_sale_by_invoice(request):
     """Get sale details by invoice number."""
     invoice = request.GET.get('invoice')
@@ -437,6 +569,7 @@ def get_sale_by_invoice(request):
 
 @login_required
 @business_required
+@permission_required('record_sales')
 def export_sales_csv(request):
     """Export sales to CSV."""
     business = request.user.business

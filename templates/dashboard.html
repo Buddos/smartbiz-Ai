@@ -11,11 +11,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center">
-                        <div class="h-8 w-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-bolt text-white text-sm"></i>
-                        </div>
-                        <span class="ml-2 text-xl font-bold text-primary-700">SmartBiz</span>
+                    <div class="flex-shrink-0 flex items-center min-w-0">
+                        {% if user.business and user.business.logo %}
+                            <img src="{{ user.business.logo.url }}" alt="{{ user.business.name }}" class="h-10 w-10 rounded-lg object-cover">
+                        {% else %}
+                            <img src="{% static 'images/logo.png' %}" alt="Smartbiz" class="h-10 w-10 rounded-lg object-contain">
+                        {% endif %}
+                        <span class="ml-2 text-xl font-bold text-primary-700 truncate">{% if user.business %}{{ user.business.name }}{% else %}SmartBiz{% endif %}</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
@@ -27,10 +29,17 @@
                             <p class="text-sm font-medium text-gray-700">{{ user.full_name }}</p>
                             <p class="text-xs text-gray-500">{{ user.get_role_display }}</p>
                         </div>
-                        <a href="{% url 'accounts:profile' %}" class="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center hover:bg-primary-200 transition-colors">
-                            <span class="text-sm font-medium text-primary-600">
-                                {{ user.first_name|first }}{{ user.last_name|first }}
-                            </span>
+                        <a href="{% url 'accounts:profile' %}" class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden hover:bg-primary-200 transition-colors">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}" class="h-full w-full object-cover" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                <span class="hidden text-sm font-medium text-primary-600">
+                                    {{ user.first_name|first }}{{ user.last_name|first }}
+                                </span>
+                            {% else %}
+                                <span class="text-sm font-medium text-primary-600">
+                                    {{ user.first_name|first }}{{ user.last_name|first }}
+                                </span>
+                            {% endif %}
                         </a>
                     </div>
                 </div>

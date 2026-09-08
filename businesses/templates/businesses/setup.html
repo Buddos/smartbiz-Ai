@@ -84,6 +84,16 @@
                         </select>
                     </div>
                 </div>
+
+                <div class="rounded-lg border border-primary-100 bg-primary-50 p-4">
+                    <h3 class="font-semibold text-primary-700"><i class="fas fa-puzzle-piece mr-2"></i>Choose your starting tools</h3>
+                    <p class="mt-1 mb-3 text-sm text-gray-600">We will use these choices to build your dashboard. You can change them later in Settings.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {% for capability_id, capability in capability_registry.items %}
+                        <label class="flex items-start gap-2 rounded bg-white p-2 text-sm"><input type="checkbox" name="capabilities" value="{{ capability_id }}" class="mt-1 capability-choice" data-capability="{{ capability_id }}"><span><strong>{{ capability.label }}</strong><small class="block text-xs text-gray-500">{{ capability.description }}</small></span></label>
+                        {% endfor %}
+                    </div>
+                </div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- Email -->
@@ -211,4 +221,20 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ category_presets|json_script:"category-presets" }}
+<script>
+    const capabilityPresets = JSON.parse(document.getElementById('category-presets').textContent);
+    const businessTypeInput = document.getElementById('business_type');
+    function applyCapabilityPreset() {
+        const preset = capabilityPresets[businessTypeInput.value] || [];
+        document.querySelectorAll('.capability-choice').forEach(choice => {
+            choice.checked = preset.includes(choice.dataset.capability);
+        });
+    }
+    businessTypeInput?.addEventListener('change', applyCapabilityPreset);
+    if (businessTypeInput) applyCapabilityPreset();
+</script>
 {% endblock %}

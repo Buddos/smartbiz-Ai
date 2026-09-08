@@ -21,11 +21,13 @@ from .models import DashboardWidget, BusinessMetric, BusinessInsight, ExportLog
 from accounts.decorators import business_required, role_required
 from accounts.models import UserActivity
 from ai_engine.services import run_intelligence_pipeline
+from businesses.capabilities import navigation_for_business
 
 # === Main Dashboard ===
 
 @login_required
 @business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def dashboard_view(request):
     """Main business dashboard."""
     business = request.user.business
@@ -37,6 +39,7 @@ def dashboard_view(request):
     # Get dashboard data
     context = get_dashboard_data(business, start_date, end_date)
     context['title'] = 'Dashboard'
+    context['generated_navigation'] = navigation_for_business(business)
     
     return render(request, 'analytics/dashboard.html', context)
 
@@ -191,6 +194,7 @@ def get_dashboard_data(business, start_date, end_date):
 
 @login_required
 @business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def sales_analytics_view(request):
     """Sales analytics page."""
     business = request.user.business
@@ -320,6 +324,7 @@ def sales_analytics_view(request):
 
 @login_required
 @business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def product_analytics_view(request):
     """Product performance analytics."""
     business = request.user.business
@@ -397,6 +402,7 @@ def product_analytics_view(request):
 
 @login_required
 @business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def customer_analytics_view(request):
     """Customer analytics page."""
     business = request.user.business
@@ -477,6 +483,7 @@ def customer_analytics_view(request):
 
 @login_required
 @business_required
+@role_required(["OWNER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
 def financial_analytics_view(request):
     """Financial analytics page."""
     business = request.user.business
@@ -639,6 +646,7 @@ def calculate_growth(business, start_date, end_date, metric_type):
 
 @login_required
 @business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def generate_insights_view(request):
     """Generate AI-powered business insights."""
     business = request.user.business

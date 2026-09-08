@@ -1,73 +1,65 @@
 {% extends 'base.html' %}
-
 {% block title %}Business Administration - SmartBiz AI{% endblock %}
-
 {% block extra_css %}
 <style>
-    .admin-shell { min-height: 100vh; background: #f7f9fc; }
-    .admin-header { background: #fff; border-bottom: 1px solid #f3f4f6; }
-    .admin-card { background: #fff; border: 1px solid #f3f4f6; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
-    .admin-card:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,.1); }
-    .admin-stat { color: #04342c; font-size: 1.75rem; font-weight: 800; }
-    .admin-label { color: #6b7280; font-size: .8rem; }
-    .admin-action { display: flex; align-items: center; gap: .75rem; padding: .9rem; border: 1px solid #f3f4f6; border-radius: 8px; color: #04342c; text-decoration: none; }
-    .admin-action:hover { background: #e1f5ee; color: #0f6e56; }
-    .admin-action i { width: 2rem; color: #0f6e56; text-align: center; }
+.admin-shell { min-height:100vh; background:#f7f9fc; }
+.admin-layout { display:flex; min-height:calc(100vh - 1px); }
+.admin-sidebar { width:220px; flex:0 0 220px; padding:1.25rem .75rem; background:#fff; border-right:1px solid #e5e7eb; }
+.admin-back { display:inline-flex; align-items:center; gap:.5rem; margin:0 .375rem 1.25rem; color:#6b7280; font-size:.8rem; text-decoration:none; }
+.admin-back:hover { color:#0f6e56; }
+.admin-sidebar-label { margin:0 .375rem .15rem; color:#9ca3af; font-size:.7rem; }
+.admin-sidebar-title { margin:0 .375rem 1.1rem; color:#04342c; font-size:1rem; font-weight:700; }
+.admin-nav-link { display:flex; align-items:center; gap:.65rem; width:100%; margin-bottom:2px; padding:.65rem .6rem; border-radius:8px; color:#6b7280; font-size:.82rem; text-decoration:none; }
+.admin-nav-link:hover, .admin-nav-link.active { background:#e1f5ee; color:#0f6e56; }
+.admin-nav-link i { width:1rem; text-align:center; }
+.admin-sidebar-spacer { min-height:1.5rem; }
+.admin-content { flex:1; min-width:0; padding:1.5rem 1.75rem; }
+.admin-content-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; }
+.admin-content-header h1 { margin:0; color:#17211e; font-size:1.25rem; font-weight:700; }
+.admin-content-header p { margin:.25rem 0 0; color:#6b7280; font-size:.8rem; }
+.admin-card { padding:1.1rem; background:#fff; border:1px solid #f0f1f3; border-radius:12px; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+.admin-card-title { margin:0 0 .75rem; color:#17211e; font-size:.9rem; font-weight:700; }
+.admin-stat-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.75rem; }
+.admin-stat { color:#04342c; font-size:1.35rem; font-weight:700; }
+.admin-stat-label { margin-top:.15rem; color:#6b7280; font-size:.7rem; }
+.admin-success { display:flex; align-items:center; gap:.65rem; margin:1.25rem 0; padding:1rem 1.1rem; border-radius:12px; background:#eaf3de; color:#3b6d11; font-size:.82rem; }
+.admin-success i { flex-shrink:0; }
+.admin-grid-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
+.admin-row { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.55rem 0; border-bottom:1px solid #f0f1f3; }
+.admin-row:last-child { border-bottom:0; }
+.admin-row-name { margin:0; color:#17211e; font-size:.8rem; font-weight:600; }
+.admin-row-meta { margin:.1rem 0 0; color:#6b7280; font-size:.7rem; }
+.admin-status { color:#3b6d11; font-size:.7rem; white-space:nowrap; }
+.admin-link { color:#0f6e56; font-size:.75rem; text-decoration:none; }
+.admin-link:hover { text-decoration:underline; }
+@media (max-width:900px) { .admin-sidebar { width:190px; flex-basis:190px; } .admin-content { padding:1.25rem; } .admin-stat-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:640px) { .admin-layout { display:block; } .admin-sidebar { width:100%; padding:1rem; border-right:0; border-bottom:1px solid #e5e7eb; } .admin-sidebar-spacer { display:none; } .admin-nav-link { display:inline-flex; width:auto; margin-right:.25rem; } .admin-content { padding:1rem; } .admin-content-header { display:block; } .admin-content-header p { line-height:1.45; } .admin-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .admin-grid-two { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="admin-shell">
-    <header class="admin-header">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <p class="text-sm text-primary-500 font-medium">{{ business.name }}</p>
-                <h1 class="text-2xl font-bold text-primary-700">Business Administration</h1>
-                <p class="text-sm text-gray-500">Manage your business operations and team.</p>
-            </div>
-            <div class="flex gap-2">
-                <a href="{% url 'dashboard' %}" class="btn-outline text-sm"><i class="fas fa-chart-pie mr-2"></i>Dashboard</a>
-                <a href="{% url 'businesses:settings' %}" class="btn-primary text-sm"><i class="fas fa-cog mr-2"></i>Settings</a>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <section class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-            <div class="admin-card"><div class="admin-stat">{{ team_count }}</div><div class="admin-label">Team members</div></div>
-            <div class="admin-card"><div class="admin-stat">{{ product_count }}</div><div class="admin-label">Active products</div></div>
-            <div class="admin-card"><div class="admin-stat">{{ customer_count }}</div><div class="admin-label">Customers</div></div>
-            <div class="admin-card"><div class="admin-stat">{{ sales_count }}</div><div class="admin-label">Sales recorded</div></div>
-            <div class="admin-card"><div class="admin-stat text-warning-600">{{ open_alert_count }}</div><div class="admin-label">Open alerts</div></div>
-            <div class="admin-card"><div class="admin-stat text-insight-600">{{ open_insight_count }}</div><div class="admin-label">Unread insights</div></div>
-        </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div class="admin-card lg:col-span-2">
-                <h2 class="text-lg font-semibold text-primary-700 mb-4">Management shortcuts</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <a class="admin-action" href="{% url 'accounts:users_list' %}"><i class="fas fa-users-cog"></i><span><strong>Team access</strong><br><small class="text-gray-500">Manage staff and roles</small></span></a>
-                    <a class="admin-action" href="{% url 'products:list' %}"><i class="fas fa-boxes"></i><span><strong>Products</strong><br><small class="text-gray-500">Catalog and stock settings</small></span></a>
-                    <a class="admin-action" href="{% url 'inventory:alerts' %}"><i class="fas fa-bell"></i><span><strong>Inventory alerts</strong><br><small class="text-gray-500">Review stock risks</small></span></a>
-                    <a class="admin-action" href="{% url 'businesses:settings' %}"><i class="fas fa-sliders-h"></i><span><strong>Business settings</strong><br><small class="text-gray-500">Profile and preferences</small></span></a>
-                    <a class="admin-action" href="{% url 'analytics:financial' %}"><i class="fas fa-file-invoice-dollar"></i><span><strong>Financial reports</strong><br><small class="text-gray-500">Revenue and expense trends</small></span></a>
-                    <a class="admin-action" href="{% url 'reports:list' %}"><i class="fas fa-file-alt"></i><span><strong>Reports</strong><br><small class="text-gray-500">Generate business reports</small></span></a>
-                </div>
-            </div>
-            <div class="admin-card">
-                <h2 class="text-lg font-semibold text-primary-700 mb-4">Team members</h2>
-                <div class="space-y-3">
-                    {% for member in team_members %}
-                    <div class="flex items-center justify-between"><div><p class="text-sm font-medium text-gray-800">{{ member.get_full_name|default:member.email }}</p><p class="text-xs text-gray-500">{{ member.get_role_display }}</p></div><span class="text-xs {% if member.is_active %}text-success-600{% else %}text-danger-600{% endif %}">{% if member.is_active %}Active{% else %}Inactive{% endif %}</span></div>
-                    {% empty %}<p class="text-sm text-gray-500">No team members found.</p>{% endfor %}
-                </div>
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="admin-card"><h2 class="text-lg font-semibold text-primary-700 mb-4">Recent sales</h2><div class="space-y-3">{% for sale in recent_sales %}<div class="flex justify-between border-b border-gray-100 pb-2"><span class="text-sm text-gray-700">{{ sale.sale_number }}</span><span class="text-sm font-medium text-primary-700">KSh {{ sale.total|floatformat:0 }}</span></div>{% empty %}<p class="text-sm text-gray-500">No sales recorded yet.</p>{% endfor %}</div></div>
-            <div class="admin-card"><h2 class="text-lg font-semibold text-primary-700 mb-4">Recent activity</h2><div class="space-y-3">{% for item in recent_activity %}<div class="flex justify-between border-b border-gray-100 pb-2"><span class="text-sm text-gray-700">{{ item.action|title }} by {{ item.user.get_full_name|default:item.user.email }}</span><span class="text-xs text-gray-500">{{ item.timestamp|timesince }} ago</span></div>{% empty %}<p class="text-sm text-gray-500">No recent activity.</p>{% endfor %}</div></div>
-        </section>
-    </main>
+<div class="admin-shell"><div class="admin-layout">
+<aside class="admin-sidebar" aria-label="Business administration navigation">
+<a href="{% url 'dashboard' %}" class="admin-back"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Dashboard</span></a>
+<p class="admin-sidebar-label">{{ business.name }}</p><p class="admin-sidebar-title">Administration</p>
+<a href="{% url 'business_admin' %}" class="admin-nav-link active"><i class="fas fa-th-large" aria-hidden="true"></i><span>Overview</span></a>
+<a href="{% url 'accounts:users_list' %}?from=admin" class="admin-nav-link"><i class="fas fa-users" aria-hidden="true"></i><span>Team access</span></a>
+<a href="{% url 'products:list' %}?from=admin" class="admin-nav-link"><i class="fas fa-box" aria-hidden="true"></i><span>Products</span></a>
+<a href="{% url 'inventory:alerts' %}?from=admin" class="admin-nav-link"><i class="fas fa-bell" aria-hidden="true"></i><span>Inventory alerts</span></a>
+<a href="{% url 'businesses:settings' %}?from=admin" class="admin-nav-link"><i class="fas fa-sliders-h" aria-hidden="true"></i><span>Business settings</span></a>
+<a href="{% url 'analytics:financial' %}?from=admin" class="admin-nav-link"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Financial reports</span></a>
+<a href="{% url 'reports:list' %}?from=admin" class="admin-nav-link"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Reports</span></a>
+<div class="admin-sidebar-spacer"></div><a href="{% url 'accounts:settings' %}?from=admin" class="admin-nav-link"><i class="fas fa-cog" aria-hidden="true"></i><span>Settings</span></a>
+</aside>
+<main class="admin-content">
+<div class="admin-content-header"><div><h1>Overview</h1><p>Manage your business operations and team</p></div></div>
+<section class="admin-card" aria-labelledby="glance-title"><h2 id="glance-title" class="admin-card-title">At a glance</h2><div class="admin-stat-grid">
+<div><div class="admin-stat">{{ team_count }}</div><div class="admin-stat-label">Team</div></div><div><div class="admin-stat">{{ product_count }}</div><div class="admin-stat-label">Products</div></div><div><div class="admin-stat">{{ customer_count }}</div><div class="admin-stat-label">Customers</div></div><div><div class="admin-stat">{{ sales_count }}</div><div class="admin-stat-label">Sales</div></div><div><div class="admin-stat text-warning-600">{{ open_alert_count }}</div><div class="admin-stat-label">Alerts</div></div><div><div class="admin-stat text-insight-600">{{ open_insight_count }}</div><div class="admin-stat-label">Insights</div></div>
+</div></section>
+{% if open_alert_count or open_insight_count %}<div class="admin-success" style="background:#faeeda;color:#7c4d0f;"><i class="fas fa-exclamation-circle" aria-hidden="true"></i><span>{{ open_alert_count }} open alert{{ open_alert_count|pluralize }} and {{ open_insight_count }} unread insight{{ open_insight_count|pluralize }} need attention.</span></div>{% else %}<div class="admin-success"><i class="fas fa-check" aria-hidden="true"></i><span>Nothing needs attention right now - no open alerts or unread insights.</span></div>{% endif %}
+<div class="admin-grid-two">
+<section class="admin-card" aria-labelledby="team-title"><div class="flex items-center justify-between mb-2"><h2 id="team-title" class="admin-card-title" style="margin-bottom:0;">Team members</h2><a class="admin-link" href="{% url 'accounts:users_list' %}">Manage</a></div>{% for member in team_members %}<div class="admin-row"><div><p class="admin-row-name">{{ member.get_full_name|default:member.email }}</p><p class="admin-row-meta">{{ member.get_role_display }}</p></div><span class="admin-status">{% if member.is_active %}Active{% else %}Inactive{% endif %}</span></div>{% empty %}<p class="admin-row-meta">No team members found.</p>{% endfor %}</section>
+<section class="admin-card" aria-labelledby="activity-title"><h2 id="activity-title" class="admin-card-title">Recent activity</h2><p class="admin-row-meta" style="margin-bottom:.4rem;">Today</p>{% for item in recent_activity %}<div class="admin-row"><span class="admin-row-name" style="font-weight:500;">{{ item.action|title }} by {{ item.user.get_full_name|default:item.user.email }}</span><span class="admin-row-meta">{{ item.timestamp|timesince }} ago</span></div>{% empty %}<p class="admin-row-meta">No recent activity.</p>{% endfor %}</section>
 </div>
+<section class="admin-card" aria-labelledby="sales-title"><h2 id="sales-title" class="admin-card-title">Recent sales</h2>{% for sale in recent_sales %}<div class="admin-row"><span class="admin-row-name" style="font-weight:500;">{{ sale.sale_number }}</span><span class="admin-row-name">KSh {{ sale.total|floatformat:0 }}</span></div>{% empty %}<p class="admin-row-meta">No sales recorded yet.</p>{% endfor %}</section>
+</main></div></div>
 {% endblock %}

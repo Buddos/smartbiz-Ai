@@ -3,11 +3,19 @@
 
 {% block title %}Business Settings - SmartBiz AI{% endblock %}
 
+{% block extra_css %}
+<style>
+    .settings-panel { display: none; }
+    .settings-panel.is-active { display: block; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Page Header -->
         <div class="mb-8">
+            <a href="{% if request.GET.from == 'admin' %}{% url 'business_admin' %}{% else %}{% url 'dashboard' %}{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>{% if request.GET.from == 'admin' %}Back to Administration{% else %}Back to Dashboard{% endif %}</span></a>
             <h1 class="text-2xl font-bold text-primary-700">Business Settings</h1>
             <p class="text-gray-600">Manage your business information and preferences</p>
         </div>
@@ -17,16 +25,19 @@
             <div class="lg:col-span-1">
                 <div class="card">
                     <div class="space-y-2">
-                        <a href="#general" class="block px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium">
+                        <a href="?section=general{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" data-settings-section="general" class="settings-nav block px-4 py-2 rounded-lg bg-primary-50 text-primary-700 font-medium">
                             <i class="fas fa-building mr-2"></i>General
                         </a>
-                        <a href="#settings" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
-                            <i class="fas fa-cog mr-2"></i>Preferences
+                        <a href="?section=preferences{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" data-settings-section="preferences" class="settings-nav block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-file-invoice mr-2"></i>Invoice Administration
                         </a>
-                        <a href="#branches" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                        <a href="?section=branches{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" data-settings-section="branches" class="settings-nav block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                             <i class="fas fa-store-alt mr-2"></i>Branches
                         </a>
-                        <a href="#subscription" class="block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                        <a href="?section=capabilities{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" data-settings-section="capabilities" class="settings-nav block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-puzzle-piece mr-2"></i>Capabilities
+                        </a>
+                        <a href="?section=subscription{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" data-settings-section="subscription" class="settings-nav block px-4 py-2 rounded-lg hover:bg-gray-50 text-gray-700">
                             <i class="fas fa-crown mr-2"></i>Subscription
                         </a>
                     </div>
@@ -36,7 +47,7 @@
             <!-- Main Content -->
             <div class="lg:col-span-3 space-y-6">
                 <!-- General Settings -->
-                <div id="general" class="card">
+                <div id="general" data-settings-panel="general" class="settings-panel card">
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
                         <i class="fas fa-building text-primary-500 mr-2"></i>General Information
                     </h3>
@@ -44,19 +55,22 @@
                     <form method="POST" enctype="multipart/form-data" class="space-y-4">
                         {% csrf_token %}
                         
-                        <!-- Logo Upload -->
+                        <!-- Business profile photo -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Business Logo</label>
+                            <label for="logo" class="block text-sm font-medium text-gray-700 mb-1">Business Profile Photo</label>
+                            <p class="text-xs text-gray-500 mb-2">This image represents your business and is separate from your personal profile photo.</p>
                             <div class="flex items-center gap-4">
-                                {% if business.logo %}
-                                    <img src="{{ business.logo.url }}" alt="{{ business.name }}" 
-                                         class="h-20 w-20 rounded-lg object-cover">
-                                {% else %}
-                                    <div class="h-20 w-20 rounded-lg bg-primary-100 flex items-center justify-center">
+                                <div id="business-logo-preview" class="h-20 w-20 rounded-lg bg-primary-100 flex items-center justify-center overflow-hidden shrink-0">
+                                    {% if business.logo %}
+                                        <img src="{{ business.logo.url }}" alt="{{ business.name }}" class="h-full w-full object-cover">
+                                    {% else %}
                                         <i class="fas fa-store text-primary-500 text-2xl"></i>
-                                    </div>
-                                {% endif %}
-                                <input type="file" name="logo" id="logo" class="input-field">
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <input type="file" name="logo" id="logo" accept="image/*" class="input-field">
+                                    <p class="mt-1 text-xs text-gray-500">Upload a JPG, PNG, or GIF image.</p>
+                                </div>
                             </div>
                         </div>
                         
@@ -131,10 +145,18 @@
                 </div>
                 
                 <!-- Business Preferences -->
-                <div id="settings" class="card">
+                <div id="settings" data-settings-panel="preferences" class="settings-panel card">
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-cog text-primary-500 mr-2"></i>Preferences
+                        <i class="fas fa-file-invoice text-primary-500 mr-2"></i>Invoice Administration
                     </h3>
+                    <div class="flex flex-wrap gap-3 mb-6">
+                        <a href="{% url 'sales:create' %}?mode=invoice&amp;from=admin" class="btn-primary"><i class="fas fa-file-invoice mr-2"></i>Create Invoice</a>
+                        <a href="{% url 'sales:list' %}?from=admin" class="btn-outline"><i class="fas fa-list mr-2"></i>View All Invoices</a>
+                    </div>
+                    <div class="mb-6 rounded-lg border border-primary-100 bg-primary-50 p-4 text-sm text-primary-800">
+                        <strong>Invoice defaults</strong>
+                        <p class="mt-1">Set the prefix, tax rate, payment terms, and footer used on new client invoices.</p>
+                    </div>
                     
                     <form method="POST" action="{% url 'businesses:settings_save' %}" 
                           id="settingsForm" class="space-y-4">
@@ -199,14 +221,53 @@
                         
                         <div class="flex items-center justify-end">
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save mr-2"></i>Save Preferences
+                                <i class="fas fa-save mr-2"></i>Save Invoice Settings
                             </button>
                         </div>
                     </form>
+                    <div class="mt-8 border-t border-gray-200 pt-5">
+                        <h4 class="font-semibold text-primary-700 mb-3">Recent invoices</h4>
+                        {% for invoice in recent_invoices %}
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 py-3 last:border-0 text-sm">
+                                <div><a href="{% url 'sales:detail' invoice.id %}" class="font-medium text-primary-700 hover:underline">{{ invoice.sale_number }}</a><span class="ml-2 text-gray-500">{{ invoice.customer_name|default:'Walk-in client' }}</span></div>
+                                <span class="font-medium">KSh {{ invoice.total|floatformat:2 }}</span>
+                            </div>
+                        {% empty %}<p class="text-sm text-gray-500">No invoices have been created yet.</p>{% endfor %}
+                    </div>
                 </div>
                 
+                <!-- Branches -->
+                <div id="branches" data-settings-panel="branches" class="settings-panel card">
+                    <div class="flex items-center justify-between gap-4 mb-4">
+                        <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-store-alt text-primary-500 mr-2"></i>Branches</h3>
+                        <a href="{% url 'businesses:branch_create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Add branch</a>
+                    </div>
+                    {% for branch in branches %}
+                        <div class="flex items-center justify-between gap-4 py-3 border-b border-gray-100 last:border-0">
+                            <div><p class="font-medium text-gray-800">{{ branch.name }}{% if branch.is_main %}<span class="ml-2 text-xs text-primary-600">Main</span>{% endif %}</p><p class="text-sm text-gray-500">{{ branch.get_full_address|default:branch.address|default:'No address provided' }}</p></div>
+                            <div class="flex items-center gap-3 text-sm"><a href="{% url 'businesses:branch_update' branch.id %}" class="text-primary-600 hover:text-primary-800">Edit</a>{% if not branch.is_main %}<form method="post" action="{% url 'businesses:branch_delete' branch.id %}">{% csrf_token %}<button type="submit" class="text-danger-600 hover:text-danger-800">Delete</button></form>{% endif %}</div>
+                        </div>
+                    {% empty %}
+                        <p class="text-gray-500">No branches have been added yet.</p>
+                    {% endfor %}
+                </div>
+
+                <div id="capabilities" data-settings-panel="capabilities" class="settings-panel card">
+                    <h3 class="text-lg font-semibold text-primary-700 mb-2"><i class="fas fa-puzzle-piece text-primary-500 mr-2"></i>Capabilities</h3>
+                    <p class="text-sm text-gray-600 mb-5">Choose the tools this business needs. Navigation updates from these selections.</p>
+                    <form method="post" action="{% url 'businesses:capabilities_save' %}" class="space-y-4">
+                        {% csrf_token %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for capability_id, capability in capability_registry.items %}
+                            <label class="flex items-start gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50"><input type="checkbox" name="capabilities" value="{{ capability_id }}" class="mt-1 h-4 w-4 text-primary-500" {% if capability_id in capabilities %}checked{% endif %}><span><strong class="block text-sm text-gray-800">{{ capability.label }}</strong><small class="text-xs text-gray-500">{{ capability.description }}</small></span></label>
+                            {% endfor %}
+                        </div>
+                        <div class="flex justify-end border-t border-gray-200 pt-4"><button type="submit" class="btn-primary"><i class="fas fa-save mr-2"></i>Save Capabilities</button></div>
+                    </form>
+                </div>
+
                 <!-- Subscription -->
-                <div id="subscription" class="card">
+                <div id="subscription" data-settings-panel="subscription" class="settings-panel card">
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
                         <i class="fas fa-crown text-primary-500 mr-2"></i>Subscription
                     </h3>
@@ -246,6 +307,23 @@
 
 {% block extra_js %}
 <script>
+const settingsPanels = document.querySelectorAll('[data-settings-panel]');
+const settingsNavigation = document.querySelectorAll('[data-settings-section]');
+const selectedSection = new URLSearchParams(window.location.search).get('section') || 'general';
+
+function showSettingsSection(section) {
+    settingsPanels.forEach(panel => panel.classList.toggle('is-active', panel.dataset.settingsPanel === section));
+    settingsNavigation.forEach(link => {
+        const active = link.dataset.settingsSection === section;
+        link.classList.toggle('bg-primary-50', active);
+        link.classList.toggle('text-primary-700', active);
+        link.classList.toggle('font-medium', active);
+        link.classList.toggle('text-gray-700', !active);
+    });
+}
+
+showSettingsSection(['general', 'preferences', 'branches', 'capabilities', 'subscription'].includes(selectedSection) ? selectedSection : 'general');
+
 document.getElementById('settingsForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
@@ -270,5 +348,19 @@ document.getElementById('settingsForm').addEventListener('submit', function(e) {
         }
     });
 });
+
+const businessLogoInput = document.getElementById('logo');
+const businessLogoPreview = document.getElementById('business-logo-preview');
+if (businessLogoInput && businessLogoPreview) {
+    businessLogoInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const preview = document.createElement('img');
+        preview.src = URL.createObjectURL(file);
+        preview.alt = 'Selected business profile photo';
+        preview.className = 'h-full w-full object-cover';
+        businessLogoPreview.replaceChildren(preview);
+    });
+}
 </script>
 {% endblock %}

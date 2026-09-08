@@ -1,6 +1,7 @@
 from django import forms
 from django.core.validators import MinValueValidator
 from django.forms import inlineformset_factory
+from django.db.models import Q
 from .models import Sale, SaleItem, Payment, Return
 from products.models import Product
 
@@ -34,9 +35,22 @@ class SaleForm(forms.ModelForm):
                 business=self.business,
                 is_active=True
             )
+            self.fields['customer'].label_from_instance = lambda customer: (
+                f"{customer.name} - {customer.phone or 'No phone'}"
+                f" - {customer.email or 'No email'}"
+            )
 
 class SaleItemForm(forms.ModelForm):
     """Form for sale items."""
+
+    product = forms.CharField(
+        label='Product name',
+        widget=forms.TextInput(attrs={
+            'class': 'input-field product-name-input',
+            'placeholder': 'Enter product name',
+            'autocomplete': 'off',
+        }),
+    )
     
     class Meta:
         model = SaleItem
@@ -52,10 +66,21 @@ class SaleItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.business:
-            self.fields['product'].queryset = Product.objects.filter(
+            self.product_queryset = Product.objects.filter(
                 business=self.business,
-                is_active=True
+                is_active=True,
             )
+
+    def clean_product(self):
+        product_name = self.cleaned_data.get('product', '').strip()
+        if not self.business:
+            raise forms.ValidationError('A business is required to select a product.')
+        product = self.product_queryset.filter(
+            Q(name__iexact=product_name) | Q(sku__iexact=product_name)
+        ).first()
+        if not product:
+            raise forms.ValidationError('Enter the exact name or SKU of an active product in your catalog.')
+        return product
 
 class BaseSaleItemFormSet(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):

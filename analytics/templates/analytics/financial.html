@@ -14,6 +14,7 @@
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-6">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+		<a href="{% if request.GET.from == 'admin' %}{% url 'business_admin' %}{% else %}{% url 'dashboard' %}{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>{% if request.GET.from == 'admin' %}Back to Administration{% else %}Back to Dashboard{% endif %}</span></a>
 		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 			<div>
 				<h1 class="text-2xl font-bold text-primary-700"><i class="fas fa-file-invoice-dollar text-primary-500 mr-2"></i>Financial Analytics</h1>

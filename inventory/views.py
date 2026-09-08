@@ -17,12 +17,13 @@ from .forms import (
 )
 from products.models import Product
 from accounts.models import UserActivity
-from accounts.decorators import business_required, role_required
+from accounts.decorators import business_required, permission_required, role_required
 
 # === Inventory Dashboard ===
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def inventory_dashboard_view(request):
     """Inventory management dashboard."""
     business = request.user.business
@@ -83,6 +84,7 @@ def inventory_dashboard_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def transaction_list_view(request):
     """List all inventory transactions."""
     business = request.user.business
@@ -138,6 +140,7 @@ def transaction_list_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def transaction_create_view(request):
     """Create a new inventory transaction."""
     business = request.user.business
@@ -183,6 +186,7 @@ def transaction_create_view(request):
 @login_required
 @business_required
 @require_POST
+@permission_required('manage_inventory')
 def transaction_delete_view(request, transaction_id):
     """Delete an inventory transaction."""
     transaction_obj = get_object_or_404(
@@ -203,6 +207,7 @@ def transaction_delete_view(request, transaction_id):
 
 @login_required
 @business_required
+@permission_required('update_stock_counts')
 def stock_count_list_view(request):
     """List all stock counts."""
     business = request.user.business
@@ -219,6 +224,7 @@ def stock_count_list_view(request):
 
 @login_required
 @business_required
+@permission_required('update_stock_counts')
 def stock_count_create_view(request):
     """Create a new stock count."""
     business = request.user.business
@@ -244,6 +250,7 @@ def stock_count_create_view(request):
 
 @login_required
 @business_required
+@permission_required('update_stock_counts')
 def stock_count_detail_view(request, stock_count_id):
     """View stock count details."""
     stock_count = get_object_or_404(
@@ -297,6 +304,7 @@ def stock_count_detail_view(request, stock_count_id):
 @login_required
 @business_required
 @require_POST
+@permission_required('update_stock_counts')
 def stock_count_complete_view(request, stock_count_id):
     """Complete a stock count and apply adjustments."""
     stock_count = get_object_or_404(
@@ -355,6 +363,7 @@ def stock_count_complete_view(request, stock_count_id):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def stock_adjustment_view(request):
     """Quick stock adjustment."""
     business = request.user.business
@@ -417,6 +426,7 @@ def stock_adjustment_view(request):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def alert_list_view(request):
     """List inventory alerts."""
     business = request.user.business
@@ -438,6 +448,7 @@ def alert_list_view(request):
 @login_required
 @business_required
 @require_POST
+@permission_required('manage_inventory')
 def alert_resolve_view(request, alert_id):
     """Resolve an inventory alert."""
     alert = get_object_or_404(
@@ -459,6 +470,7 @@ def alert_resolve_view(request, alert_id):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def get_inventory_stats(request):
     """Get inventory statistics for dashboard."""
     business = request.user.business
@@ -508,6 +520,7 @@ def get_inventory_stats(request):
 
 @login_required
 @business_required
+@permission_required('manage_inventory')
 def check_stock_alerts(request):
     """Check and generate stock alerts."""
     business = request.user.business

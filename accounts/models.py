@@ -38,6 +38,7 @@ class User(AbstractUser):
         ('OWNER', 'Business Owner'),
         ('MANAGER', 'Business Manager'),
         ('STAFF', 'Staff Member'),
+        ('ACCOUNTANT', 'Accountant / Bookkeeper'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -107,34 +108,26 @@ class User(AbstractUser):
         return self.role in ['OWNER', 'MANAGER', 'ADMIN']
     
     def has_permission(self, permission):
-        """Check if user has a specific permission."""
-        # Super admin has all permissions
-        if self.is_superuser:
+        """Return whether this user may perform a named business action."""
+        if self.is_superuser or self.role in {'ADMIN', 'OWNER'}:
             return True
-        
-        # Platform admin has all permissions
-        if self.role == 'ADMIN':
-            return True
-        
-        # Business owner has all business permissions
-        if self.role == 'OWNER':
-            return True
-        
-        # Manager has most permissions
-        if self.role == 'MANAGER':
-            # Managers can't delete business or manage other users' roles
-            restricted = ['delete_business', 'manage_roles']
-            return permission not in restricted
-        
-        # Staff have limited permissions
-        if self.role == 'STAFF':
-            staff_permissions = [
-                'view_products', 'create_sales', 'view_sales',
-                'view_inventory', 'view_customers'
-            ]
-            return permission in staff_permissions
-        
-        return False
+        permissions = {
+            'MANAGER': {
+                'view_dashboard', 'view_analytics', 'record_sales',
+                'manage_inventory', 'submit_expenses', 'approve_expenses',
+                'manage_products', 'view_ai_insights', 'chat_assistant',
+            },
+            'STAFF': {
+                'view_dashboard', 'record_sales', 'update_stock_counts',
+                'submit_expenses', 'chat_assistant_limited',
+            },
+            'ACCOUNTANT': {
+                'view_dashboard_financial', 'review_expenses',
+                'view_ai_insights_financial', 'chat_assistant_limited',
+                'export_reports',
+            },
+        }
+        return permission in permissions.get(self.role, set())
     
     def get_businesses(self):
         """Get all businesses the user has access to."""
@@ -146,26 +139,25 @@ class User(AbstractUser):
         return []
     
     def get_user_permissions_list(self):
-        """Get list of permissions for the user."""
-        permissions = {
-            'view_dashboard': True,
-            'manage_products': self.can_manage_business,
-            'view_products': True,
-            'manage_sales': self.can_manage_business or self.role == 'MANAGER',
-            'view_sales': True,
-            'manage_expenses': self.can_manage_business,
-            'view_expenses': True,
-            'manage_inventory': self.can_manage_business or self.role == 'MANAGER',
-            'view_inventory': True,
-            'manage_customers': self.can_manage_business or self.role == 'MANAGER',
-            'view_customers': True,
-            'manage_users': self.can_manage_business,
-            'view_analytics': self.can_manage_business or self.role == 'MANAGER',
-            'view_reports': self.can_manage_business or self.role == 'MANAGER',
-            'manage_business': self.can_manage_business,
-            'delete_business': self.role in ['OWNER', 'ADMIN'],
+        """Return capability flags for templates and API consumers."""
+        capabilities = {
+            'view_dashboard': 'view_dashboard',
+            'record_sales': 'record_sales',
+            'manage_products': 'manage_products',
+            'manage_inventory': 'manage_inventory',
+            'update_stock_counts': 'update_stock_counts',
+            'submit_expenses': 'submit_expenses',
+            'approve_expenses': 'approve_expenses',
+            'review_expenses': 'review_expenses',
+            'view_ai_insights': 'view_ai_insights',
+            'export_reports': 'export_reports',
+            'manage_users': 'manage_roles',
+            'manage_business': 'manage_business_settings',
         }
-        return permissions
+        return {
+            name: self.has_permission(permission)
+            for name, permission in capabilities.items()
+        }
 
 class UserActivity(models.Model):
     """Track user activity for audit purposes."""

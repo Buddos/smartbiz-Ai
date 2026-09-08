@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - SmartBiz AI{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8"><div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+<a href="{% url 'businesses:settings' %}?section=branches{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-5"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Branches</span></a>
+<div class="card"><h1 class="text-2xl font-bold text-primary-700 mb-6">{{ title }}</h1><form method="post" class="space-y-4">{% csrf_token %}{{ form.as_p }}<div class="flex justify-end gap-3 pt-4 border-t border-gray-200"><a href="{% url 'businesses:settings' %}?section=branches" class="btn-outline">Cancel</a><button type="submit" class="btn-primary"><i class="fas fa-save mr-2"></i>Save branch</button></div></form></div>
+</div></div>
+{% endblock %}

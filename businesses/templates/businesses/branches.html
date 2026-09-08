@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}Branches - SmartBiz AI{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8"><div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+<a href="{% url 'businesses:settings' %}?section=branches{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-5"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Branches</span></a>
+<div class="flex items-center justify-between gap-4 mb-6"><div><h1 class="text-2xl font-bold text-primary-700">Branches</h1><p class="text-gray-600">View and manage your business locations.</p></div><a href="{% url 'businesses:branch_create' %}" class="btn-primary"><i class="fas fa-plus mr-2"></i>Add branch</a></div>
+<div class="card">{% for branch in branches %}<div class="flex items-center justify-between gap-4 py-3 border-b border-gray-100 last:border-0"><div><p class="font-medium text-gray-800">{{ branch.name }}{% if branch.is_main %}<span class="ml-2 text-xs text-primary-600">Main</span>{% endif %}</p><p class="text-sm text-gray-500">{{ branch.get_full_address|default:branch.address|default:'No address provided' }}</p></div><a href="{% url 'businesses:branch_update' branch.id %}" class="text-primary-600 hover:text-primary-800">Edit</a></div>{% empty %}<p class="text-gray-500">No branches have been added yet.</p>{% endfor %}</div>
+</div></div>
+{% endblock %}

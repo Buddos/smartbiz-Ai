@@ -6,15 +6,11 @@ from .models import Category, Product
 class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
-        fields = ["name", "description", "icon", "color", "parent", "is_active", "display_order"]
+        fields = ["name", "description", "parent"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "input-field"}),
             "description": forms.Textarea(attrs={"class": "input-field", "rows": 2}),
-            "icon": forms.TextInput(attrs={"class": "input-field", "placeholder": "fa-box"}),
-            "color": forms.TextInput(attrs={"class": "input-field", "placeholder": "#0F6E56"}),
             "parent": forms.Select(attrs={"class": "input-field"}),
-            "is_active": forms.CheckboxInput(attrs={"class": "form-checkbox"}),
-            "display_order": forms.NumberInput(attrs={"class": "input-field"}),
         }
 
     def __init__(self, *args, **kwargs):

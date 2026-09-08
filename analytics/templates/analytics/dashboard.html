@@ -36,7 +36,8 @@
 
     .reference-dashboard-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 100; width: 240px; padding: 20px 16px; overflow-y: auto; background: #fff; border-right: 1px solid #F3F4F6; }
     .reference-dashboard-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; margin-bottom: 16px; border-bottom: 1px solid #F3F4F6; color: #04342C; font-size: 20px; font-weight: 800; text-decoration: none; }
-    .reference-dashboard-logo .icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #0F6E56; color: #fff; }
+    .reference-dashboard-logo .icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #E1F5EE; color: #0F6E56; overflow: hidden; }
+    .reference-dashboard-logo .icon img { width: 100%; height: 100%; object-fit: contain; }
     .reference-dashboard-logo span { color: #0F6E56; }
     .reference-dashboard-nav-title { padding: 8px 12px 4px; color: #9CA3AF; font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
     .reference-dashboard-nav { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 2px; border-radius: 8px; color: #4A1B0C; font-size: 14px; font-weight: 500; text-decoration: none; }
@@ -48,7 +49,8 @@
     .reference-dashboard-header-tools { display: flex; align-items: center; gap: 16px; }
     .reference-dashboard-header-tools .search { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid #F3F4F6; border-radius: 12px; background: #F9FAFB; }
     .reference-dashboard-header-tools input { width: 180px; border: 0; outline: 0; background: transparent; }
-    .reference-dashboard-header-tools button, .reference-dashboard-header-tools .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; text-decoration: none; }
+    .reference-dashboard-header-tools button, .reference-dashboard-header-tools .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; text-decoration: none; overflow: hidden; }
+    .reference-dashboard-header-tools .avatar img { width: 100%; height: 100%; object-fit: cover; }
     .reference-dashboard-profile { position: relative; }
     .reference-dashboard-profile-menu { display: none; position: absolute; top: 48px; right: 0; z-index: 120; width: 190px; padding: 8px; border: 1px solid #F3F4F6; border-radius: 12px; background: #fff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1); }
     .reference-dashboard-profile-menu.open { display: block; }
@@ -56,7 +58,8 @@
     .reference-dashboard-profile-menu a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: #4A1B0C; font-size: 13px; text-decoration: none; }
     .reference-dashboard-profile-menu a:hover { background: #E1F5EE; color: #0F6E56; }
     .reference-dashboard-user { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding: 16px 12px; border-top: 1px solid #F3F4F6; color: #04342C; font-size: 13px; }
-    .reference-dashboard-user .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; }
+    .reference-dashboard-user .avatar { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #E1F5EE; color: #0F6E56; font-weight: 600; overflow: hidden; }
+    .reference-dashboard-user .avatar img { width: 100%; height: 100%; object-fit: cover; }
     @media (max-width: 768px) {
         .reference-dashboard-sidebar { transform: translateX(-100%); width: 280px; transition: transform .3s ease; }
         .reference-dashboard-sidebar.open { transform: translateX(0); }
@@ -70,27 +73,18 @@
 
 {% block content %}
 <aside class="reference-dashboard-sidebar" id="referenceDashboardSidebar">
-    <a href="{% url 'dashboard' %}" class="reference-dashboard-logo"><span class="icon"><i class="fas fa-bolt"></i></span>Smart<span>Biz</span> AI</a>
+    <a href="{% url 'dashboard' %}" class="reference-dashboard-logo"><span class="icon">{% if user.business and user.business.logo %}<img src="{{ user.business.logo.url }}" alt="{{ user.business.name }}">{% else %}<img src="{% static 'images/logo.png' %}" alt="Smartbiz">{% endif %}</span>Smart<span>Biz</span> AI</a>
     <div class="reference-dashboard-nav-title">Main</div>
     <a href="{% url 'dashboard' %}" class="reference-dashboard-nav active"><i class="fas fa-th-large"></i>Dashboard</a>
-    <a href="{% url 'products:list' %}" class="reference-dashboard-nav"><i class="fas fa-box"></i>Products</a>
-    <a href="{% url 'sales:list' %}" class="reference-dashboard-nav"><i class="fas fa-receipt"></i>Sales</a>
-    <a href="{% url 'inventory:dashboard' %}" class="reference-dashboard-nav"><i class="fas fa-warehouse"></i>Inventory{% if low_stock_count %}<span class="ml-auto">{{ low_stock_count }}</span>{% endif %}</a>
-    <a href="{% url 'customers:list' %}" class="reference-dashboard-nav"><i class="fas fa-users"></i>Customers</a>
-    <div class="reference-dashboard-nav-title">Analytics</div>
-    <a href="{% url 'analytics:sales' %}" class="reference-dashboard-nav"><i class="fas fa-chart-line"></i>Sales Analytics</a>
-    <a href="{% url 'analytics:financial' %}" class="reference-dashboard-nav"><i class="fas fa-file-invoice-dollar"></i>Financial</a>
-    <a href="{% url 'products:categories' %}" class="reference-dashboard-nav"><i class="fas fa-tags"></i>Categories</a>
-    <div class="reference-dashboard-nav-title">AI &amp; Insights</div>
-    <a href="#dashboard-insights" class="reference-dashboard-nav"><i class="fas fa-brain"></i>AI Insights</a>
-    <a href="{% url 'ai_engine:home' %}" class="reference-dashboard-nav"><i class="fas fa-robot"></i>Assistant</a>
-    <a href="{% url 'reports:list' %}" class="reference-dashboard-nav"><i class="fas fa-chart-pie"></i>Reports</a>
-    <div class="reference-dashboard-user"><div class="avatar">{{ user.first_name|default:user.email|first|upper }}</div><div>{{ user.get_full_name|default:user.email }}<br><small class="text-gray-500">{{ user.get_role_display|default:'Business User' }}</small></div></div>
+    {% for item in generated_navigation %}<a href="{% url item.url %}" class="reference-dashboard-nav"><i class="fas {{ item.icon }}"></i>{{ item.label }}</a>{% endfor %}
+    <div class="reference-dashboard-nav-title">Account</div>
+    <a href="{% url 'accounts:settings' %}" class="reference-dashboard-nav"><i class="fas fa-cog"></i>Settings</a>
+    <div class="reference-dashboard-user"><div class="avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</div><div>{{ user.get_full_name|default:user.email }}<br><small class="text-gray-500">{{ user.get_role_display|default:'Business User' }}</small></div></div>
 </aside>
 <div class="reference-dashboard-main">
     <header class="reference-dashboard-header">
         <div class="flex items-center gap-4"><button class="reference-dashboard-menu" id="referenceDashboardMenu" aria-label="Open menu"><i class="fas fa-bars"></i></button><div><h1 class="text-xl font-bold text-primary-700">Dashboard</h1><p class="text-sm text-gray-500 hidden sm:block">Welcome back, {{ user.first_name|default:user.email }}! Here's your business overview</p></div></div>
-        <div class="reference-dashboard-header-tools"><div class="search"><i class="fas fa-search text-gray-400"></i><input type="search" placeholder="Search..." aria-label="Search"></div><button aria-label="Notifications"><i class="fas fa-bell"></i></button><div class="reference-dashboard-profile"><button class="avatar" id="referenceDashboardProfileButton" aria-label="Open account menu" aria-expanded="false">{{ user.first_name|default:user.email|first|upper }}</button><div class="reference-dashboard-profile-menu" id="referenceDashboardProfileMenu"><div class="profile-summary">{{ user.get_full_name|default:user.email }}</div>{% if user.role == 'OWNER' or user.role == 'MANAGER' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-cog"></i>Settings</a><a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a><a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i>Log out</a></div></div></div>
+        <div class="reference-dashboard-header-tools"><div class="search"><i class="fas fa-search text-gray-400"></i><input type="search" placeholder="Search..." aria-label="Search"></div><button aria-label="Notifications"><i class="fas fa-bell"></i></button><div class="reference-dashboard-profile"><button class="avatar" id="referenceDashboardProfileButton" aria-label="Open account menu" aria-expanded="false">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button><div class="reference-dashboard-profile-menu" id="referenceDashboardProfileMenu"><div class="profile-summary">{{ user.get_full_name|default:user.email }}</div>{% if user.role == 'OWNER' or user.role == 'MANAGER' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-cog"></i>Settings</a><a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a><a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i>Log out</a></div></div></div>
     </header>
 <div class="min-h-screen bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

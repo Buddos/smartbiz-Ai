@@ -10,6 +10,7 @@ urlpatterns = [
     # Business Settings
     path('settings/', views.business_settings_view, name='settings'),
     path('settings/save/', views.business_settings_save, name='settings_save'),
+    path('settings/capabilities/save/', views.capabilities_save, name='capabilities_save'),
     
     # Business Management (Admin)
     path('list/', views.business_list_view, name='list'),

@@ -15,6 +15,11 @@
     .formset-item:hover {
         border-color: #0F6E56;
     }
+    .invoice-create-paper { max-width: 980px; margin: 0 auto; padding: 1.5rem; background: #fff; border: 1px solid #d9dedb; box-shadow: 0 8px 24px rgba(23,33,30,.07); }
+    .invoice-create-paper .invoice-create-kicker { letter-spacing: .18em; color: #71817a; font-size: .7rem; text-transform: uppercase; }
+    .invoice-create-paper .invoice-create-title { margin: .25rem 0; color: #04342c; font-size: 2.3rem; font-weight: 300; letter-spacing: .05em; }
+    .invoice-create-paper .invoice-create-rule { border-top: 1px solid #b8c4be; border-bottom: 1px solid #b8c4be; padding: .5rem 0; color: #53635c; font-size: .8rem; }
+    .invoice-mode .formset-item { background: #fbfcfb; border-color: #dfe7e3; }
     .formset-item .delete-row {
         color: #A32D2D;
         cursor: pointer;
@@ -26,43 +31,50 @@
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen bg-gray-50 py-8 {% if invoice_mode %}invoice-mode{% endif %}">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Page Header -->
-        <div class="mb-8">
+        <div class="mb-8 {% if invoice_mode %}invoice-create-paper{% endif %}">
             <div class="flex items-center gap-3">
-                <a href="{% url 'sales:list' %}" class="text-gray-400 hover:text-gray-600">
+                <a href="{% if invoice_mode %}{% url 'businesses:settings' %}?section=preferences&amp;from=admin{% else %}{% url 'dashboard' %}{% endif %}" class="text-gray-400 hover:text-gray-600" title="{% if invoice_mode %}Back to Invoice Administration{% else %}Back to Dashboard{% endif %}">
                     <i class="fas fa-arrow-left text-xl"></i>
                 </a>
                 <div>
-                    <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
-                    <p class="text-gray-600">Enter sale details below</p>
+                    {% if invoice_mode %}<p class="invoice-create-kicker">Client billing document</p>{% endif %}
+                    <h1 class="{% if invoice_mode %}invoice-create-title{% else %}text-2xl font-bold text-primary-700{% endif %}">{{ title }}</h1>
+                    <p class="text-gray-600">{% if invoice_mode %}Prepare a professional invoice for your client{% else %}Enter sale details below{% endif %}</p>
                 </div>
             </div>
+            {% if invoice_mode %}<div class="invoice-create-rule mt-5"><span>Invoice details</span><span class="float-right">Draft</span></div>{% endif %}
         </div>
 
         <!-- Form -->
         <div class="card">
             <form method="POST" id="saleForm" class="space-y-6">
                 {% csrf_token %}
+                {% if invoice_mode %}<input type="hidden" name="mode" value="invoice">{% endif %}
                 
                 <!-- Customer Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-user text-primary-500 mr-2"></i>Customer Information
+                        <i class="fas fa-user text-primary-500 mr-2"></i>{% if invoice_mode %}Bill To{% else %}Customer Information{% endif %}
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="customer" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-                            <select name="customer" id="customer" class="input-field">
+                            <label for="customer" class="block text-sm font-medium text-gray-700 mb-1">Select client</label>
+                            <select name="customer" id="customer" class="input-field" data-client-selector>
                                 <option value="">Walk-in Customer</option>
                                 {% for customer in form.fields.customer.queryset %}
                                     <option value="{{ customer.id }}" 
+                                        data-name="{{ customer.name|escape }}"
+                                        data-phone="{{ customer.phone|escape }}"
+                                        data-email="{{ customer.email|escape }}"
                                         {% if form.customer.value == customer.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ customer.name }} - {{ customer.phone }}
+                                        {{ customer.name }} - {{ customer.phone|default:'No phone' }} - {{ customer.email|default:'No email' }}
                                     </option>
                                 {% endfor %}
                             </select>
+                            <p class="mt-1 text-xs text-gray-500">Choose a saved client to fill their billing details automatically.</p>
                         </div>
                         <div>
                             <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
@@ -88,7 +100,7 @@
                 <!-- Sale Items -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-shopping-cart text-primary-500 mr-2"></i>Sale Items
+                        <i class="fas fa-list text-primary-500 mr-2"></i>{% if invoice_mode %}Invoice Items{% else %}Sale Items{% endif %}
                     </h3>
                     
                     {{ formset.management_form }}
@@ -99,8 +111,9 @@
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     {{ item_form.id }}
                                     <div>
-                                        <label class="block text-xs text-gray-500 mb-1">Product</label>
+                                        <label class="block text-xs text-gray-500 mb-1">Product name</label>
                                         {{ item_form.product }}
+                                        <p class="mt-1 text-xs text-gray-500">Enter the exact product name or SKU from your catalog.</p>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">Quantity</label>
@@ -136,7 +149,7 @@
                 <!-- Payment Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-credit-card text-primary-500 mr-2"></i>Payment Information
+                        <i class="fas fa-credit-card text-primary-500 mr-2"></i>{% if invoice_mode %}Payment Details{% else %}Payment Information{% endif %}
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -185,10 +198,10 @@
 
                 <!-- Form Actions -->
                 <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                    <a href="{% url 'sales:list' %}" class="btn-outline">Cancel</a>
+                    <a href="{% if invoice_mode %}{% url 'businesses:settings' %}?section=preferences&amp;from=admin{% else %}{% url 'dashboard' %}{% endif %}" class="btn-outline">{% if invoice_mode %}Back to Invoice Administration{% else %}Back to Dashboard{% endif %}</a>
                     <button type="submit" class="btn-primary">
                         <i class="fas fa-save mr-2"></i>
-                        {% if sale %}Update Sale{% else %}Create Sale{% endif %}
+                        {% if sale %}{% if invoice_mode %}Update Invoice{% else %}Update Sale{% endif %}{% else %}{% if invoice_mode %}Create Invoice{% else %}Create Sale{% endif %}{% endif %}
                     </button>
                 </div>
             </form>
@@ -222,7 +235,41 @@
         
         container.appendChild(newItem);
         formset.value = total + 1;
+        const newProductSelect = newItem.querySelector('.product-select');
+        if (newProductSelect) {
+            newProductSelect.addEventListener('change', function () {
+                fillProductPrice(this);
+                calculateTotals();
+            });
+        }
     });
+
+    function fillClientDetails() {
+        const clientSelector = document.querySelector('[data-client-selector]');
+        const selectedClient = clientSelector && clientSelector.options[clientSelector.selectedIndex];
+        if (!selectedClient || !selectedClient.value) return;
+        document.getElementById('customer_name').value = selectedClient.dataset.name || '';
+        document.getElementById('customer_phone').value = selectedClient.dataset.phone || '';
+        document.getElementById('customer_email').value = selectedClient.dataset.email || '';
+    }
+
+    function fillProductPrice(productSelector) {
+        const selectedProduct = productSelector.options[productSelector.selectedIndex];
+        if (!selectedProduct || !selectedProduct.value) return;
+        const priceMatch = selectedProduct.textContent.match(/KSh\s*([\d,]+(?:\.\d+)?)/i);
+        const priceField = productSelector.closest('.formset-item').querySelector('input[name$="-unit_price"]');
+        if (priceMatch && priceField && !priceField.value) {
+            priceField.value = priceMatch[1].replace(/,/g, '');
+        }
+    }
+
+    document.querySelector('[data-client-selector]')?.addEventListener('change', fillClientDetails);
+    document.querySelectorAll('.product-select').forEach(select => select.addEventListener('change', function () {
+        fillProductPrice(this);
+        calculateTotals();
+    }));
+    fillClientDetails();
+    document.querySelectorAll('.product-select').forEach(fillProductPrice);
 
     // Calculate totals
     function calculateTotals() {

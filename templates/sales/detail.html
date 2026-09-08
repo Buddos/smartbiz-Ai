@@ -1,13 +1,42 @@
 {% extends 'layouts/app.html' %}
+{% block extra_css %}
+<style>
+  .invoice-paper { max-width: 860px; margin: 0 auto; padding: 2rem; background: #fff; border: 1px solid #d9dedb; box-shadow: 0 8px 24px rgba(23,33,30,.08); color: #17211e; }
+  .invoice-paper .invoice-kicker { letter-spacing: .22em; font-size: .7rem; color: #65736d; }
+  .invoice-paper .invoice-title { margin: .4rem 0 .2rem; font-size: 3rem; line-height: 1; font-weight: 300; letter-spacing: .04em; }
+  .invoice-paper .invoice-meta { display:flex; justify-content:space-between; gap:1rem; padding:.55rem 0; border-top:1px solid #bbc5c0; border-bottom:1px solid #bbc5c0; color:#53635c; font-size:.78rem; }
+  .invoice-paper .invoice-info { display:grid; grid-template-columns:1fr 1fr; border:1px solid #cdd6d1; margin: 1.25rem 0; }
+  .invoice-paper .invoice-info > div { padding: .85rem; min-height: 80px; }
+  .invoice-paper .invoice-info > div + div { border-left:1px solid #cdd6d1; }
+  .invoice-paper .invoice-label { margin:0 0 .35rem; font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:#71817a; }
+  .invoice-paper .invoice-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+  .invoice-paper .invoice-table th { padding:.65rem .55rem; border:1px solid #cdd6d1; background:#f5f7f6; text-align:left; font-size:.65rem; letter-spacing:.06em; text-transform:uppercase; }
+  .invoice-paper .invoice-table td { padding:.7rem .55rem; border:1px solid #dfe5e2; }
+  .invoice-paper .invoice-table .number { text-align:right; white-space:nowrap; }
+  .invoice-paper .invoice-bottom { display:grid; grid-template-columns:1fr 250px; gap:2rem; margin-top:1.25rem; }
+  .invoice-paper .invoice-notes { color:#53635c; font-size:.75rem; line-height:1.55; }
+  .invoice-paper .invoice-total { border-top:1px solid #9eaaa4; padding-top:.65rem; font-weight:700; }
+  .invoice-paper .invoice-footer { display:flex; justify-content:space-between; gap:1rem; margin-top:1.5rem; padding-top:.65rem; border-top:1px solid #cdd6d1; color:#71817a; font-size:.68rem; }
+  @media (max-width:640px) { .invoice-paper { padding:1rem; } .invoice-paper .invoice-title { font-size:2.25rem; } .invoice-paper .invoice-bottom { grid-template-columns:1fr; gap:1rem; } .invoice-paper .invoice-info { grid-template-columns:1fr; } .invoice-paper .invoice-info > div + div { border-top:1px solid #cdd6d1; border-left:0; } .invoice-paper .invoice-table { min-width:620px; } .invoice-paper .invoice-footer { flex-direction:column; } }
+</style>
+{% endblock %}
 {% block page %}
-<div class="flex justify-between mb-4">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
   <h1 class="text-2xl font-bold text-primary-700">{{ title }}</h1>
-  <a class="btn-primary" href="{% url 'sales:payment' sale.id %}">Record payment</a>
+  <div class="flex flex-wrap gap-2">
+    {% if sale.payment_status != 'PAID' %}<a class="btn-outline" href="{% url 'sales:update' sale.id %}"><i class="fas fa-edit mr-2"></i>Edit invoice</a>{% endif %}
+    <a class="btn-outline" href="{% url 'sales:invoice_pdf' sale.id %}"><i class="fas fa-file-pdf mr-2"></i>Download PDF</a>
+    <a class="btn-outline" href="{% url 'sales:payment' sale.id %}"><i class="fas fa-credit-card mr-2"></i>Record payment</a>
+    {% if sale.customer_email or sale.customer.email %}<form method="post" action="{% url 'sales:send_invoice' sale.id %}">{% csrf_token %}<button class="btn-primary" type="submit"><i class="fas fa-paper-plane mr-2"></i>Send invoice</button></form>{% endif %}
+  </div>
 </div>
-<div class="card mb-4 text-sm">
-  <p>{{ sale.sale_number }} · {{ sale.customer_name|default:"Walk-in" }} · KSh {{ sale.total }} · {{ sale.payment_status }}</p>
-</div>
-<div class="card">
-  {% for item in items %}<p class="text-sm py-1">{{ item.product_name }} × {{ item.quantity }} = KSh {{ item.total }}</p>{% endfor %}
+<div class="invoice-paper">
+  <div class="flex items-start justify-between gap-4"><div>{% if business.logo %}<img src="{{ business.logo.url }}" alt="{{ business.name }}" class="h-10 w-10 rounded object-cover mb-2">{% endif %}<p class="invoice-kicker">{{ business.name }}</p><h2 class="invoice-title">INVOICE</h2></div><div class="text-right text-xs text-gray-500">{{ business.address }}{% if business.city %}, {{ business.city }}{% endif %}<br>{{ business.phone_number }}{% if business.email %}<br>{{ business.email }}{% endif %}</div></div>
+  <div class="invoice-meta"><span>{{ sale.sale_number }}</span><span>Date: {{ sale.sale_date|date:"d/m/Y" }}</span></div>
+  <div class="invoice-info"><div><p class="invoice-label">Bill to</p><strong>{{ sale.customer_name|default:"Walk-in Client" }}</strong><p class="text-xs text-gray-600">{{ sale.customer_email }}{% if sale.customer_phone %} · {{ sale.customer_phone }}{% endif %}</p></div><div><p class="invoice-label">Payment details</p><p class="text-xs text-gray-600">{{ settings.invoice_terms|default:"Payment due according to agreed terms." }}</p><p class="text-xs text-gray-600">Status: {{ sale.get_payment_status_display }}</p></div></div>
+  <div class="mb-4"><p class="invoice-label">Bill to</p><strong>{{ sale.customer_name|default:"Walk-in Client" }}</strong><p class="text-xs text-gray-600">{{ sale.customer_email }}{% if sale.customer_phone %} · {{ sale.customer_phone }}{% endif %}</p></div>
+  <div class="overflow-x-auto"><table class="invoice-table"><thead><tr><th style="width:6%">No</th><th>Description</th><th class="number">Qty</th><th class="number">Unit Price (KSh)</th><th class="number">Amount (KSh)</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ forloop.counter }}</td><td>{{ item.product_name }}</td><td class="number">{{ item.quantity }}</td><td class="number">{{ item.unit_price|floatformat:2 }}</td><td class="number">{{ item.total|floatformat:2 }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="invoice-bottom"><div class="invoice-notes"><p class="invoice-label">Notes</p>{% if settings.invoice_terms %}<p>{{ settings.invoice_terms }}</p>{% endif %}{% if settings.invoice_footer %}<p>{{ settings.invoice_footer }}</p>{% endif %}</div><div class="text-sm"><div class="flex justify-between py-1"><span>Sub total</span><span>KSh {{ sale.subtotal|floatformat:2 }}</span></div><div class="flex justify-between py-1"><span>Tax ({{ settings.invoice_tax_rate|default:0 }}%)</span><span>KSh {{ sale.tax|floatformat:2 }}</span></div>{% if sale.discount %}<div class="flex justify-between py-1"><span>Discount</span><span>- KSh {{ sale.discount|floatformat:2 }}</span></div>{% endif %}<div class="invoice-total flex justify-between mt-2"><span>Total</span><span>KSh {{ sale.total|floatformat:2 }}</span></div></div></div>
+  <div class="invoice-footer"><span>{{ business.email }}</span><span>{{ business.phone_number }}</span><span>{{ business.city }}</span></div>
 </div>
 {% endblock %}

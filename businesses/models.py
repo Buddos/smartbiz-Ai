@@ -93,6 +93,7 @@ class Business(models.Model):
     
     # Preferences
     preferences = models.JSONField(default=dict, blank=True)
+    enabled_capabilities = models.JSONField(default=list, blank=True)
     
     class Meta:
         db_table = 'businesses_business'

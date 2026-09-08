@@ -6,7 +6,7 @@ from django.db.models import Count, F, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from accounts.decorators import business_required, role_required
+from accounts.decorators import business_required, permission_required, role_required
 from expenses.models import Expense
 from products.models import Product
 from sales.models import Sale, SaleItem
@@ -54,7 +54,8 @@ def _build_summary(business, start, end):
 
 @login_required
 @business_required
-@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
+@role_required(["OWNER", "MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
+@permission_required('export_reports')
 def report_list_view(request):
     start, end = _period(request)
     reports = Report.objects.filter(business=request.user.business)
@@ -68,7 +69,8 @@ def report_list_view(request):
 
 @login_required
 @business_required
-@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
+@role_required(["OWNER", "MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
+@permission_required('export_reports')
 def report_generate_view(request):
     start, end = _period(request)
     report_type = request.GET.get("type", "PERFORMANCE")
@@ -90,7 +92,8 @@ def report_generate_view(request):
 
 @login_required
 @business_required
-@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
+@role_required(["OWNER", "MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
+@permission_required('export_reports')
 def report_detail_view(request, report_id):
     report = get_object_or_404(Report, id=report_id, business=request.user.business)
     return render(request, "reports/detail.html", {"report": report, "title": report.title})
