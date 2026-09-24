@@ -28,6 +28,19 @@ from products.models import Product
 from customers.models import Customer
 from accounts.models import UserActivity
 from accounts.decorators import business_required, permission_required, role_required
+from businesses.capabilities import sale_template_for_business
+
+
+def _sale_metadata_from_form(form, existing=None):
+    metadata = dict(existing or {})
+    for field_name in ('table_reference', 'order_type', 'transaction_code', 'serial_number', 'warranty_period'):
+        value = form.cleaned_data.get(field_name)
+        if value:
+            metadata[field_name] = value
+    served_by = form.cleaned_data.get('served_by')
+    if served_by:
+        metadata['served_by'] = {'id': str(served_by.id), 'name': served_by.get_full_name() or served_by.email}
+    return metadata
 
 # === Sale Views ===
 
@@ -126,6 +139,7 @@ def sale_create_view(request):
                 sale = form.save(commit=False)
                 sale.business = business
                 sale.created_by = request.user
+                sale.metadata = _sale_metadata_from_form(form, sale.metadata)
                 sale.save()
                 
                 formset.instance = sale
@@ -159,11 +173,14 @@ def sale_create_view(request):
         form = SaleForm(business=business)
         formset = SaleItemFormSet(business=business)
     
-    return render(request, 'sales/form.html', {
+    sale_template = sale_template_for_business(business)
+    return render(request, sale_template['entry_template'], {
         'form': form,
         'formset': formset,
-        'title': 'Create Invoice' if invoice_mode else 'New Sale',
+        'title': 'Create Invoice' if invoice_mode else sale_template['title'],
         'invoice_mode': invoice_mode,
+        'sale_template': sale_template,
+        'quick_products': Product.objects.filter(business=business, is_active=True).order_by('name')[:24],
     })
 
 @login_required
@@ -174,6 +191,13 @@ def sale_detail_view(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
     items = sale.sale_items.all()
     payments = sale.payments.all()
+    business = sale.business
+    invoice_settings = getattr(business, 'settings', None)
+    currency = business.currency or 'KES'
+    invoice_number = f"{invoice_settings.invoice_prefix if invoice_settings else 'INV-'}{sale.sale_number.split('-')[-1]}"
+    served_by = sale.metadata.get('served_by', {})
+    transaction_code = sale.metadata.get('transaction_code', '')
+    invoice_number = f"{invoice_settings.invoice_prefix if invoice_settings else 'INV-'}{sale.sale_number.split('-')[-1]}"
     
     # Check if return exists
     try:
@@ -186,6 +210,13 @@ def sale_detail_view(request, sale_id):
         'items': items,
         'payments': payments,
         'return_obj': return_obj,
+        'business': business,
+        'settings': invoice_settings,
+        'invoice_number': invoice_number,
+        'served_by': sale.metadata.get('served_by', {}),
+        'transaction_code': sale.metadata.get('transaction_code', ''),
+        'receipt_payment': payments.filter(payment_status='COMPLETED').first(),
+        'currency': business.currency or 'KES',
         'title': f'Sale #{sale.sale_number}',
     })
 
@@ -259,7 +290,7 @@ def invoice_pdf_view(request, sale_id):
             business_lines.insert(0, logo)
         except (OSError, AttributeError):
             pass
-    invoice_lines = [Paragraph('<font size="25">INVOICE</font>', styles['Normal']), Paragraph(f'{sale.sale_number}', styles['InvoiceSmall']), Paragraph(f'Sale date: {sale.sale_date.strftime("%d/%m/%Y")}', styles['InvoiceSmall']), Paragraph(f'Printed: {timezone.localtime().strftime("%d/%m/%Y %H:%M")}', styles['InvoiceSmall'])]
+    invoice_lines = [Paragraph('<font size="25">INVOICE</font>', styles['Normal']), Paragraph(f'#{invoice_number}', styles['InvoiceSmall']), Paragraph(f'Date: {sale.sale_date.strftime("%d %b %Y")}', styles['InvoiceSmall']), Paragraph(f'Time: {sale.sale_date.strftime("%I:%M %p")}', styles['InvoiceSmall']), Paragraph(f'Status: {sale.get_payment_status_display()}', styles['InvoiceSmall'])]
     header = Table([[business_lines, invoice_lines]], colWidths=[115 * mm, 55 * mm])
     header.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('ALIGN', (1, 0), (1, 0), 'RIGHT'), ('BOTTOMPADDING', (0, 0), (-1, -1), 10), ('LINEBELOW', (0, 0), (-1, 0), 0.6, colors.HexColor('#dfe7e3'))]))
     story.extend([header, Spacer(1, 8 * mm)])
@@ -267,22 +298,24 @@ def invoice_pdf_view(request, sale_id):
     recipient = sale.customer_name or (sale.customer.name if sale.customer else 'Walk-in Client')
     recipient_contact = sale.customer_email or (sale.customer.email if sale.customer else '')
     bill_to = [Paragraph('BILL TO', styles['InvoiceLabel']), Paragraph(f'<b>{escape(recipient)}</b>', styles['Normal']), Paragraph(f'{escape(recipient_contact)}{" · " if recipient_contact and sale.customer_phone else ""}{escape(sale.customer_phone or "")}', styles['InvoiceSmall'])]
-    payment_details = [Paragraph('PAYMENT DETAILS', styles['InvoiceLabel']), Paragraph(f'{escape(invoice_settings.invoice_terms) if invoice_settings and invoice_settings.invoice_terms else "Payment due according to agreed terms."}', styles['InvoiceSmall']), Paragraph(f'Status: {sale.get_payment_status_display()}', styles['InvoiceSmall'])]
+    payment_details = [Paragraph('PAYMENT DETAILS', styles['InvoiceLabel']), Paragraph(f'Method: {escape(sale.get_payment_method_display())}', styles['InvoiceSmall']), Paragraph(f'Reference: {escape(transaction_code or "Not provided")}', styles['InvoiceSmall']), Paragraph(f'Status: {sale.get_payment_status_display()}', styles['InvoiceSmall'])]
     info_table = Table([[bill_to, payment_details]], colWidths=[85 * mm, 85 * mm])
     info_table.setStyle(TableStyle([('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#cdd6d1')), ('LINEBEFORE', (1, 0), (1, 0), 0.5, colors.HexColor('#cdd6d1')), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 8), ('RIGHTPADDING', (0, 0), (-1, -1), 8), ('TOPPADDING', (0, 0), (-1, -1), 8), ('BOTTOMPADDING', (0, 0), (-1, -1), 8)]))
     story.extend([info_table, Spacer(1, 7 * mm)])
 
-    table_data = [[Paragraph('<b>No</b>', styles['InvoiceSmall']), Paragraph('<b>Description</b>', styles['InvoiceSmall']), Paragraph('<b>Qty</b>', styles['InvoiceSmall']), Paragraph('<b>Unit Price (KSh)</b>', styles['InvoiceSmall']), Paragraph('<b>Amount (KSh)</b>', styles['InvoiceSmall'])]]
+    table_data = [[Paragraph('<b>Service / Product</b>', styles['InvoiceSmall']), Paragraph('<b>Staff</b>', styles['InvoiceSmall']), Paragraph('<b>Qty</b>', styles['InvoiceSmall']), Paragraph(f'<b>Unit Price ({escape(currency)})</b>', styles['InvoiceSmall']), Paragraph(f'<b>Amount ({escape(currency)})</b>', styles['InvoiceSmall'])]]
     for item in items:
-        table_data.append([str(len(table_data)), Paragraph(escape(item.product_name), styles['Normal']), str(item.quantity), f'{item.unit_price:,.2f}', f'{item.total:,.2f}'])
-    invoice_table = Table(table_data, colWidths=[12 * mm, 66 * mm, 20 * mm, 35 * mm, 37 * mm], repeatRows=1)
+        table_data.append([Paragraph(escape(item.product_name), styles['Normal']), Paragraph(escape(served_by.get('name', '-')), styles['InvoiceSmall']), str(item.quantity), f'{item.unit_price:,.2f}', f'{item.total:,.2f}'])
+    invoice_table = Table(table_data, colWidths=[57 * mm, 35 * mm, 18 * mm, 30 * mm, 30 * mm], repeatRows=1)
     invoice_table.setStyle(TableStyle([('GRID', (0, 0), (-1, -1), 0.35, colors.HexColor('#dfe7e3')), ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f4f8f6')), ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ALIGN', (2, 1), (-1, -1), 'RIGHT'), ('TOPPADDING', (0, 0), (-1, -1), 8), ('BOTTOMPADDING', (0, 0), (-1, -1), 8)]))
     story.extend([invoice_table, Spacer(1, 7 * mm)])
 
-    totals = [['Subtotal', f'KSh {sale.subtotal:,.2f}'], ['Tax', f'KSh {sale.tax:,.2f}']]
+    totals = [['Subtotal', f'{currency} {sale.subtotal:,.2f}']]
+    if sale.tax:
+        totals.append(['Tax', f'{currency} {sale.tax:,.2f}'])
     if sale.discount:
-        totals.append(['Discount', f'- KSh {sale.discount:,.2f}'])
-    totals.append(['Total Amount Due', f'KSh {sale.total:,.2f}'])
+        totals.append(['Discount', f'- {currency} {sale.discount:,.2f}'])
+    totals.append(['Total Amount Due', f'{currency} {sale.total:,.2f}'])
     totals_table = Table([[Paragraph(label, styles['InvoiceTotal'] if label == 'Total Amount Due' else styles['Normal']), Paragraph(value, styles['InvoiceTotal'] if label == 'Total Amount Due' else styles['Normal'])] for label, value in totals], colWidths=[125 * mm, 45 * mm])
     totals_table.setStyle(TableStyle([('ALIGN', (1, 0), (1, -1), 'RIGHT'), ('LINEABOVE', (0, -1), (-1, -1), 0.7, colors.HexColor('#9bb8aa')), ('TOPPADDING', (0, 0), (-1, -1), 5), ('BOTTOMPADDING', (0, 0), (-1, -1), 5)]))
     story.append(totals_table)
@@ -293,6 +326,8 @@ def invoice_pdf_view(request, sale_id):
         if invoice_settings.invoice_footer:
             notes.append(Paragraph(escape(invoice_settings.invoice_footer), styles['InvoiceSmall']))
         story.extend([Spacer(1, 10 * mm), Table([[notes]], colWidths=[170 * mm], style=TableStyle([('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.HexColor('#dfe7e3')), ('TOPPADDING', (0, 0), (-1, -1), 8)]))])
+    story.append(Spacer(1, 8 * mm))
+    story.append(Paragraph('Thank you for choosing us. We look forward to serving you again.', styles['InvoiceSmall']))
     document.build(story)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{sale.sale_number}.pdf"'
@@ -319,6 +354,8 @@ def sale_update_view(request, sale_id):
             with transaction.atomic():
                 # Update sale
                 sale = form.save()
+                sale.metadata = _sale_metadata_from_form(form, sale.metadata)
+                sale.save(update_fields=['metadata', 'updated_at'])
                 
                 # Update stock for changed items
                 for item_form in formset:
@@ -346,6 +383,7 @@ def sale_update_view(request, sale_id):
         'formset': formset,
         'sale': sale,
         'title': f'Edit Sale #{sale.sale_number}',
+        'sale_template': sale_template_for_business(business),
     })
 
 @login_required

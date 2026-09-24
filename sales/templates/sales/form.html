@@ -40,12 +40,12 @@
                     <i class="fas fa-arrow-left text-xl"></i>
                 </a>
                 <div>
-                    {% if invoice_mode %}<p class="invoice-create-kicker">Client billing document</p>{% endif %}
+                    {% if invoice_mode %}<p class="invoice-create-kicker">Client billing document</p>{% else %}{% block sale_profile_kicker %}<p class="invoice-create-kicker">{{ sale_template.label }}</p>{% endblock %}{% endif %}
                     <h1 class="{% if invoice_mode %}invoice-create-title{% else %}text-2xl font-bold text-primary-700{% endif %}">{{ title }}</h1>
-                    <p class="text-gray-600">{% if invoice_mode %}Prepare a professional invoice for your client{% else %}Enter sale details below{% endif %}</p>
+                    <p class="text-gray-600">{% if invoice_mode %}Prepare a professional invoice for your client{% else %}{{ sale_template.description|default:'Enter sale details below' }}{% endif %}</p>
                 </div>
             </div>
-            {% if invoice_mode %}<div class="invoice-create-rule mt-5"><span>Invoice details</span><span class="float-right">Draft</span></div>{% endif %}
+            {% if invoice_mode %}<div class="invoice-create-rule mt-5"><span>Invoice details</span><span class="float-right">Draft</span></div>{% else %}{% block sale_profile_intro %}{% endblock %}{% endif %}
         </div>
 
         <!-- Form -->
@@ -53,6 +53,15 @@
             <form method="POST" id="saleForm" class="space-y-6">
                 {% csrf_token %}
                 {% if invoice_mode %}<input type="hidden" name="mode" value="invoice">{% endif %}
+
+                {% if form.non_field_errors or form.errors or formset.non_form_errors %}
+                    <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+                        <p class="font-semibold"><i class="fas fa-exclamation-circle mr-2"></i>Please correct the highlighted sale details.</p>
+                        {% for error in form.non_field_errors %}<p class="mt-1">{{ error }}</p>{% endfor %}
+                        {% for error in form.errors.values %}{% for message in error %}<p class="mt-1">{{ message }}</p>{% endfor %}{% endfor %}
+                        {% for error in formset.non_form_errors %}<p class="mt-1">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endif %}
                 
                 <!-- Customer Information -->
                 <div>
@@ -97,10 +106,44 @@
                     </div>
                 </div>
 
+                {% if sale_template.business_type == 'RESTAURANT' %}
+                    <div class="rounded-xl border border-orange-100 bg-orange-50 p-4">
+                        <h3 class="text-lg font-semibold text-orange-900 mb-3"><i class="fas fa-utensils mr-2"></i>Order setup</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Order type</label>{{ form.order_type }}</div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Table</label>{{ form.table_reference }}</div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Served by</label>{{ form.served_by }}</div>
+                        </div>
+                    </div>
+                {% elif sale_template.business_type == 'SALON' %}
+                    <div class="rounded-xl border border-pink-100 bg-pink-50 p-4">
+                        <h3 class="text-lg font-semibold text-pink-900 mb-3"><i class="fas fa-scissors mr-2"></i>Service team</h3>
+                        <div class="max-w-md"><label class="block text-sm font-medium text-gray-700 mb-1">Served by</label>{{ form.served_by }}</div>
+                    </div>
+                {% elif sale_template.business_type == 'RETAIL' or sale_template.business_type == 'ELECTRONICS' or sale_template.business_type == 'BOUTIQUE' or sale_template.business_type == 'HARDWARE' %}
+                    <div class="rounded-xl border border-primary-100 bg-primary-50 p-4">
+                        <h3 class="text-lg font-semibold text-primary-800 mb-3"><i class="fas fa-user-tie mr-2"></i>Sale team</h3>
+                        <div class="max-w-md"><label class="block text-sm font-medium text-gray-700 mb-1">Served by</label>{{ form.served_by }}</div>
+                    </div>
+                {% endif %}
+
+                {% if sale_template.business_type == 'SALON' or sale_template.business_type == 'RESTAURANT' or sale_template.business_type == 'RETAIL' or sale_template.business_type == 'ELECTRONICS' or sale_template.business_type == 'BOUTIQUE' or sale_template.business_type == 'HARDWARE' %}
+                    <div class="rounded-xl border border-primary-100 bg-white p-4">
+                        <div class="flex items-center justify-between mb-3"><h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-bolt text-accent-500 mr-2"></i>{% if sale_template.business_type == 'SALON' %}Quick services{% elif sale_template.business_type == 'RESTAURANT' %}Quick menu{% else %}Quick products{% endif %}</h3><span class="text-xs text-gray-500">Tap an item to add it</span></div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {% for product in quick_products %}
+                                <button type="button" class="quick-product rounded-xl border border-gray-200 bg-gray-50 p-4 text-left hover:border-primary-400 hover:bg-primary-50" data-product-name="{{ product.name|escape }}" data-product-price="{{ product.selling_price }}">
+                                    <strong class="block text-sm text-gray-900">{{ product.name }}</strong><span class="mt-1 block text-sm font-semibold text-primary-700">KSh {{ product.selling_price|floatformat:0 }}</span>
+                                </button>
+                            {% empty %}<p class="text-sm text-gray-500">Add services or menu items to Products first.</p>{% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
                 <!-- Sale Items -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-list text-primary-500 mr-2"></i>{% if invoice_mode %}Invoice Items{% else %}Sale Items{% endif %}
+                        <i class="fas fa-list text-primary-500 mr-2"></i>{% if invoice_mode %}Invoice Items{% else %}{{ sale_template.item_label }}{% endif %}
                     </h3>
                     
                     {{ formset.management_form }}
@@ -111,17 +154,20 @@
                                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                     {{ item_form.id }}
                                     <div>
-                                        <label class="block text-xs text-gray-500 mb-1">Product name</label>
+                                        <label class="block text-xs text-gray-500 mb-1">{{ sale_template.product_label }}</label>
                                         {{ item_form.product }}
+                                        {% for error in item_form.product.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                                         <p class="mt-1 text-xs text-gray-500">Enter the exact product name or SKU from your catalog.</p>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">Quantity</label>
                                         {{ item_form.quantity }}
+                                        {% for error in item_form.quantity.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-500 mb-1">Unit Price</label>
                                         {{ item_form.unit_price }}
+                                        {% for error in item_form.unit_price.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
                                     </div>
                                     <div class="flex items-end justify-between">
                                         <div class="flex-1">
@@ -146,10 +192,31 @@
                     </button>
                 </div>
 
+                {% if 'table' in sale_template.sections %}
+                    <div>
+                        <h3 class="text-lg font-semibold text-primary-700 mb-4">{{ sale_template.table_label|default:'Table details' }}</h3>
+                        <label for="id_table_reference" class="block text-sm font-medium text-gray-700 mb-1">Table or order reference</label>
+                        {{ form.table_reference }}
+                    </div>
+                {% endif %}
+
+                {% if 'booking' in sale_template.sections %}
+                    <div>
+                        <h3 class="text-lg font-semibold text-primary-700 mb-4">{{ sale_template.booking_label|default:'Booking details' }}</h3>
+                        <p class="text-sm text-gray-500">Record the booking details in the customer and notes fields below.</p>
+                    </div>
+                {% endif %}
+
+                {% if 'delivery' in sale_template.sections %}
+                    <div>
+                        <h3 class="text-lg font-semibold text-primary-700 mb-4">{{ sale_template.delivery_label|default:'Delivery details' }}</h3>
+                    </div>
+                {% endif %}
+
                 <!-- Payment Information -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-credit-card text-primary-500 mr-2"></i>{% if invoice_mode %}Payment Details{% else %}Payment Information{% endif %}
+                        <i class="fas fa-credit-card text-primary-500 mr-2"></i>{% if invoice_mode %}Payment Details{% elif 'credit' in sale_template.sections %}Credit and Payment Information{% else %}Payment Information{% endif %}
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -162,6 +229,24 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                        </div>
+                        <div>
+                            <label for="id_transaction_code" class="block text-sm font-medium text-gray-700 mb-1">M-Pesa / transaction code</label>
+                            {{ form.transaction_code }}
+                        </div>
+                        {% if sale_template.business_type == 'ELECTRONICS' %}
+                            <div>
+                                <label for="id_serial_number" class="block text-sm font-medium text-gray-700 mb-1">Serial / IMEI</label>
+                                {{ form.serial_number }}
+                            </div>
+                            <div>
+                                <label for="id_warranty_period" class="block text-sm font-medium text-gray-700 mb-1">Warranty</label>
+                                {{ form.warranty_period }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <label for="id_discount" class="block text-sm font-medium text-gray-700 mb-1">Discount</label>
+                            {{ form.discount }}
                         </div>
                         <div>
                             <label for="delivery_address" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
@@ -270,6 +355,21 @@
     }));
     fillClientDetails();
     document.querySelectorAll('.product-select').forEach(fillProductPrice);
+
+    document.querySelectorAll('.quick-product').forEach(button => button.addEventListener('click', function() {
+        const productField = document.querySelector('input[name="sale_items-0-product"]');
+        const priceField = document.querySelector('input[name="sale_items-0-unit_price"]');
+        const quantityField = document.querySelector('input[name="sale_items-0-quantity"]');
+        if (!productField || !priceField || !quantityField) return;
+        if (productField.value === this.dataset.productName) {
+            quantityField.value = (parseInt(quantityField.value) || 0) + 1;
+        } else {
+            productField.value = this.dataset.productName;
+            priceField.value = this.dataset.productPrice;
+            quantityField.value = 1;
+        }
+        calculateTotals();
+    }));
 
     // Calculate totals
     function calculateTotals() {

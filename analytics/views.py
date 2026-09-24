@@ -21,7 +21,13 @@ from .models import DashboardWidget, BusinessMetric, BusinessInsight, ExportLog
 from accounts.decorators import business_required, role_required
 from accounts.models import UserActivity
 from ai_engine.services import run_intelligence_pipeline
-from businesses.capabilities import navigation_for_business
+from businesses.capabilities import (
+    capabilities_for_business,
+    dashboard_capabilities_for_business,
+    dashboard_profile_for_business,
+    navigation_for_business,
+    sale_template_for_business,
+)
 
 # === Main Dashboard ===
 
@@ -40,6 +46,10 @@ def dashboard_view(request):
     context = get_dashboard_data(business, start_date, end_date)
     context['title'] = 'Dashboard'
     context['generated_navigation'] = navigation_for_business(business)
+    context['selected_capabilities'] = dashboard_capabilities_for_business(business)
+    context['sale_template'] = sale_template_for_business(business)
+    context['business_type_label'] = business.get_business_type_display()
+    context['dashboard_profile'] = dashboard_profile_for_business(business)
     
     return render(request, 'analytics/dashboard.html', context)
 

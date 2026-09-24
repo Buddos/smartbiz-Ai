@@ -1,0 +1,42 @@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="card lg:col-span-2 border-l-4 border-primary-500">
+        {% if dashboard_profile.id == 'restaurant' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-utensils text-primary-500 mr-2"></i>Today's service flow</h3>
+            <p class="mt-2 text-sm text-gray-600">Keep table orders moving, sell menu items, and review service activity from one restaurant workspace.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Start order</a><a href="{% url 'sales:list' %}" class="btn-outline text-sm"><i class="fas fa-chair mr-2"></i>View table orders</a></div>
+        {% elif dashboard_profile.id == 'salon' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-scissors text-primary-500 mr-2"></i>Appointments and clients</h3>
+            <p class="mt-2 text-sm text-gray-600">Your salon workspace prioritizes bookings, client records, staff shifts, and service revenue.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Record service</a><a href="{% url 'customers:list' %}" class="btn-outline text-sm"><i class="fas fa-users mr-2"></i>Open clients</a></div>
+        {% elif dashboard_profile.id == 'service' or dashboard_profile.id == 'freelance' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-briefcase text-primary-500 mr-2"></i>Client work and billing</h3>
+            <p class="mt-2 text-sm text-gray-600">Track client work, quotes, invoices, and service income from this delivery-focused workspace.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}?mode=invoice" class="btn-primary text-sm"><i class="fas fa-file-invoice mr-2"></i>Create invoice</a><a href="{% url 'customers:list' %}" class="btn-outline text-sm"><i class="fas fa-users mr-2"></i>Open clients</a></div>
+        {% elif dashboard_profile.id == 'wholesale' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-truck-loading text-primary-500 mr-2"></i>Wholesale movement</h3>
+            <p class="mt-2 text-sm text-gray-600">Prioritize bulk orders, customer credit, stock availability, and delivery follow-up.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Create wholesale sale</a><a href="{% url 'inventory:dashboard' %}" class="btn-outline text-sm"><i class="fas fa-warehouse mr-2"></i>Check inventory</a></div>
+        {% elif dashboard_profile.id == 'electronics' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-microchip text-primary-500 mr-2"></i>Device sales and stock</h3>
+            <p class="mt-2 text-sm text-gray-600">Monitor device inventory, customer purchases, and payment follow-up for your electronics shop.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Record device sale</a><a href="{% url 'inventory:dashboard' %}" class="btn-outline text-sm"><i class="fas fa-warehouse mr-2"></i>Check stock</a></div>
+        {% elif dashboard_profile.id == 'boutique' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-gem text-primary-500 mr-2"></i>Collection performance</h3>
+            <p class="mt-2 text-sm text-gray-600">See what is moving in your collection and keep customer purchases connected to stock.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Record boutique sale</a><a href="{% url 'products:list' %}" class="btn-outline text-sm"><i class="fas fa-box mr-2"></i>Manage collection</a></div>
+        {% elif dashboard_profile.id == 'hardware' or dashboard_profile.id == 'retail' %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-store text-primary-500 mr-2"></i>Stock and checkout</h3>
+            <p class="mt-2 text-sm text-gray-600">Keep everyday products available, spot stock pressure early, and record sales quickly.</p>
+            <div class="mt-4 flex flex-wrap gap-2"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Record sale</a><a href="{% url 'inventory:dashboard' %}" class="btn-outline text-sm"><i class="fas fa-warehouse mr-2"></i>Open inventory</a></div>
+        {% else %}
+            <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-compass text-primary-500 mr-2"></i>Business overview</h3>
+            <p class="mt-2 text-sm text-gray-600">Use the selected tools below to shape this workspace around the way your business operates.</p>
+            <div class="mt-4"><a href="{% url 'sales:create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>{{ dashboard_profile.primary_action }}</a></div>
+        {% endif %}
+    </div>
+    <div class="card bg-primary-50">
+        <p class="text-xs font-semibold uppercase tracking-wide text-primary-600">{{ dashboard_profile.metric_label }}</p>
+        <p class="mt-2 text-3xl font-bold text-primary-700">{% if dashboard_profile.id == 'retail' or dashboard_profile.id == 'hardware' %}{{ low_stock_count|add:out_of_stock_count }}{% elif dashboard_profile.id == 'electronics' or dashboard_profile.id == 'boutique' %}{{ total_products }}{% elif dashboard_profile.id == 'restaurant' or dashboard_profile.id == 'wholesale' %}{{ total_sales }}{% else %}{{ total_sales }}{% endif %}</p>
+        <p class="mt-1 text-sm text-gray-600">Based on this business's current data.</p>
+    </div>
+</div>

@@ -4,6 +4,7 @@ from django.forms import inlineformset_factory
 from django.db.models import Q
 from .models import Sale, SaleItem, Payment, Return
 from products.models import Product
+from accounts.models import User
 
 class SaleForm(forms.ModelForm):
     """Form for creating/editing sales."""
@@ -12,7 +13,7 @@ class SaleForm(forms.ModelForm):
         model = Sale
         fields = [
             'customer', 'customer_name', 'customer_phone', 'customer_email',
-            'payment_method', 'notes', 'delivery_address', 'delivery_date',
+            'payment_method', 'discount', 'notes', 'delivery_address', 'delivery_date',
         ]
         widgets = {
             'customer': forms.Select(attrs={'class': 'input-field'}),
@@ -20,6 +21,7 @@ class SaleForm(forms.ModelForm):
             'customer_phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Phone number'}),
             'customer_email': forms.EmailInput(attrs={'class': 'input-field', 'placeholder': 'Email address'}),
             'payment_method': forms.Select(attrs={'class': 'input-field'}),
+            'discount': forms.NumberInput(attrs={'class': 'input-field', 'step': '0.01', 'min': 0}),
             'notes': forms.Textarea(attrs={'class': 'input-field', 'rows': 2, 'placeholder': 'Additional notes'}),
             'delivery_address': forms.Textarea(attrs={'class': 'input-field', 'rows': 2, 'placeholder': 'Delivery address'}),
             'delivery_date': forms.DateTimeInput(attrs={'class': 'input-field', 'type': 'datetime-local'}),
@@ -28,6 +30,34 @@ class SaleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.business = kwargs.pop('business', None)
         super().__init__(*args, **kwargs)
+
+        if self.business:
+            from businesses.capabilities import capabilities_for_business
+            capabilities = capabilities_for_business(self.business)
+            self.fields['served_by'] = forms.ModelChoiceField(
+                queryset=User.objects.filter(business=self.business, is_active=True).order_by('first_name', 'last_name'),
+                required=False,
+                label='Served by',
+                widget=forms.Select(attrs={'class': 'input-field'}),
+            )
+            if 'tables' in capabilities:
+                self.fields['table_reference'] = forms.CharField(
+                    required=False,
+                    label='Table or order reference',
+                    widget=forms.TextInput(attrs={
+                        'class': 'input-field',
+                        'placeholder': 'e.g. Table 4 or Takeaway 12',
+                    }),
+                )
+                self.fields['order_type'] = forms.ChoiceField(
+                    choices=[('DINE_IN', 'Dine In'), ('TAKEAWAY', 'Takeaway'), ('DELIVERY', 'Delivery')],
+                    required=False,
+                    widget=forms.Select(attrs={'class': 'input-field'}),
+                )
+            if self.business.business_type == 'ELECTRONICS':
+                self.fields['serial_number'] = forms.CharField(required=False, label='Serial / IMEI', widget=forms.TextInput(attrs={'class': 'input-field'}))
+                self.fields['warranty_period'] = forms.CharField(required=False, label='Warranty', widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'e.g. 12 Months'}))
+            self.fields['transaction_code'] = forms.CharField(required=False, label='M-Pesa / transaction code', widget=forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Optional reconciliation code'}))
         
         if self.business:
             from customers.models import Customer

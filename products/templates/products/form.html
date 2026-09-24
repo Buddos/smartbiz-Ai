@@ -33,7 +33,7 @@
                            value="{{ form.name.value|default:'' }}"
                            class="input-field" placeholder="Enter product name">
                     {% if form.name.errors %}
-                        <p class="mt-1 text-sm text-danger-500">{{ form.name.errors.0 }}</p>
+                        <p class="mt-1 text-sm text-primary-600">{{ form.name.errors.0 }}</p>
                     {% endif %}
                 </div>
 
@@ -93,7 +93,7 @@
                                    value="{{ form.selling_price.value|default:0 }}"
                                    class="input-field" step="0.01" min="0">
                             {% if form.selling_price.errors %}
-                                <p class="mt-1 text-xs text-danger-500">{{ form.selling_price.errors.0 }}</p>
+                                <p class="mt-1 text-xs text-primary-600">{{ form.selling_price.errors.0 }}</p>
                             {% endif %}
                         </div>
                         <div>

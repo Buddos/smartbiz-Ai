@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}New Salon Sale - SmartBiz AI{% endblock %}
+{% block extra_css %}
+<style>
+.salon-page{background:#f3f8f5;color:#17352b}.salon-shell{max-width:1120px;margin:0 auto}.salon-panel{background:#fff;border:1px solid #d7e8df;border-radius:14px;box-shadow:0 8px 24px rgba(20,66,49,.06)}.salon-header{border-bottom:1px solid #d7e8df}.salon-kicker{color:#0f6e56;font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.salon-title{color:#073b2d;font-size:clamp(1.8rem,4vw,2.7rem);font-weight:750}.salon-section-title{color:#0a4d3b;font-size:1rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}.salon-input{width:100%;border:1px solid #bdd8cc;border-radius:9px;padding:.72rem .8rem;color:#17352b;background:#fff}.salon-input:focus{outline:0;border-color:#0f6e56;box-shadow:0 0 0 3px rgba(15,110,86,.12)}.quick-card{min-height:92px;border:1px solid #c5ded2;border-radius:12px;background:#f8fcfa;padding:.85rem;text-align:left;transition:.18s}.quick-card:hover,.quick-card:focus{border-color:#0f6e56;background:#e8f5ef;transform:translateY(-2px);outline:0}.quick-card strong{display:block;color:#124b39;font-size:.9rem}.quick-card span{display:block;color:#0f6e56;font-size:.86rem;font-weight:750;margin-top:.35rem}.line-table{width:100%;border-collapse:collapse}.line-table th{color:#5e776c;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:.7rem .5rem;border-bottom:1px solid #d7e8df}.line-table td{padding:.65rem .5rem;border-bottom:1px solid #e7f0eb;vertical-align:middle}.line-table .salon-input{padding:.55rem .6rem}.payment-choice{display:flex;align-items:center;gap:.55rem;min-height:44px;padding:.65rem .8rem;border:1px solid #c5ded2;border-radius:9px;color:#164c3a;cursor:pointer}.payment-choice:has(input:checked){border-color:#0f6e56;background:#e8f5ef;box-shadow:inset 0 0 0 1px #0f6e56}.payment-choice input{accent-color:#0f6e56}.salon-total{color:#073b2d;font-size:1.1rem}.salon-grand-total{color:#0f6e56;font-size:1.85rem;font-weight:800}.salon-primary{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;border:0;border-radius:9px;background:#0f6e56;color:#fff;padding:.8rem 1.25rem;font-weight:750;cursor:pointer}.salon-primary:hover{background:#0a4d3b}.salon-secondary{display:inline-flex;align-items:center;justify-content:center;border:1px solid #9fc5b5;border-radius:9px;color:#0f6e56;padding:.78rem 1.1rem;font-weight:700;text-decoration:none}.salon-error{border:1px solid #b7d8c8;background:#eef9f3;color:#0a4d3b;border-radius:9px;padding:.8rem 1rem}@media(max-width:700px){.line-table th:nth-child(3),.line-table td:nth-child(3){display:none}.line-table th,.line-table td{padding:.5rem .25rem}}
++</style>
+{% endblock %}
+{% block content %}
+<div class="salon-page min-h-screen py-6 sm:py-10"><div class="salon-shell px-3 sm:px-6"><div class="salon-panel overflow-hidden">
+<header class="salon-header flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8"><div class="flex items-center gap-3"><a href="{% url 'dashboard' %}" class="text-[#0f6e56]" aria-label="Back to dashboard"><i class="fas fa-arrow-left"></i></a><div><p class="salon-kicker">Salon / barber checkout</p><h1 class="salon-title">New Sale</h1></div></div><div class="text-left sm:text-right"><p class="text-xs uppercase tracking-wider text-[#5e776c]">Sale ticket</p><p class="font-semibold text-[#0a4d3b]">Ready to complete</p></div></header>
+<form method="POST" id="saleForm" class="space-y-7 p-5 sm:p-8">{% csrf_token %}{{ formset.management_form }}
+{% if form.non_field_errors or form.errors or formset.non_form_errors or formset.errors %}<div class="salon-error" role="alert"><strong><i class="fas fa-circle-exclamation mr-2"></i>Please correct the sale details.</strong>{% for error in form.errors.values %}{% for message in error %}<p class="mt-1">{{ message }}</p>{% endfor %}{% endfor %}{% for error in formset.non_form_errors %}<p class="mt-1">{{ error }}</p>{% endfor %}</div>{% endif %}
+<section><h2 class="salon-section-title mb-3">Customer</h2><div class="grid grid-cols-1 gap-4 md:grid-cols-3"><div class="md:col-span-2"><label for="customer" class="mb-1 block text-sm font-semibold">Customer</label><select name="customer" id="customer" class="salon-input" data-client-selector><option value="">Walk-in Customer</option>{% for customer in form.fields.customer.queryset %}<option value="{{ customer.id }}" data-name="{{ customer.name|escape }}" data-phone="{{ customer.phone|escape }}" data-email="{{ customer.email|escape }}">{{ customer.name }}{% if customer.phone %} - {{ customer.phone }}{% endif %}</option>{% endfor %}</select><p class="mt-1 text-xs text-[#5e776c]">A customer is optional for a quick haircut or walk-in service.</p></div><div><label for="customer_phone" class="mb-1 block text-sm font-semibold">Phone (optional)</label><input id="customer_phone" name="customer_phone" value="{{ form.customer_phone.value|default:'' }}" class="salon-input" placeholder="Phone number"></div></div><input type="hidden" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'Walk-in Customer' }}"><input type="hidden" name="customer_email" id="customer_email" value="{{ form.customer_email.value|default:'' }}"></section>
+<section><div class="mb-3"><h2 class="salon-section-title">Services / products</h2><p class="mt-1 text-sm text-[#5e776c]">Tap a service to add it instantly, or choose a product below.</p></div><div class="mb-5 flex items-center gap-2 rounded-lg border border-[#bdd8cc] bg-[#fbfefc] px-3 py-2"><i class="fas fa-search text-[#0f6e56]"></i><input id="quickSearch" class="w-full border-0 bg-transparent text-sm outline-none" placeholder="Search service or product..." aria-label="Search service or product"></div><h3 class="mb-3 text-sm font-bold text-[#124b39]">Quick Services</h3><div id="quickProducts" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{% for product in quick_products %}<button type="button" class="quick-card quick-product" data-product-name="{{ product.name|escape }}" data-product-price="{{ product.selling_price }}"><strong>{{ product.name }}</strong><span>KSh {{ product.selling_price|floatformat:0 }}</span></button>{% empty %}<p class="text-sm text-[#5e776c]">Add Haircut, Beard Trim, Hair Color, or other services in Products to show them here.</p>{% endfor %}</div></section>
+<section><div class="mb-3 flex items-center justify-between"><h2 class="salon-section-title">Selected items</h2><button type="button" id="addItem" class="salon-secondary text-sm">+ Add product</button></div><div class="overflow-x-auto"><table class="line-table"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody id="formsetContainer">{% for item_form in formset %}<tr class="formset-item">{{ item_form.id }}<td>{{ item_form.product }}{% for error in item_form.product.errors %}<p class="text-xs text-[#0a4d3b]">{{ error }}</p>{% endfor %}</td><td class="w-20">{{ item_form.quantity }}</td><td class="w-32">{{ item_form.unit_price }}</td><td class="w-28"><span class="line-total salon-total">KSh 0</span></td></tr>{% endfor %}</tbody></table></div></section>
+<section class="grid grid-cols-1 gap-5 border-t border-[#d7e8df] pt-6 md:grid-cols-2"><div><h2 class="salon-section-title mb-3">Staff / barber</h2><label for="id_served_by" class="mb-1 block text-sm font-semibold">Served by</label>{{ form.served_by }}<p class="mt-1 text-xs text-[#5e776c]">Used for staff performance analytics.</p></div><div><h2 class="salon-section-title mb-3">Payment method</h2><div class="grid grid-cols-2 gap-2">{% for value,label in form.fields.payment_method.choices %}{% if value %}<label class="payment-choice"><input type="radio" name="payment_method" value="{{ value }}"{% if forloop.first %} checked{% endif %}> <span>{{ label }}</span></label>{% endif %}{% endfor %}</div><label for="id_transaction_code" class="mt-3 mb-1 block text-sm font-semibold">M-Pesa code (optional)</label>{{ form.transaction_code }}</div></section>
+<section class="grid grid-cols-1 gap-6 border-t border-[#d7e8df] pt-6 md:grid-cols-2"><div><label for="id_discount" class="mb-1 block text-sm font-semibold">Discount</label>{{ form.discount }}<p class="mt-1 text-xs text-[#5e776c]">Leave blank or enter 0 when no discount applies.</p></div><div class="space-y-2 text-right"><div class="flex justify-between text-sm"><span>Subtotal</span><span id="summarySubtotal">KSh 0</span></div><div class="flex justify-between text-sm"><span>Discount</span><span id="summaryDiscount">KSh 0</span></div><div class="flex justify-between border-t border-[#d7e8df] pt-3"><strong class="salon-total">TOTAL</strong><strong id="summaryTotal" class="salon-grand-total">KSh 0</strong></div></div></section>
+<footer class="flex flex-col-reverse gap-3 border-t border-[#d7e8df] pt-5 sm:flex-row sm:justify-end"><a href="{% url 'dashboard' %}" class="salon-secondary">Cancel</a><button type="submit" class="salon-primary"><i class="fas fa-check"></i> Complete Sale</button></footer>
+</form></div></div></div>
+{% endblock %}
+{% block extra_js %}<script>
+	(function () {
+		const container = document.getElementById('formsetContainer');
+		const totalForms = document.getElementById('id_sale_items-TOTAL_FORMS');
+		const discountField = document.getElementById('id_discount');
+		const rows = () => Array.from(container.querySelectorAll('.formset-item'));
+
+		function calculateTotals() {
+			let subtotal = 0;
+			rows().forEach((row) => {
+				const quantity = parseFloat(row.querySelector('input[name$="-quantity"]')?.value) || 0;
+				const price = parseFloat(row.querySelector('input[name$="-unit_price"]')?.value) || 0;
+				const total = quantity * price;
+				subtotal += total;
+				const output = row.querySelector('.line-total');
+				if (output) output.textContent = `KSh ${total.toFixed(0)}`;
+			});
+			const discount = parseFloat(discountField?.value) || 0;
+			document.getElementById('summarySubtotal').textContent = `KSh ${subtotal.toFixed(0)}`;
+			document.getElementById('summaryDiscount').textContent = `KSh ${discount.toFixed(0)}`;
+			document.getElementById('summaryTotal').textContent = `KSh ${Math.max(0, subtotal - discount).toFixed(0)}`;
+		}
+
+		document.querySelectorAll('.quick-product').forEach((button) => button.addEventListener('click', () => {
+			const first = rows()[0];
+			const product = first?.querySelector('input[name$="-product"]');
+			const quantity = first?.querySelector('input[name$="-quantity"]');
+			const price = first?.querySelector('input[name$="-unit_price"]');
+			if (!product) return;
+			if (product.value === button.dataset.productName) quantity.value = (parseInt(quantity.value, 10) || 0) + 1;
+			else { product.value = button.dataset.productName; quantity.value = 1; price.value = button.dataset.productPrice; }
+			calculateTotals();
+		}));
+
+		document.getElementById('quickSearch')?.addEventListener('input', (event) => {
+			const query = event.target.value.toLowerCase();
+			document.querySelectorAll('.quick-product').forEach((card) => { card.hidden = !card.textContent.toLowerCase().includes(query); });
+		});
+		document.addEventListener('input', (event) => {
+			if (event.target.matches('input[name$="-quantity"], input[name$="-unit_price"], #id_discount')) calculateTotals();
+		});
+		document.getElementById('addItem')?.addEventListener('click', () => {
+			const current = parseInt(totalForms.value, 10);
+			const source = rows()[rows().length - 1];
+			const clone = source.cloneNode(true);
+			clone.innerHTML = clone.innerHTML.replace(new RegExp(`-${current - 1}-`, 'g'), `-${current}-`);
+			clone.querySelectorAll('input').forEach((input) => { if (input.type !== 'hidden') input.value = ''; });
+			clone.querySelector('.line-total').textContent = 'KSh 0';
+			container.appendChild(clone);
+			totalForms.value = current + 1;
+			calculateTotals();
+		});
+		calculateTotals();
+	}());
+</script>{% endblock %}

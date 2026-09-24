@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from decimal import Decimal
 import uuid
 from businesses.models import Business
 from products.models import Product
@@ -258,9 +259,12 @@ class SaleItem(models.Model):
                 self.cost_price = self.product.purchase_price
             if not self.unit_price:
                 self.unit_price = self.product.selling_price
-        self.subtotal = self.unit_price * self.quantity
-        self.tax_amount = self.subtotal * (self.tax_rate / 100)
-        self.total = self.subtotal + self.tax_amount - self.discount
+        unit_price = Decimal(str(self.unit_price or 0))
+        discount = Decimal(str(self.discount or 0))
+        self.subtotal = unit_price * self.quantity
+        tax_rate = Decimal(str(self.tax_rate or 0))
+        self.tax_amount = self.subtotal * (tax_rate / Decimal('100'))
+        self.total = self.subtotal + self.tax_amount - discount
         super().save(*args, **kwargs)
 
 class Payment(models.Model):
