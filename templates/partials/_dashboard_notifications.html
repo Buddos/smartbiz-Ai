@@ -1,0 +1,32 @@
+<div class="dashboard-notifications" data-notifications>
+    <button class="dashboard-notifications-button" type="button" data-notifications-toggle aria-expanded="false" aria-controls="dashboardNotificationsPanel" aria-label="Notifications{% if unread_count %}, {{ unread_count }} items need attention{% endif %}">
+        <i class="fas fa-bell" aria-hidden="true"></i>
+        {% if unread_count %}<span class="dashboard-notifications-count" aria-hidden="true">{{ unread_count }}</span>{% endif %}
+    </button>
+    <section class="dashboard-notifications-panel" id="dashboardNotificationsPanel" data-notifications-panel hidden aria-label="Notifications">
+        <div class="dashboard-notifications-heading">
+            <div><strong>Notifications</strong><span>{% if unread_count %}{{ unread_count }} need attention{% else %}You're all caught up{% endif %}</span></div>
+            <button class="dashboard-notifications-close" type="button" data-notifications-close aria-label="Close notifications"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
+        <div class="dashboard-notifications-list">
+            {% for item in items %}
+                <div class="dashboard-notification">
+                    <span class="dashboard-notification-icon"><i class="fas {{ item.icon }}" aria-hidden="true"></i></span>
+                    <div class="dashboard-notification-copy">
+                        {% if item.url %}<a href="{{ item.url }}">{{ item.title }}</a>{% else %}<strong>{{ item.title }}</strong>{% endif %}
+                        <p>{{ item.message }}</p>
+                        <time>{{ item.timestamp|timesince }} ago</time>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="dashboard-notifications-empty">No new notifications.</p>
+            {% endfor %}
+        </div>
+        {% if items %}
+            <div class="dashboard-notifications-footer">
+                {% if can_view_inventory_alerts %}<a href="{% url 'inventory:alerts' %}">Inventory alerts</a>{% endif %}
+                {% if can_view_ai_insights %}<a href="{% url 'ai_engine:home' %}#insights">AI insights</a>{% endif %}
+            </div>
+        {% endif %}
+    </section>
+</div>

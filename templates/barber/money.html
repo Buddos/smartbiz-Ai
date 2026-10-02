@@ -1,0 +1,33 @@
+{% extends 'barber/page_base.html' %}
+{% load static %}
+{% block page_content %}
+<section class="barber-page-heading">
+  <div><p class="salon-eyebrow">Recorded sales and expenses</p><h1>Money</h1><p class="salon-subtitle" id="moneyPeriodLabel">{{ money.start }} – {{ money.end }}</p></div>
+  <div class="barber-period-controls" id="moneyPage" data-live-url="{% url 'barber:live_money' %}">
+    <button type="button" data-period="today">Today</button><button type="button" data-period="week">This week</button><button type="button" data-period="month" class="is-active">This month</button><button type="button" data-period="custom">Custom</button>
+  </div>
+</section>
+<div class="barber-custom-dates" id="customMoneyDates" hidden><label>From <input type="date" id="moneyStart" value="{{ money.start }}"></label><label>To <input type="date" id="moneyEnd" value="{{ money.end }}"></label><button type="button" id="applyMoneyDates">Apply</button></div>
+<section class="barber-money-kpis">
+  <article><span>Revenue</span><strong>KSh <b data-money="revenue">{{ money.revenue|floatformat:0 }}</b></strong><small data-money-change="revenue">{% if money.revenue_change != None %}{{ money.revenue_change }}% vs prior period{% else %}No prior-period comparison{% endif %}</small></article>
+  <article><span>Expenses</span><strong>KSh <b data-money="expenses">{{ money.expenses|floatformat:0 }}</b></strong><small data-money-change="expenses">{% if money.expense_change != None %}{{ money.expense_change }}% vs prior period{% else %}No prior-period comparison{% endif %}</small></article>
+  <article class="money-profit"><span>Profit</span><strong>KSh <b data-money="profit">{{ money.profit|floatformat:0 }}</b></strong><small><b data-money="margin">{{ money.margin }}</b>% margin after recorded expenses</small></article>
+  <article><span>Cash in</span><strong>KSh <b data-money="cash_in">{{ money.cash_in|floatformat:0 }}</b></strong><small>Recorded cash + M-Pesa payments</small></article>
+  <article><span>Cash out</span><strong>KSh <b data-money="cash_out">{{ money.cash_out|floatformat:0 }}</b></strong><small>Recorded expenses</small></article>
+</section>
+<p class="live-note" id="moneyLiveStatus" aria-live="polite">Money figures refresh automatically.</p>
+<section class="barber-page-panel money-alert-panel" id="expenseAlerts">{% for alert in money.expense_alerts %}<p><strong>{{ alert.name }} expenses increased {{ alert.percent }}%</strong> · KSh {{ alert.amount|floatformat:0 }} more than the comparable prior period.</p>{% empty %}<p>No expense category has increased by more than 15% versus the comparable prior period.</p>{% endfor %}</section>
+<section class="barber-money-grid">
+  <article class="barber-page-panel"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Sales composition</p><h2>Revenue sources</h2></div></div><div class="money-source-list" id="moneySources">{% for item in money.sources %}<div class="money-source-row"><div><strong>{{ item.name }}</strong><span>KSh {{ item.amount|floatformat:0 }} · {{ item.percent }}%</span></div><i><b style="width:{{ item.percent }}%"></b></i></div>{% empty %}<p class="table-empty">No sales recorded in this period.</p>{% endfor %}</div></article>
+  <article class="barber-page-panel"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Daily totals</p><h2>Revenue and expenses</h2></div></div><div class="money-trend-list" id="moneyTrend">{% for day in money.trend %}<div class="money-trend-row"><span>{{ day.date }}</span><div><i class="trend-revenue" style="width:{{ day.revenue_width }}%"></i><i class="trend-expense" style="width:{{ day.expense_width }}%"></i></div><strong>KSh {{ day.revenue|floatformat:0 }}</strong></div>{% empty %}<p class="table-empty">No daily totals yet.</p>{% endfor %}</div><p class="chart-legend"><i class="legend-revenue"></i> Revenue <i class="legend-expenses"></i> Expenses</p></article>
+  <article class="barber-page-panel"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Cash movement</p><h2>Last 7 days</h2></div></div><div class="barber-table-wrap"><table class="barber-data-table compact-table"><thead><tr><th>Day</th><th>In</th><th>Out</th><th>Net</th></tr></thead><tbody id="cashDays">{% for day in money.cash_days %}<tr><td>{{ day.date }}</td><td>KSh {{ day.in|floatformat:0 }}</td><td>KSh {{ day.out|floatformat:0 }}</td><td>KSh {{ day.net|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="4" class="table-empty">No cash movement recorded.</td></tr>{% endfor %}</tbody></table></div></article>
+  <article class="barber-page-panel"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Where money went</p><h2>Expense breakdown</h2></div></div><div class="money-expenses-list" id="expenseBreakdown">{% for item in money.expense_breakdown %}<div><span>{{ item.name }}</span><strong>KSh {{ item.amount|floatformat:0 }}</strong></div>{% empty %}<p class="table-empty">No expenses recorded in this period.</p>{% endfor %}</div><p class="live-note">Profit subtracts recorded expenses and sale-item costs from revenue. Barber commissions are not modeled and are not included.</p></article>
+</section>
+<section class="barber-page-panel money-pnl-panel"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Period summary</p><h2>Profit &amp; loss</h2></div></div>
+  <div class="money-pnl-row"><span>Recorded revenue</span><strong>KSh <b data-money="revenue">{{ money.revenue|floatformat:0 }}</b></strong></div>
+  <div class="money-pnl-row"><span>Sale-item costs</span><strong>− KSh <b data-money="product_cost">{{ money.product_cost|floatformat:0 }}</b></strong></div>
+  <div class="money-pnl-row"><span>Recorded expenses</span><strong>− KSh <b data-money="expenses">{{ money.expenses|floatformat:0 }}</b></strong></div>
+  <div class="money-pnl-row net"><span>Net profit</span><strong>KSh <b data-money="profit">{{ money.profit|floatformat:0 }}</b></strong></div>
+</section>
+<script src="{% static 'js/barber-pages.js' %}" defer></script>
+{% endblock %}

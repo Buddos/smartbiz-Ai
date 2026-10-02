@@ -1,0 +1,19 @@
+{% load dashboard_notifications %}
+<header class="salon-topbar">
+    <button class="salon-menu-button" type="button" aria-label="Open navigation" aria-controls="salonSidebar" aria-expanded="false" data-salon-menu><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <div class="salon-breadcrumb"><span>{{ user.business.name|default:'Salon' }}</span><i class="fas fa-chevron-right" aria-hidden="true"></i><strong>{% if page == 'appointments' %}Appointments{% elif page == 'pipeline' %}Bookings pipeline{% elif page == 'client_packages' %}Client packages{% elif page == 'clients' %}Clients{% elif page == 'stylists' %}Stylists{% elif page == 'services' %}Services &amp; packages{% elif page == 'products' %}Retail products{% else %}Today{% endif %}</strong></div>
+    <div class="salon-topbar-actions">
+        <a class="salon-topbar-link" href="{% url 'ai_engine:home' %}" title="AI insights" aria-label="AI insights"><i class="fas fa-lightbulb" aria-hidden="true"></i></a>
+        {% dashboard_notifications %}
+        <div class="salon-account-menu" data-account-menu>
+            <button class="salon-topbar-profile" type="button" aria-label="Open account menu" aria-expanded="false" data-account-menu-button>{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button>
+            <div class="salon-account-popover" data-account-menu-popover>
+                <div class="salon-account-summary"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></div>
+                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}
+                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-gear"></i>Settings</a>{% else %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-gear"></i>Personal settings</a>{% endif %}
+                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a>
+                <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket"></i>Log out</a>
+            </div>
+        </div>
+    </div>
+</header>

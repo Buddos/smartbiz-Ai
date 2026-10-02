@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Suppliers | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Suppliers</h1><p>{{ supplier_count }} active supplier{{ supplier_count|pluralize }} and recent purchase orders.</p></div>
+        <div class="electronics-heading-actions"><a class="electronics-button electronics-button-outline" href="#supplier-form"><i class="fas fa-plus"></i> Add supplier</a><a class="electronics-button electronics-button-accent" href="#purchase-order-section"><i class="fas fa-file-circle-plus"></i> New purchase order</a></div>
+    </header>
+    <div class="electronics-stat-row">
+        <article class="electronics-stat"><span>Active suppliers</span><strong>{{ supplier_count }}</strong></article>
+        <article class="electronics-stat"><span>Purchase orders</span><strong>{{ purchase_order_count }}</strong></article>
+        <article class="electronics-stat"><span>Open orders</span><strong>{{ open_order_count }}</strong></article>
+        <article class="electronics-stat"><span>Stock receiving</span><strong>Tracked</strong></article>
+    </div>
+    <div class="electronics-split">
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2>Supplier directory</h2><p>Saved vendors linked to this business.</p></div></div>
+            <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Supplier</th><th>Contact</th><th>SKUs ordered</th><th>Lead time</th><th>Open POs</th></tr></thead><tbody>
+                {% for supplier in suppliers %}
+                <tr><td><strong>{{ supplier.name }}</strong></td><td>{% if supplier.phone %}{{ supplier.phone }}{% endif %}{% if supplier.email %}<br><a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>{% endif %}</td><td>{{ supplier.product_count }}</td><td>{{ supplier.lead_time_days }} days</td><td>{{ supplier.outstanding_orders }}</td></tr>
+                {% empty %}<tr><td colspan="5">No suppliers have been added yet.</td></tr>{% endfor %}
+            </tbody></table></div>
+            <form id="supplier-form" method="post" class="electronics-form-grid" style="margin-top:18px">{% csrf_token %}<input type="hidden" name="form_type" value="supplier">
+                {% for field in supplier_form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="text-danger-700">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                <div class="full-width"><button class="electronics-button electronics-button-accent" type="submit"><i class="fas fa-check-circle"></i> Review supplier details</button></div>
+            </form>
+        </section>
+        <section id="purchase-order-section" class="electronics-panel" tabindex="-1">
+            <div class="electronics-panel-heading"><div><h2>New purchase order</h2><p>Record an order, then receive it into inventory.</p></div></div>
+            {% if order_form.fields.supplier.queryset %}
+            <form id="purchase-order-form" method="post" class="electronics-form-grid">{% csrf_token %}<input type="hidden" name="form_type" value="order">
+                {% for field in order_form %}<label class="{% if field.name == 'notes' %}full-width{% endif %}">{{ field.label }}{{ field }}{% for error in field.errors %}<small class="text-danger-700">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                <div class="full-width"><button class="electronics-button electronics-button-accent" type="submit"><i class="fas fa-file-circle-plus"></i> Create purchase order</button></div>
+            </form>
+            {% else %}<p class="electronics-empty">Add a supplier first to create a purchase order.</p>{% endif %}
+        </section>
+    </div>
+    <section class="electronics-panel" style="margin-top:15px">
+        <div class="electronics-panel-heading"><div><h2>Purchase orders</h2><p>Orders recorded for this business.</p></div></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>PO #</th><th>Supplier</th><th>Product</th><th>Qty</th><th>Total</th><th>Expected</th><th>Status</th><th>Action</th></tr></thead><tbody>
+            {% for order in orders %}<tr>
+                <td><strong>{{ order.order_number }}</strong></td><td>{{ order.supplier.name }}</td>
+                <td>{% for item in order.items.all %}{{ item.product.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
+                <td>{% for item in order.items.all %}{{ item.received_quantity }}/{{ item.quantity }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                <td>{{ user.business.currency }} {{ order.total|floatformat:2 }}</td><td>{{ order.expected_date|date:"j M Y"|default:"—" }}</td>
+                <td><span class="electronics-badge {% if order.status == 'PARTIAL' %}warning{% elif order.status == 'CANCELLED' %}danger{% endif %}">{{ order.get_status_display }}</span></td>
+                <td>{% if order.status == 'DRAFT' or order.status == 'SENT' or order.status == 'PARTIAL' %}<form method="post" action="{% url 'electronics:purchase_order_receive' order.id %}" class="electronics-inline-form">{% csrf_token %}<button type="submit">Receive stock</button></form>{% else %}—{% endif %}</td>
+            </tr>{% empty %}<tr><td colspan="8">No purchase orders have been recorded.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div></div>
+<div class="supplier-confirm-backdrop" id="supplierConfirmDialog" hidden>
+    <section class="supplier-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="supplierConfirmTitle" aria-describedby="supplierConfirmDescription">
+        <span class="supplier-confirm-icon"><i class="fas fa-truck"></i></span>
+        <h2 id="supplierConfirmTitle">Confirm supplier details</h2>
+        <p id="supplierConfirmDescription">Review this supplier before adding them to your directory.</p>
+        <dl class="supplier-confirm-summary">
+            <div><dt>Name</dt><dd data-confirm-name>—</dd></div>
+            <div><dt>Phone</dt><dd data-confirm-phone>—</dd></div>
+            <div><dt>Email</dt><dd data-confirm-email>—</dd></div>
+        </dl>
+        <div class="supplier-confirm-actions">
+            <button type="button" class="electronics-button electronics-button-outline" data-supplier-edit>Edit details</button>
+            <button type="button" class="electronics-button electronics-button-accent" data-supplier-confirm><i class="fas fa-check"></i> Confirm &amp; add supplier</button>
+        </div>
+    </section>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/electronics-supplier-confirm.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Sales | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Sales</h1><p>Record sales, review receipts, and follow payment status.</p></div>
+        <div class="electronics-heading-actions">
+            <a class="electronics-button electronics-button-outline" href="{% url 'sales:export' %}?{{ request.GET.urlencode }}"><i class="fas fa-download"></i> Export CSV</a>
+            <a class="electronics-button electronics-button-accent" href="{% url 'sales:create' %}"><i class="fas fa-plus"></i> New sale</a>
+        </div>
+    </header>
+    <section class="electronics-kpis" aria-label="Today's sales">
+        <article class="electronics-kpi"><div><span>Today's sales</span><strong>{{ user.business.currency }} {{ electronics_stats.today_total|floatformat:0 }}</strong><small>Live sales total</small></div><i class="kpi-icon mint fas fa-money-bill-wave"></i></article>
+        <article class="electronics-kpi"><div><span>Transactions</span><strong>{{ electronics_stats.today_transactions }}</strong><small>{{ electronics_stats.completed_today }} completed</small></div><i class="kpi-icon coral fas fa-receipt"></i></article>
+        <article class="electronics-kpi"><div><span>Average ticket</span><strong>{{ user.business.currency }} {{ electronics_stats.today_average|floatformat:0 }}</strong><small>Today's average transaction</small></div><i class="kpi-icon mint fas fa-chart-line"></i></article>
+        <article class="electronics-kpi"><div><span>Returns today</span><strong>{{ electronics_stats.returns_today }}</strong><small>{{ user.business.currency }} {{ electronics_stats.refunds_today|floatformat:0 }} refunded</small></div><i class="kpi-icon lavender fas fa-rotate-left"></i></article>
+    </section>
+    <nav class="electronics-filter-pills" aria-label="Sales time period">
+        <a class="{% if request.GET.range == 'today' %}active{% endif %}" href="?range=today">Today</a>
+        <a class="{% if request.GET.range == 'week' %}active{% endif %}" href="?range=week">This week</a>
+        <a class="{% if request.GET.range == 'month' %}active{% endif %}" href="?range=month">This month</a>
+        <a class="{% if not request.GET.range %}active{% endif %}" href="{% url 'sales:list' %}">All sales</a>
+    </nav>
+    <section class="electronics-panel">
+        <form method="get" class="electronics-filter-form">
+            {% if request.GET.range %}<input type="hidden" name="range" value="{{ request.GET.range }}">{% endif %}
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="search" value="{{ form.search.value|default:'' }}" placeholder="Receipt, phone, product, or IMEI"></label>
+            <label><span>From</span><input class="input-field" type="date" name="date_from" value="{{ form.date_from.value|default:'' }}"></label>
+            <label><span>To</span><input class="input-field" type="date" name="date_to" value="{{ form.date_to.value|default:'' }}"></label>
+            <label><span>Payment</span><select class="input-field" name="payment_method">{% for value,label in form.fields.payment_method.choices %}<option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label><span>Payment status</span><select class="input-field" name="payment_status">{% for value,label in form.fields.payment_status.choices %}<option value="{{ value }}" {% if form.payment_status.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label><span>Order status</span><select class="input-field" name="order_status"><option value="">All order statuses</option>{% for value,label in order_status_choices %}<option value="{{ value }}" {% if order_status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label><span>Cashier</span><select class="input-field" name="cashier"><option value="">All cashiers</option>{% for cashier in cashiers %}<option value="{{ cashier.id }}" {% if cashier_filter == cashier.id|stringformat:"s" %}selected{% endif %}>{{ cashier.get_full_name|default:cashier.email }}</option>{% endfor %}</select></label>
+            <button class="electronics-button electronics-button-outline" type="submit">Apply filters</button>
+            <a class="electronics-clear-filters" href="{% url 'sales:list' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap">
+            <table class="electronics-table">
+                <thead><tr><th>Receipt</th><th>Date &amp; time</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Cashier</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for sale in page_obj %}
+                    <tr class="{% if sale.order_status == 'RETURNED' %}row-danger{% elif sale.payment_status == 'PENDING' %}row-warning{% elif sale.payment_method == 'CREDIT' %}row-info{% endif %}">
+                        <td><a class="electronics-table-link" href="{% url 'sales:detail' sale.id %}">{{ sale.sale_number }}</a></td>
+                        <td>{{ sale.sale_date|date:"j M Y · g:i A" }}</td>
+                        <td><strong>{{ sale.customer_name|default:"Walk-in" }}</strong>{% if sale.customer_phone %}<br><small>{{ sale.customer_phone }}</small>{% endif %}</td>
+                        <td>{% for item in sale.sale_items.all %}{% if forloop.counter <= 2 %}{{ item.product_name }}{% if not forloop.last %}, {% endif %}{% endif %}{% empty %}—{% endfor %}<br><small>{{ sale.item_count }} unit{{ sale.item_count|pluralize }}</small></td>
+                        <td><strong>{{ user.business.currency }} {{ sale.total|floatformat:2 }}</strong></td>
+                        <td><span class="electronics-badge {% if sale.payment_status == 'PENDING' %}warning{% elif sale.payment_status == 'REFUNDED' %}danger{% elif sale.payment_method == 'CREDIT' %}info{% endif %}">{{ sale.get_payment_method_display }}</span></td>
+                        <td>{% if sale.created_by %}{{ sale.created_by.get_full_name|default:sale.created_by.email }}{% else %}—{% endif %}</td>
+                        <td><span class="electronics-badge {% if sale.order_status == 'CANCELLED' or sale.order_status == 'RETURNED' %}danger{% elif sale.order_status == 'PENDING' or sale.order_status == 'PROCESSING' %}warning{% endif %}">{{ sale.get_order_status_display }}</span></td>
+                        <td class="electronics-row-actions"><a href="{% url 'sales:detail' sale.id %}" aria-label="View {{ sale.sale_number }}" title="View"><i class="fas fa-eye"></i></a><a href="{% url 'sales:return' sale.id %}" aria-label="Return {{ sale.sale_number }}" title="Process return"><i class="fas fa-rotate-left"></i></a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9"><div class="electronics-empty-state"><i class="fas fa-receipt"></i><strong>No sales match these filters</strong><span>Try a different date range, or record the first sale.</span><a class="electronics-button electronics-button-accent" href="{% url 'sales:create' %}">Create sale</a></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page_obj.has_other_pages %}<nav class="electronics-pagination" aria-label="Sales pages">{% if page_obj.has_previous %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>{% if page_obj.has_next %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+</div></div>
+{% endblock %}

@@ -3,7 +3,9 @@ from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
+from django.forms import UUIDField
 from django.http import HttpResponse
 from io import BytesIO
 from xml.sax.saxutils import escape
@@ -15,20 +17,24 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
-from django.db.models import Q, Sum, Count, Avg
+from django.db.models import Q, Sum, Count, Avg, Max
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 import csv
 import json
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from .models import Sale, SaleItem, Payment, Return
-from .forms import SaleForm, SaleItemFormSet, PaymentForm, ReturnForm, SaleSearchForm
-from products.models import Product
+from .forms import BarberSaleItemFormSet, SaleForm, SaleItemFormSet, PaymentForm, ReturnForm, SaleSearchForm
+from products.models import Category, Product
 from customers.models import Customer
-from accounts.models import UserActivity
+from accounts.models import User, UserActivity
 from accounts.decorators import business_required, permission_required, role_required
 from businesses.capabilities import sale_template_for_business
+from businesses.models import BusinessSettings
+from barber.models import Appointment
+from salon.models import SalonAppointment
 
 
 def _sale_metadata_from_form(form, existing=None):
@@ -51,6 +57,15 @@ def sale_list_view(request):
     """List all sales with search and filters."""
     business = request.user.business
     sales = Sale.objects.filter(business=business)
+    quick_range = request.GET.get("range", "")
+    if business.business_type == "ELECTRONICS" and quick_range:
+        local_today = timezone.localdate()
+        if quick_range == "today":
+            sales = sales.filter(sale_date__date=local_today)
+        elif quick_range == "week":
+            sales = sales.filter(sale_date__date__gte=local_today - timedelta(days=local_today.weekday()))
+        elif quick_range == "month":
+            sales = sales.filter(sale_date__date__gte=local_today.replace(day=1))
     
     # Search form
     form = SaleSearchForm(request.GET or None)
@@ -62,8 +77,10 @@ def sale_list_view(request):
             sales = sales.filter(
                 Q(sale_number__icontains=search) |
                 Q(customer_name__icontains=search) |
-                Q(customer_phone__icontains=search)
-            )
+                Q(customer_phone__icontains=search) |
+                Q(sale_items__product_name__icontains=search) |
+                Q(metadata__serial_number__icontains=search)
+            ).distinct()
         
         # Date range
         date_from = form.cleaned_data.get('date_from')
@@ -92,9 +109,15 @@ def sale_list_view(request):
         max_amount = form.cleaned_data.get('max_amount')
         if max_amount:
             sales = sales.filter(total__lte=max_amount)
+
+    cashier_id = request.GET.get("cashier", "")
+    if cashier_id:
+        sales = sales.filter(created_by_id=cashier_id)
+    if request.GET.get("order_status"):
+        sales = sales.filter(order_status=request.GET["order_status"])
     
     # Default ordering
-    sales = sales.order_by('-sale_date')
+    sales = sales.select_related("customer", "created_by").prefetch_related("sale_items").order_by('-sale_date')
     
     # Pagination
     paginator = Paginator(sales, 20)
@@ -113,11 +136,38 @@ def sale_list_view(request):
         'average_sale': sales.aggregate(avg=Avg('total'))['avg'] or 0,
         'pending_payments': sales.filter(payment_status='PENDING').count(),
     }
-    
-    return render(request, 'sales/list.html', {
+
+    electronics_stats = None
+    cashiers = None
+    if business.business_type == "ELECTRONICS":
+        all_sales = Sale.objects.filter(business=business)
+        today_sales = all_sales.filter(sale_date__date=today)
+        today_returns = Return.objects.filter(
+            business=business,
+            return_date__date=today,
+            status__in=["APPROVED", "PROCESSED"],
+        )
+        electronics_stats = {
+            "today_total": today_sales.aggregate(total=Sum("total"))["total"] or 0,
+            "today_transactions": today_sales.count(),
+            "today_average": today_sales.aggregate(avg=Avg("total"))["avg"] or 0,
+            "completed_today": today_sales.filter(order_status="COMPLETED").count(),
+            "returns_today": today_returns.count(),
+            "refunds_today": today_returns.aggregate(total=Sum("refund_amount"))["total"] or 0,
+        }
+        cashiers = User.objects.filter(
+            business=business, is_active=True, sales_created__isnull=False
+        ).distinct().order_by("first_name", "last_name")
+
+    return render(request, 'electronics/sales.html' if electronics_stats else 'sales/list.html', {
         'page_obj': page_obj,
         'form': form,
         'stats': stats,
+        'electronics_stats': electronics_stats,
+        'cashiers': cashiers,
+        'cashier_filter': cashier_id,
+        'order_status_filter': request.GET.get("order_status", ""),
+        'order_status_choices': Sale.ORDER_STATUS_CHOICES,
         'title': 'Sales',
     })
 
@@ -128,52 +178,356 @@ def sale_create_view(request):
     """Create a new sale."""
     business = request.user.business
     invoice_mode = request.GET.get('mode') == 'invoice' or request.POST.get('mode') == 'invoice'
+    active_appointment = None
+    appointment_id_value = ""
     
     if request.method == 'POST':
+        appointment_id_value = request.POST.get("appointment_id", "").strip()
         form = SaleForm(request.POST, business=business)
-        formset = SaleItemFormSet(request.POST, business=business)
+        item_formset = BarberSaleItemFormSet if business.business_type == "BARBER" else SaleItemFormSet
+        formset = item_formset(request.POST, business=business)
         
         if form.is_valid() and formset.is_valid():
             with transaction.atomic():
-                # Create sale
-                sale = form.save(commit=False)
-                sale.business = business
-                sale.created_by = request.user
-                sale.metadata = _sale_metadata_from_form(form, sale.metadata)
-                sale.save()
-                
-                formset.instance = sale
-                formset.save()
-                sale.recalculate()
-                if sale.payment_method in {"CASH", "M-PESA", "CARD", "BANK"} and sale.amount_paid == 0:
-                    sale.amount_paid = sale.total
-                    sale.save()
-                for item_form in formset:
-                    if item_form.cleaned_data and not item_form.cleaned_data.get("DELETE", False):
+                locked_products = {}
+                requested_quantities = {}
+                if business.business_type == "ELECTRONICS":
+                    for item_form in formset.forms:
+                        if not item_form.cleaned_data or item_form.cleaned_data.get("DELETE", False):
+                            continue
                         product = item_form.cleaned_data["product"]
-                        quantity = item_form.cleaned_data["quantity"]
-                        product.current_stock = max(0, product.current_stock - quantity)
-                        product.save()
-                
-                # Log activity
-                UserActivity.objects.create(
-                    user=request.user,
-                    action='CREATE',
-                    model_name='Sale',
-                    object_id=str(sale.id),
-                    changes={'sale_number': sale.sale_number, 'total': float(sale.total)},
+                        product_key = str(product.pk)
+                        requested_quantities[product_key] = (
+                            requested_quantities.get(product_key, 0)
+                            + item_form.cleaned_data["quantity"]
+                        )
+                    locked_products = {
+                        str(product.pk): product
+                        for product in Product.objects.select_for_update().filter(
+                            business=business,
+                            pk__in=requested_quantities,
+                        )
+                    }
+                    for product_key, quantity in requested_quantities.items():
+                        product = locked_products.get(product_key)
+                        first_form = next(
+                            item_form
+                            for item_form in formset.forms
+                            if item_form.cleaned_data
+                            and not item_form.cleaned_data.get("DELETE", False)
+                            and str(item_form.cleaned_data["product"].pk) == product_key
+                        )
+                        if product is None:
+                            first_form.add_error(
+                                "product",
+                                "This product is no longer available in your catalog. Refresh and try again.",
+                            )
+                        elif quantity > product.current_stock:
+                            first_form.add_error(
+                                "quantity",
+                                f"Only {product.current_stock} unit(s) remain; "
+                                f"{quantity} were requested across this cart.",
+                            )
+                if business.business_type == "ELECTRONICS" and not form.errors and not any(formset.errors):
+                    subtotal = sum(
+                        (
+                            item_form.cleaned_data["quantity"]
+                            * item_form.cleaned_data["unit_price"]
+                            for item_form in formset.forms
+                            if item_form.cleaned_data
+                            and not item_form.cleaned_data.get("DELETE", False)
+                        ),
+                        start=0,
+                    )
+                    if form.cleaned_data.get("discount", 0) > subtotal:
+                        form.add_error("discount", "Discount cannot exceed the sale subtotal.")
+
+                appointment_id = None
+                appointment = None
+                if appointment_id_value:
+                    try:
+                        appointment_id = UUIDField().clean(appointment_id_value)
+                    except ValidationError:
+                        form.add_error(None, "This appointment is invalid. Refresh the page and try again.")
+                if appointment_id and business.business_type == "BARBER":
+                    appointments = Appointment.objects.select_for_update().filter(
+                        id=appointment_id,
+                        business=business,
+                        status="IN_CHAIR",
+                    )
+                    if request.user.role == "BARBER":
+                        appointments = appointments.filter(barber=request.user)
+                    appointment = appointments.first()
+                    if appointment is None:
+                        form.add_error(None, "This appointment is no longer active. Refresh the page and try again.")
+
+                if appointment_id and business.business_type == "SALON":
+                    appointment = SalonAppointment.objects.select_for_update().filter(
+                        id=appointment_id,
+                        business=business,
+                        status__in=["CHECKED_IN", "IN_SERVICE"],
+                        sale__isnull=True,
+                    ).select_related("customer", "stylist").prefetch_related("services").first()
+                    if appointment is None:
+                        form.add_error(None, "This salon appointment is no longer ready for checkout.")
+
+                if appointment_id and business.business_type not in {"BARBER", "SALON"}:
+                    form.add_error(None, "Appointments can only be linked to barber or salon sales.")
+
+                if not form.errors and not any(formset.errors):
+                    sale = form.save(commit=False)
+                    sale.business = business
+                    sale.created_by = request.user
+                    tax_settings = None
+                    if business.business_type == "ELECTRONICS":
+                        tax_settings = BusinessSettings.objects.filter(business=business).first()
+                        sale.metadata["tax"] = {
+                            "enabled": bool(tax_settings and tax_settings.tax_enabled),
+                            "rate": str(tax_settings.tax_rate if tax_settings else Decimal("0")),
+                            "inclusive": bool(tax_settings and tax_settings.tax_inclusive),
+                        }
+                    if business.business_type == "BARBER":
+                        sale.barber = (
+                            (appointment.barber if appointment and appointment.barber_id else None) or
+                            form.cleaned_data.get("served_by") or
+                            (request.user if request.user.role == "BARBER" else None)
+                        )
+                    sale.metadata = _sale_metadata_from_form(form, sale.metadata)
+                    if business.business_type == "SALON" and appointment and appointment.stylist_id:
+                        sale.metadata["served_by"] = {
+                            "id": str(appointment.stylist_id),
+                            "name": appointment.stylist.get_full_name() or appointment.stylist.email,
+                        }
+                    sale.save()
+
+                    formset.instance = sale
+                    formset.save()
+                    if business.business_type == "ELECTRONICS":
+                        tax_rate = (
+                            tax_settings.tax_rate
+                            if tax_settings and tax_settings.tax_enabled
+                            else Decimal("0")
+                        )
+                        for item in sale.sale_items.select_related("product"):
+                            item.tax_rate = (
+                                tax_rate
+                                if locked_products[str(item.product_id)].is_taxable
+                                else Decimal("0")
+                            )
+                            item.save()
+                    sale.recalculate()
+                    if sale.payment_method in {"CASH", "M-PESA", "CARD", "BANK"} and sale.amount_paid == 0:
+                        sale.amount_paid = sale.total
+                        sale.save()
+                    for item_form in formset:
+                        if item_form.cleaned_data and not item_form.cleaned_data.get("DELETE", False):
+                            product = item_form.cleaned_data["product"]
+                            quantity = item_form.cleaned_data["quantity"]
+                            if business.business_type != "ELECTRONICS" and not (
+                                business.business_type == "SALON"
+                                and product.metadata.get("salon_service")
+                            ):
+                                product.current_stock = max(0, product.current_stock - quantity)
+                                product.save()
+                    if business.business_type == "ELECTRONICS":
+                        for product_key, quantity in requested_quantities.items():
+                            product = locked_products[product_key]
+                            product.current_stock -= quantity
+                            product.save()
+
+                    if appointment:
+                        if business.business_type == "BARBER":
+                            appointment.sale = sale
+                            appointment.status = "DONE"
+                            appointment.completed_at = timezone.now()
+                            appointment.save(update_fields=["sale", "status", "completed_at", "updated_at"])
+                        else:
+                            appointment.sale = sale
+                            appointment.status = "COMPLETED"
+                            appointment.save(update_fields=["sale", "status", "updated_at"])
+
+                    UserActivity.objects.create(
+                        user=request.user,
+                        action='CREATE',
+                        model_name='Sale',
+                        object_id=str(sale.id),
+                        changes={'sale_number': sale.sale_number, 'total': float(sale.total)},
+                        business=business,
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+
+                    messages.success(request, f'Invoice #{sale.sale_number} created successfully!' if invoice_mode else f'Sale #{sale.sale_number} created successfully!')
+                    return redirect('sales:detail', sale_id=sale.id)
+        if appointment_id_value and business.business_type == "BARBER":
+            try:
+                posted_appointment_id = UUIDField().clean(appointment_id_value)
+            except ValidationError:
+                posted_appointment_id = None
+            if posted_appointment_id:
+                appointments = Appointment.objects.filter(
                     business=business,
-                    ip_address=request.META.get('REMOTE_ADDR'),
-                    user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    id=posted_appointment_id,
+                    status="IN_CHAIR",
                 )
-                
-                messages.success(request, f'Invoice #{sale.sale_number} created successfully!' if invoice_mode else f'Sale #{sale.sale_number} created successfully!')
-                return redirect('sales:detail', sale_id=sale.id)
+                if request.user.role == "BARBER":
+                    appointments = appointments.filter(barber=request.user)
+                active_appointment = appointments.select_related("customer", "service", "chair", "barber").first()
+        elif appointment_id_value and business.business_type == "SALON":
+            try:
+                posted_appointment_id = UUIDField().clean(appointment_id_value)
+            except ValidationError:
+                posted_appointment_id = None
+            if posted_appointment_id:
+                active_appointment = SalonAppointment.objects.filter(
+                    business=business,
+                    id=posted_appointment_id,
+                    status__in=["CHECKED_IN", "IN_SERVICE"],
+                    sale__isnull=True,
+                ).select_related("customer", "stylist").prefetch_related("services").first()
     else:
-        form = SaleForm(business=business)
-        formset = SaleItemFormSet(business=business)
+        initial = {}
+        if business.business_type == "BARBER":
+            appointments = Appointment.objects.filter(
+                business=business,
+                status="IN_CHAIR",
+            )
+            requested_appointment_id = request.GET.get("appointment", "").strip()
+            if requested_appointment_id:
+                try:
+                    requested_appointment_id = str(UUIDField().clean(requested_appointment_id))
+                except ValidationError:
+                    requested_appointment_id = ""
+                if requested_appointment_id:
+                    appointments = appointments.filter(id=requested_appointment_id)
+                else:
+                    appointments = appointments.none()
+            elif request.user.role == "BARBER":
+                appointments = appointments.filter(barber=request.user)
+            active_appointment = appointments.select_related(
+                "customer", "service", "barber", "chair"
+            ).first()
+            if active_appointment:
+                appointment_id_value = str(active_appointment.id)
+                if active_appointment.barber_id:
+                    initial["served_by"] = active_appointment.barber
+                initial = {
+                    "customer": active_appointment.customer_id or "",
+                    "customer_name": active_appointment.display_client_name,
+                    "customer_phone": active_appointment.client_phone or (
+                        active_appointment.customer.phone if active_appointment.customer_id else ""
+                    ),
+                    **initial,
+                }
+        elif business.business_type == "SALON":
+            requested_appointment_id = request.GET.get("appointment", "").strip()
+            if requested_appointment_id:
+                try:
+                    requested_appointment_id = UUIDField().clean(requested_appointment_id)
+                except ValidationError:
+                    requested_appointment_id = None
+                active_appointment = (
+                    SalonAppointment.objects.filter(
+                        id=requested_appointment_id,
+                        business=business,
+                        status__in=["CHECKED_IN", "IN_SERVICE"],
+                        sale__isnull=True,
+                    )
+                    .select_related("customer", "stylist")
+                    .prefetch_related("services")
+                    .first()
+                    if requested_appointment_id else None
+                )
+                if active_appointment is None:
+                    from django.http import Http404
+                    raise Http404("This salon appointment is not available for checkout.")
+                appointment_id_value = str(active_appointment.id)
+                initial = {
+                    "customer": active_appointment.customer_id or "",
+                    "customer_name": active_appointment.display_client_name,
+                    "customer_phone": active_appointment.display_client_phone,
+                    "served_by": active_appointment.stylist_id or "",
+                }
+        if business.business_type == "ELECTRONICS" and request.GET.get("customer"):
+            customer = get_object_or_404(
+                Customer,
+                id=request.GET["customer"],
+                business=business,
+                is_active=True,
+            )
+            initial.update({
+                "customer": customer,
+                "customer_name": customer.name,
+                "customer_phone": customer.phone,
+                "customer_email": customer.email,
+            })
+        form = SaleForm(business=business, initial=initial)
+        item_formset = BarberSaleItemFormSet if business.business_type == "BARBER" else SaleItemFormSet
+        initial_items = []
+        if business.business_type == "SALON" and active_appointment:
+            services = list(active_appointment.services.filter(
+                business=business,
+                is_active=True,
+                metadata__salon_service=True,
+            ).order_by("name"))
+            if len(services) != active_appointment.services.count():
+                messages.error(
+                    request,
+                    "A booked service is no longer active. Reactivate it before checking out this appointment.",
+                )
+                return redirect("salon:appointments")
+            initial_items = [
+                {
+                    "product": service.name,
+                    "quantity": 1,
+                    "unit_price": service.selling_price,
+                }
+                for service in services
+            ]
+        formset = item_formset(business=business)
+        if initial_items:
+            formset.extra = max(formset.extra, len(initial_items))
+            for item_form, item_initial in zip(formset.forms, initial_items):
+                item_form.initial.update(item_initial)
     
     sale_template = sale_template_for_business(business)
+    electronics_products = (
+        Product.objects.filter(business=business, is_active=True)
+        .select_related("category")
+        .order_by("name")
+        if business.business_type == "ELECTRONICS"
+        else Product.objects.none()
+    )
+    recent_electronics_products = Product.objects.none()
+    frequent_electronics_products = Product.objects.none()
+    tax_settings = (
+        BusinessSettings.objects.filter(business=business).first()
+        if business.business_type == "ELECTRONICS"
+        else None
+    )
+    if business.business_type == "ELECTRONICS":
+        recent_cutoff = timezone.now() - timedelta(days=7)
+        recent_electronics_products = (
+            electronics_products.filter(
+                sale_items__sale__business=business,
+                sale_items__sale__sale_date__gte=recent_cutoff,
+            )
+            .annotate(last_sold=Max("sale_items__sale__sale_date"))
+            .order_by("-last_sold", "name")[:4]
+        )
+        frequent_electronics_products = (
+            electronics_products.annotate(
+                recent_units_sold=Sum(
+                    "sale_items__quantity",
+                    filter=Q(
+                        sale_items__sale__business=business,
+                        sale_items__sale__sale_date__gte=recent_cutoff,
+                    ),
+                )
+            )
+            .filter(recent_units_sold__gt=0)
+            .order_by("-recent_units_sold", "name")[:4]
+        )
     return render(request, sale_template['entry_template'], {
         'form': form,
         'formset': formset,
@@ -181,6 +535,27 @@ def sale_create_view(request):
         'invoice_mode': invoice_mode,
         'sale_template': sale_template,
         'quick_products': Product.objects.filter(business=business, is_active=True).order_by('name')[:24],
+        'electronics_products': electronics_products,
+        'recent_electronics_products': recent_electronics_products,
+        'frequent_electronics_products': frequent_electronics_products,
+        'electronics_categories': (
+            Category.objects.filter(
+                business=business,
+                is_active=True,
+                products__is_active=True,
+                products__business=business,
+            ).distinct().order_by("name")
+            if business.business_type == "ELECTRONICS"
+            else Category.objects.none()
+        ),
+        'electronics_customers': form.fields["customer"].queryset if business.business_type == "ELECTRONICS" else (),
+        'electronics_tax': {
+            'enabled': bool(tax_settings and tax_settings.tax_enabled),
+            'rate': tax_settings.tax_rate if tax_settings else Decimal("0"),
+            'inclusive': bool(tax_settings and tax_settings.tax_inclusive),
+        },
+        'active_appointment': active_appointment,
+        'appointment_id_value': appointment_id_value,
     })
 
 @login_required
@@ -204,17 +579,30 @@ def sale_detail_view(request, sale_id):
         return_obj = sale.returns.first()
     except Return.DoesNotExist:
         return_obj = None
+    customer_summary = None
+    if sale.customer_id:
+        customer_summary = sale.customer.sales.aggregate(
+            purchases=Count("id"),
+            spent=Sum("total"),
+        )
     
-    return render(request, 'sales/detail.html', {
+    return render(request, (
+        'electronics/sale_detail.html'
+        if business.business_type == "ELECTRONICS"
+        else 'sales/detail.html'
+    ), {
         'sale': sale,
         'items': items,
         'payments': payments,
         'return_obj': return_obj,
+        'customer_summary': customer_summary,
         'business': business,
         'settings': invoice_settings,
         'invoice_number': invoice_number,
         'served_by': sale.metadata.get('served_by', {}),
         'transaction_code': sale.metadata.get('transaction_code', ''),
+        'sale_serial_number': sale.metadata.get('serial_number', ''),
+        'warranty_period': sale.metadata.get('warranty_period', ''),
         'receipt_payment': payments.filter(payment_status='COMPLETED').first(),
         'currency': business.currency or 'KES',
         'title': f'Sale #{sale.sale_number}',

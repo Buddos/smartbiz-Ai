@@ -1,0 +1,131 @@
+{% extends 'layouts/app.html' %}
+{% load static %}
+{% block title %}Barbershop products - SmartBiz AI{% endblock %}
+{% block extra_css %}
+<style>
+.barber-products{--product-ink:#1e1e2f;--product-muted:#56566f;--product-line:#dbe5df;--product-green:#0f6e56;color:var(--product-ink);font-family:var(--font-sans)}
+.products-header,.products-actions,.products-filters,.products-kpis,.products-layout,.product-drawer-head,.product-modal-head,.bulk-bar,.stock-alert-item,.attach-row{display:flex;align-items:center;gap:12px}
+.products-header,.product-drawer-head,.product-modal-head{justify-content:space-between}
+.products-header h1{margin:0;font-size:26px;line-height:1.2;font-weight:700;letter-spacing:-.02em}
+.products-header p{margin:5px 0 0;color:var(--product-muted);font-size:14px}
+.products-actions{flex-wrap:wrap}
+.products-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:9px 14px;border:1px solid #9abaaa;border-radius:9px;background:#fff;color:#155b45;text-decoration:none;font:600 14px/1.3 var(--font-sans);cursor:pointer}
+.products-button.primary{border-color:var(--product-green);background:var(--product-green);color:white}
+.products-button:hover{filter:brightness(.97)}
+.products-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:20px 0}
+.products-kpi{display:grid;gap:6px;padding:16px;border:1px solid var(--product-line);border-right:0;background:#fff}
+.products-kpi:first-child{border-radius:12px 0 0 12px}.products-kpi:last-child{border-right:1px solid var(--product-line);border-radius:0 12px 12px 0}
+.products-kpi span{color:var(--product-muted);font-size:12px;line-height:1.4;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.products-kpi strong{font-size:26px;line-height:1.1;font-weight:800;font-variant-numeric:tabular-nums}
+.products-kpi small{color:var(--product-muted);font-size:12px}
+.products-filters{flex-wrap:wrap;padding:14px;border:1px solid var(--product-line);border-radius:12px 12px 0 0;background:#fff}
+.products-filters input,.products-filters select{min-height:42px;padding:8px 11px;border:1px solid #bdcec4;border-radius:8px;background:#fff;color:var(--product-ink);font:400 14px/1.4 var(--font-sans)}
+.products-filters input[type=search]{flex:1;min-width:180px}
+.product-table-wrap{overflow-x:auto;border:1px solid var(--product-line);border-top:0;border-radius:0 0 12px 12px;background:#fff}
+.product-table{width:100%;border-collapse:collapse;font-size:14px}
+.product-table th{padding:12px 10px;border-bottom:1px solid var(--product-line);color:#4c6257;text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.product-table td{padding:12px 10px;border-bottom:1px solid #edf1ee;vertical-align:middle}
+.product-table tr:last-child td{border-bottom:0}
+.product-name-button{border:0;background:transparent;padding:0;color:#155b45;text-align:left;font:600 14px/1.4 var(--font-sans);cursor:pointer}
+.product-sku{display:block;color:var(--product-muted);font-size:12px}
+.stock-status{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.stock-status::before{width:8px;height:8px;border-radius:50%;background:currentColor;content:""}
+.stock-status.healthy{background:#edf7f0;color:#286342}.stock-status.low{background:#fff6e4;color:#82580f}.stock-status.out{background:#fff0f0;color:#923d3d}.stock-status.archived{background:#f0f0f2;color:#56566f}
+.product-row.is-low{background:#fffaf0}.product-row.is-out{background:#fff6f6}
+.row-actions{display:flex;gap:6px;white-space:nowrap}
+.row-action{min-height:36px;padding:6px 9px;border:1px solid #cbd8d0;border-radius:7px;background:white;color:#27523d;font:600 12px/1.3 var(--font-sans);cursor:pointer}
+.row-action:hover{border-color:var(--product-green)}
+.product-extra-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:14px;margin-top:16px}
+.product-panel{padding:17px;border:1px solid var(--product-line);border-radius:12px;background:#fff}
+.product-panel h2{margin:0 0 12px;font-size:16px;font-weight:700}
+.stock-alert-list,.attach-list{display:grid;gap:8px}
+.stock-alert-item{justify-content:space-between;padding:10px 0;border-bottom:1px solid #edf1ee}
+.stock-alert-item:last-child{border:0}
+.stock-alert-item strong,.attach-row strong{font-size:14px}
+.stock-alert-item span,.attach-row span{color:var(--product-muted);font-size:13px}
+.stock-alert-item button{flex:0 0 auto}
+.attach-row{display:grid;grid-template-columns:minmax(70px,.5fr) 1fr 42px;gap:10px}
+.attach-track{height:9px;overflow:hidden;border-radius:99px;background:#edf1ee}
+.attach-track i{display:block;height:100%;border-radius:inherit;background:#54836a}
+.product-live-note{margin-top:10px;color:var(--product-muted);font-size:12px}
+.product-empty{padding:36px 16px;text-align:center;color:var(--product-muted);font-size:14px}
+.product-drawer{position:fixed;inset:0 0 0 auto;z-index:80;width:min(440px,100vw);padding:24px;overflow-y:auto;border:0;border-left:1px solid var(--product-line);background:#fff;box-shadow:-16px 0 48px rgba(20,35,27,.18);transform:translateX(100%);transition:transform .2s}
+.product-drawer.is-open{transform:translateX(0)}
+.product-drawer-backdrop{position:fixed;inset:0;z-index:79;background:rgba(20,34,27,.38)}
+.product-drawer[hidden],.product-drawer-backdrop[hidden]{display:none}
+.product-drawer-head h2,.product-modal-head h2{margin:0;font-size:21px}
+.product-drawer-head button,.product-modal-head button{width:40px;height:40px;border:0;border-radius:8px;background:#f0f4f1;color:var(--product-ink);font-size:24px;cursor:pointer}
+.drawer-stat-list{display:grid;gap:10px;margin:20px 0}
+.drawer-stat{display:flex;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid #edf1ee;font-size:14px}
+.drawer-stat span{color:var(--product-muted)}
+.product-modal{width:min(720px,calc(100vw - 24px));max-height:90vh;padding:22px;border:1px solid var(--product-line);border-radius:14px;background:white;color:var(--product-ink)}
+.product-modal::backdrop{background:rgba(20,34,27,.45)}
+.product-modal-head{margin-bottom:14px}
+.product-modal form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.product-modal form p{display:grid;gap:5px;margin:0;font-size:13px;font-weight:600}
+.product-modal form p:has(textarea),.product-modal form p:has(input[type=file]),.product-modal form p:has(input[type=checkbox]),.product-modal form ul.errorlist{grid-column:1/-1}
+.product-modal form input:not([type=checkbox]),.product-modal form select,.product-modal form textarea{width:100%;min-height:42px;padding:8px 10px;border:1px solid #bdcec4;border-radius:8px;font:400 14px/1.4 var(--font-sans)}
+.product-modal form input[type=checkbox]{width:18px;height:18px;accent-color:var(--product-green)}
+.product-modal-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.bulk-bar{position:sticky;bottom:12px;z-index:10;justify-content:space-between;margin:12px 0;padding:12px 14px;border:1px solid #c4d8cb;border-radius:12px;background:#f1f8f3;box-shadow:0 4px 18px rgba(20,35,27,.12)}
+.products-page [hidden]{display:none!important}
+@media(max-width:900px){.product-extra-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.products-header{align-items:flex-start;flex-direction:column}.products-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.products-kpi,.products-kpi:first-child,.products-kpi:last-child{border:1px solid var(--product-line);border-radius:10px}.products-kpi strong{font-size:23px}.product-table-wrap{overflow:visible;border:0;background:transparent}.product-table,.product-table tbody{display:block}.product-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.product-table tr.product-row{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:10px;margin-bottom:10px;border:1px solid var(--product-line);border-radius:11px;background:#fff}.product-table td{display:flex;justify-content:space-between;gap:10px;padding:7px 4px;border:0;text-align:right}.product-table td::before{content:attr(data-label);color:var(--product-muted);font-size:11px;font-weight:600;text-align:left}.product-table td:first-child,.product-table td:last-child{grid-column:1/-1}.product-table td:first-child{justify-content:flex-start;text-align:left}.product-table td:first-child::before{content:none}.product-table td:last-child{justify-content:flex-start}.product-table td:last-child::before{content:none}.row-actions{flex-wrap:wrap}.products-filters{align-items:stretch}.products-filters input,.products-filters select{flex:1 1 140px}.product-modal form{grid-template-columns:1fr}.product-modal form p:has(textarea),.product-modal form p:has(input[type=file]),.product-modal form p:has(input[type=checkbox]),.product-modal form ul.errorlist{grid-column:auto}.product-modal-actions{grid-column:auto}.bulk-bar{flex-wrap:wrap}}
+</style>
+{% endblock %}
+{% block page %}
+<main class="barber-products products-page" id="barberProductsPage"
+  data-live-url="{% url 'products:api_live_barber_products' %}"
+  data-action-url="{% url 'products:barber_product_action' product_id='00000000-0000-0000-0000-000000000000' %}">
+  <header class="products-header">
+    <div><p class="salon-eyebrow">Retail · live inventory</p><h1>Products <span id="productCount">({{ product_data.metrics.total_products }})</span></h1><p>Stock, sales and product attachment to completed visits. Refreshes automatically.</p></div>
+    <div class="products-actions">
+      <a class="products-button" href="{% url 'products:export' %}"><i class="fas fa-file-export" aria-hidden="true"></i> Export CSV</a>
+      <button type="button" class="products-button primary" id="addProductButton"><i class="fas fa-plus" aria-hidden="true"></i> Add product</button>
+    </div>
+  </header>
+  <section class="products-kpis" aria-label="Product performance">
+    <article class="products-kpi"><span>Product revenue</span><strong>KSh <b data-product-metric="revenue">{{ product_data.metrics.revenue|floatformat:0 }}</b></strong><small>Paid retail sales · 30 days</small></article>
+    <article class="products-kpi"><span>Units sold</span><strong data-product-metric="units">{{ product_data.metrics.units }}</strong><small>Paid units · 30 days</small></article>
+    <article class="products-kpi"><span>Average margin</span><strong><b data-product-metric="margin">{{ product_data.metrics.margin }}</b>%</strong><small>Weighted by paid product sales</small></article>
+    <article class="products-kpi"><span>Attach rate</span><strong><b data-product-metric="attach_rate">{{ product_data.metrics.attach_rate }}</b>%</strong><small><span data-product-metric="attach_count">{{ product_data.metrics.attach_count }}</span> of <span data-product-metric="appointment_count">{{ product_data.metrics.appointment_count }}</span> completed visits · 30 days</small></article>
+  </section>
+  <section class="product-catalogue">
+    <div class="products-filters">
+      <label class="sr-only" for="productSearch">Search products</label><input type="search" id="productSearch" placeholder="Search name, SKU or supplier..." value="{{ request.GET.search }}">
+      <label class="sr-only" for="productCategory">Filter by category</label><select id="productCategory"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:'s' %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select>
+      <label class="sr-only" for="productStatus">Filter by stock status</label><select id="productStatus"><option value="">Active products</option><option value="LOW" {% if request.GET.status == 'LOW' %}selected{% endif %}>Low stock</option><option value="OUT" {% if request.GET.status == 'OUT' %}selected{% endif %}>Out of stock</option><option value="ARCHIVED" {% if request.GET.status == 'ARCHIVED' %}selected{% endif %}>Archived</option></select>
+      <button type="button" class="products-button" id="clearProductFilters">Clear</button>
+    </div>
+    <div class="product-table-wrap"><table class="product-table">
+      <thead><tr><th><input type="checkbox" id="selectAllProducts" aria-label="Select all products"></th><th>Product</th><th>Category</th><th>Stock</th><th>Reorder</th><th>Cost</th><th>Price</th><th>Margin</th><th>Sold · 30d</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="productRows"></tbody>
+    </table><div class="product-empty" id="productEmpty" hidden>No products yet. Add retail products such as pomade, beard oil or shampoo to start tracking sales.</div></div>
+  </section>
+  <div class="bulk-bar" id="bulkBar" hidden><strong><span id="selectedCount">0</span> selected</strong><div class="products-actions"><button type="button" class="products-button" data-bulk-action="restock">Restock selected</button><button type="button" class="products-button" data-bulk-action="archive">Archive selected</button><a class="products-button" href="{% url 'products:export' %}">Export CSV</a></div></div>
+  <section class="product-extra-grid">
+    <article class="product-panel"><h2>Low-stock alerts <span id="lowStockCount">({{ product_data.metrics.low_stock_count }})</span></h2><div class="stock-alert-list" id="lowStockAlerts"></div></article>
+    <article class="product-panel"><h2>Attach rate by barber</h2><div class="attach-list" id="barberAttachRates"></div><p class="product-live-note">Paid retail sale linked to completed appointments · last 30 days.</p></article>
+  </section>
+  <p class="product-live-note" id="productUpdatedAt" aria-live="polite"></p>
+
+  <div class="product-drawer-backdrop" id="productDrawerBackdrop" hidden></div>
+  <aside class="product-drawer" id="productDrawer" aria-labelledby="drawerProductName" aria-hidden="true">
+    <div class="product-drawer-head"><div><p class="salon-eyebrow">Product details</p><h2 id="drawerProductName"></h2></div><button type="button" id="closeProductDrawer" aria-label="Close details">×</button></div>
+    <div class="drawer-stat-list" id="drawerProductStats"></div>
+    <div class="products-actions"><button type="button" class="products-button" id="drawerRestock">Restock</button><button type="button" class="products-button" id="drawerEdit">Edit</button></div>
+  </aside>
+
+  <dialog class="product-modal" id="productModal">
+    <div class="product-modal-head"><div><p class="salon-eyebrow">Inventory</p><h2 id="productModalTitle">Add product</h2></div><button type="button" id="closeProductModal" aria-label="Close product form">×</button></div>
+    <form id="productForm" method="post" enctype="multipart/form-data">
+      {% csrf_token %}<input type="hidden" name="product_id" id="productId" value="{{ editing_product_id }}">
+      {{ form.as_p }}
+      <div class="product-modal-actions"><button type="button" class="products-button" id="cancelProductForm">Cancel</button><button type="submit" class="products-button primary">Save product</button></div>
+    </form>
+  </dialog>
+</main>
+{{ product_data|json_script:"initialProductData" }}
+<script src="{% static 'js/barber-products.js' %}" defer></script>
+{% if form.errors %}<script>document.addEventListener('DOMContentLoaded', () => document.getElementById('productModal').showModal());</script>{% endif %}
+{% endblock %}

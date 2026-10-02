@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load dashboard_notifications %}
 
 {% block title %}Dashboard - SmartBiz AI{% endblock %}
 
@@ -77,14 +78,12 @@
     <div class="reference-dashboard-nav-title">Main</div>
     <a href="{% url 'dashboard' %}" class="reference-dashboard-nav active"><i class="fas fa-th-large"></i>Dashboard</a>
     {% for item in generated_navigation %}<a href="{% url item.url %}" class="reference-dashboard-nav"><i class="fas {{ item.icon }}"></i>{{ item.label }}</a>{% endfor %}
-    <div class="reference-dashboard-nav-title">Account</div>
-    <a href="{% url 'accounts:settings' %}" class="reference-dashboard-nav"><i class="fas fa-cog"></i>Settings</a>
     <div class="reference-dashboard-user"><div class="avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</div><div>{{ user.get_full_name|default:user.email }}<br><small class="text-gray-500">{{ user.get_role_display|default:'Business User' }}</small></div></div>
 </aside>
 <div class="reference-dashboard-main">
     <header class="reference-dashboard-header">
         <div class="flex items-center gap-4"><button class="reference-dashboard-menu" id="referenceDashboardMenu" aria-label="Open menu"><i class="fas fa-bars"></i></button><div><h1 class="text-xl font-bold text-primary-700">Dashboard</h1><p class="text-sm text-gray-500 hidden sm:block">Welcome back, {{ user.first_name|default:user.email }}! Here's your business overview</p></div></div>
-        <div class="reference-dashboard-header-tools"><div class="search"><i class="fas fa-search text-gray-400"></i><input type="search" placeholder="Search..." aria-label="Search"></div><button aria-label="Notifications"><i class="fas fa-bell"></i></button><div class="reference-dashboard-profile"><button class="avatar" id="referenceDashboardProfileButton" aria-label="Open account menu" aria-expanded="false">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button><div class="reference-dashboard-profile-menu" id="referenceDashboardProfileMenu"><div class="profile-summary">{{ user.get_full_name|default:user.email }}</div>{% if user.role == 'OWNER' or user.role == 'MANAGER' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-cog"></i>Settings</a><a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a><a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i>Log out</a></div></div></div>
+        <div class="reference-dashboard-header-tools"><div class="search"><i class="fas fa-search text-gray-400"></i><input type="search" placeholder="Search..." aria-label="Search"></div>{% dashboard_notifications %}<div class="reference-dashboard-profile"><button class="avatar" id="referenceDashboardProfileButton" aria-label="Open account menu" aria-expanded="false">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="{{ user.full_name }}">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button><div class="reference-dashboard-profile-menu" id="referenceDashboardProfileMenu"><div class="profile-summary">{{ user.get_full_name|default:user.email }}</div>{% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield"></i>Business admin</a>{% endif %}{% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-cog"></i>Settings</a>{% else %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-cog"></i>Personal settings</a>{% endif %}<a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i>Profile</a><a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i>Logout</a></div></div></div>
     </header>
 <div class="min-h-screen bg-gray-50 py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -264,7 +263,7 @@
         </div>
 
         <!-- Insights Row -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 gap-6">
             <!-- Top Products -->
             <div class="card">
                 <h3 class="text-lg font-semibold text-primary-700 mb-4">
@@ -288,45 +287,6 @@
                 </div>
             </div>
 
-            <!-- Recent Insights -->
-            <div class="card">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-primary-700">
-                        <i class="fas fa-lightbulb text-insight-500 mr-2"></i>Insights
-                    </h3>
-                    {% if unread_insights > 0 %}
-                    <span class="px-2 py-1 rounded-full text-xs bg-danger-100 text-danger-700">{{ unread_insights }} new</span>
-                    {% endif %}
-                </div>
-                <div class="space-y-3">
-                    {% for insight in recent_insights %}
-                    <div class="insight-card {{ insight.severity|lower }} p-3 rounded-lg bg-gray-50">
-                        <div class="flex items-start gap-3">
-                            <i class="fas 
-                                {% if insight.severity == 'CRITICAL' %}fa-exclamation-circle text-danger-500
-                                {% elif insight.severity == 'WARNING' %}fa-exclamation-triangle text-warning-500
-                                {% elif insight.severity == 'SUCCESS' %}fa-check-circle text-success-500
-                                {% else %}fa-info-circle text-insight-500{% endif %} 
-                                mt-1">
-                            </i>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900">{{ insight.title }}</p>
-                                <p class="text-xs text-gray-600 mt-1">{{ insight.description|truncatechars:100 }}</p>
-                                <p class="text-xs text-gray-400 mt-1">{{ insight.generated_at|timesince }} ago</p>
-                            </div>
-                            {% if not insight.is_read %}
-                            <button onclick="markRead('{{ insight.id }}')" 
-                                    class="text-xs text-primary-500 hover:text-primary-700">
-                                Mark read
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <p class="text-sm text-gray-500 text-center py-4">No insights yet. Generate some!</p>
-                    {% endfor %}
-                </div>
-            </div>
         </div>
 
         <!-- Category Sales -->

@@ -14,6 +14,8 @@ urlpatterns = [
     path("terms-and-conditions/", terms_conditions, name="terms_conditions"),
     path("dashboard/", dashboard_view, name="dashboard"),
     path("dashboard/admin/", business_admin_dashboard_view, name="business_admin"),
+    path("dashboard/barber/", include("barber.urls")),
+    path("salon/", include("salon.urls")),
     path("accounts/", include("accounts.urls")),
     path("businesses/", include("businesses.urls")),
     path("products/", include("products.urls")),
@@ -24,6 +26,8 @@ urlpatterns = [
     path("analytics/", include("analytics.urls")),
     path("ai/", include("ai_engine.urls")),
     path("reports/", include("reports.urls")),
+    path("electronics/", include("electronics.urls")),
+    path("retail/", include("retail.urls")),
     path("api/", include("api.urls")),
 ]
 

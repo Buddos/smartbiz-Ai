@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Customer Credit | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar"><div><h1>Customer Credit</h1><p>Follow outstanding credit sales, installment due dates, and payment history.</p></div><a class="electronics-button electronics-button-outline" href="{% url 'sales:export' %}"><i class="fas fa-download"></i> Export sales</a></header>
+    <div class="electronics-stat-row">
+        <article class="electronics-stat"><span>Total outstanding</span><strong>{{ user.business.currency }} {{ outstanding_total|floatformat:0 }}</strong></article>
+        <article class="electronics-stat"><span>Overdue</span><strong class="credit-danger">{{ user.business.currency }} {{ overdue_total|floatformat:0 }}</strong></article>
+        <article class="electronics-stat"><span>Customers with credit</span><strong>{{ customers_with_credit }}</strong></article>
+        <article class="electronics-stat"><span>Average balance</span><strong>{{ user.business.currency }} {{ average_balance|floatformat:0 }}</strong></article>
+    </div>
+    <section class="electronics-panel">
+        <div class="electronics-panel-heading"><div><h2>Outstanding credit sales</h2><p>Balance values update from recorded payments.</p></div></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Customer</th><th>Sale / device</th><th>Total</th><th>Paid</th><th>Balance</th><th>Next due</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {% for row in credit_rows %}{% with sale=row.sale plan=row.plan %}
+            <tr>
+                <td><strong>{% if sale.customer_name %}{{ sale.customer_name }}{% elif sale.customer %}{{ sale.customer.name }}{% else %}Walk-in customer{% endif %}</strong><br><small>{{ sale.customer_phone|default:sale.customer.phone|default:"No phone" }}</small></td>
+                <td><a href="{% url 'sales:detail' sale.id %}">{{ sale.sale_number }}</a><br><small>{% for item in sale.sale_items.all %}{{ item.product_name }}{% if not forloop.last %}, {% endif %}{% empty %}No line items{% endfor %}</small></td>
+                <td>{{ user.business.currency }} {{ sale.total|floatformat:2 }}</td><td>{{ user.business.currency }} {{ sale.amount_paid|floatformat:2 }}</td>
+                <td><strong>{{ user.business.currency }} {{ sale.balance_due|floatformat:2 }}</strong></td>
+                <td>{% if plan %}{{ plan.next_due_date|date:"j M Y" }}{% else %}Plan not set{% endif %}</td>
+                <td>{% if row.overdue %}<span class="electronics-badge danger">Overdue</span>{% elif plan %}<span class="electronics-badge">On plan</span>{% else %}<span class="electronics-badge warning">No plan</span>{% endif %}</td>
+                <td><a href="{% url 'sales:payment' sale.id %}">Record payment</a></td>
+            </tr>{% endwith %}
+            {% empty %}<tr><td colspan="8">No outstanding credit sales for this business.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="electronics-panel" style="margin-top:15px">
+        <div class="electronics-panel-heading"><div><h2>Set an installment plan</h2><p>Plans are attached to existing unpaid credit sales. Payments remain recorded on the sale.</p></div></div>
+        <form method="post" class="electronics-form-grid">{% csrf_token %}
+            {% for field in form %}<label class="{% if field.name == 'notes' %}full-width{% endif %}">{{ field.label }}{{ field }}{% for error in field.errors %}<small class="text-danger-700">{{ error }}</small>{% endfor %}</label>{% endfor %}
+            <div class="full-width"><button class="electronics-button electronics-button-accent" type="submit"><i class="fas fa-calendar-check"></i> Save installment plan</button></div>
+        </form>
+    </section>
+</div></div>
+{% endblock %}

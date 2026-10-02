@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ customer.name }} | Customers{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><p class="electronics-breadcrumb"><a href="{% url 'customers:list' %}">Customers</a> / Profile</p><h1>{{ customer.name }}</h1><p>{% if customer.phone %}<a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>{% endif %}{% if customer.email %} · {{ customer.email }}{% endif %}{% if customer.address %} · {{ customer.address }}{% endif %}</p></div>
+        <div class="electronics-heading-actions">{% if customer.phone %}<a class="electronics-button electronics-button-outline" href="tel:{{ customer.phone }}"><i class="fas fa-phone"></i> Call</a><a class="electronics-button electronics-button-outline" href="sms:{{ customer.phone }}"><i class="fas fa-comment-sms"></i> SMS</a>{% endif %}<a class="electronics-button electronics-button-outline" href="{% url 'customers:update' customer.id %}"><i class="fas fa-pen"></i> Edit</a><a class="electronics-button electronics-button-accent" href="{% url 'sales:create' %}?customer={{ customer.id }}"><i class="fas fa-cart-shopping"></i> New sale</a></div>
+    </header>
+    <section class="electronics-kpis" aria-label="Customer lifetime summary">
+        <article class="electronics-kpi"><div><span>Total spent</span><strong>{{ user.business.currency }} {{ sales_summary.spent|default:0|floatformat:2 }}</strong><small>{{ sales_summary.purchases }} purchase{{ sales_summary.purchases|pluralize }}</small></div><i class="kpi-icon mint fas fa-bag-shopping"></i></article>
+        <article class="electronics-kpi"><div><span>Outstanding credit</span><strong>{{ user.business.currency }} {{ sales_summary.balance|default:0|floatformat:2 }}</strong><small>{% if sales_summary.balance %}Balance from unpaid credit sales{% else %}No unpaid credit balance{% endif %}</small></div><i class="kpi-icon coral fas fa-credit-card"></i></article>
+        <article class="electronics-kpi"><div><span>Repair jobs</span><strong>{{ repair_job_count }}</strong><small>Jobs currently recorded for this customer</small></div><i class="kpi-icon lavender fas fa-screwdriver-wrench"></i></article>
+    </section>
+    <section class="electronics-panel">
+        <div class="electronics-panel-heading"><div><h2>Purchase history</h2><p>Latest sales linked to this customer.</p></div></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Receipt</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th></tr></thead><tbody>
+            {% for sale in sales %}<tr><td>{{ sale.sale_date|date:"j M Y" }}</td><td><a class="electronics-table-link" href="{% url 'sales:detail' sale.id %}">{{ sale.sale_number }}</a></td><td>{% for item in sale.sale_items.all %}{{ item.product_name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td><td>{{ user.business.currency }} {{ sale.total|floatformat:2 }}</td><td>{{ sale.get_payment_method_display }}</td><td><span class="electronics-badge {% if sale.payment_status == 'PENDING' %}warning{% elif sale.payment_status == 'REFUNDED' %}danger{% endif %}">{{ sale.get_payment_status_display }}</span></td></tr>{% empty %}<tr><td colspan="6">No purchases recorded for this customer.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="electronics-panel electronics-customer-detail-section">
+        <div class="electronics-panel-heading"><div><h2>Repair history</h2><p>Repair jobs linked to this customer record.</p></div><a href="{% url 'electronics:repairs' %}">View repairs <i class="fas fa-arrow-right"></i></a></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Job</th><th>Device</th><th>Issue</th><th>Status</th><th>Estimate</th></tr></thead><tbody>
+            {% for job in repair_jobs %}<tr><td>{{ job.created_at|date:"j M Y" }}</td><td><strong>{{ job.job_number }}</strong></td><td>{{ job.device_brand }} {{ job.device_model }}{% if job.imei %}<br><small>IMEI {{ job.imei }}</small>{% endif %}</td><td>{{ job.issue|truncatechars:60 }}</td><td><span class="electronics-badge {% if job.status == 'READY' %}warning{% elif job.status == 'CANCELLED' %}danger{% endif %}">{{ job.get_status_display }}</span></td><td>{{ user.business.currency }} {{ job.estimate|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">No repair jobs are linked to this customer yet.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <div class="electronics-customer-lower-grid">
+        <section class="electronics-panel"><div class="electronics-panel-heading"><div><h2>Customer notes</h2><p>Notes saved on this customer record.</p></div></div><p class="electronics-customer-notes">{{ customer.notes|default:"No notes have been added." }}</p></section>
+        <section class="electronics-panel"><div class="electronics-panel-heading"><div><h2>Feedback</h2><p>Feedback recorded for this customer.</p></div></div>{% for item in feedback %}<article class="electronics-feedback"><strong>{{ item.rating }}/5</strong><span>{{ item.created_at|date:"j M Y" }}</span><p>{{ item.comment|default:"No comment provided." }}</p></article>{% empty %}<p class="electronics-empty">No feedback recorded.</p>{% endfor %}<form method="post" class="electronics-feedback-form">{% csrf_token %}{{ fb_form.as_p }}<button class="electronics-button electronics-button-accent" type="submit">Save feedback</button></form></section>
+    </div>
+</div></div>
+{% endblock %}

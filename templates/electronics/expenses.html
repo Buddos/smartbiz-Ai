@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Expenses | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Expenses</h1><p>Track shop operating costs against real recorded expenses.</p></div>
+        <div class="electronics-heading-actions">
+            <a class="electronics-button electronics-button-outline" href="{% url 'expenses:category_create' %}"><i class="fas fa-tags"></i> Categories</a>
+            <a class="electronics-button electronics-button-outline" href="{% url 'expenses:export' %}?{{ request.GET.urlencode }}"><i class="fas fa-download"></i> Export CSV</a>
+            <a class="electronics-button electronics-button-accent" href="{% url 'expenses:create' %}"><i class="fas fa-plus"></i> Add expense</a>
+        </div>
+    </header>
+    <section class="electronics-kpis" aria-label="Expense summary">
+        <article class="electronics-kpi"><div><span>This month</span><strong>{{ user.business.currency }} {{ month_total|floatformat:0 }}</strong><small>{{ month_count }} expense entries</small></div><i class="kpi-icon coral fas fa-money-bill-transfer"></i></article>
+        <article class="electronics-kpi"><div><span>Last month</span><strong>{{ user.business.currency }} {{ previous_month_total|floatformat:0 }}</strong><small>Previous calendar month</small></div><i class="kpi-icon lavender fas fa-calendar"></i></article>
+        <article class="electronics-kpi"><div><span>Change</span>{% if month_change != None %}<strong class="{% if month_change > 0 %}metric-negative{% else %}metric-positive{% endif %}">{{ month_change|floatformat:1 }}%</strong><small>{{ user.business.currency }} {{ month_difference|floatformat:0 }} vs last month</small>{% else %}<strong>—</strong><small>No previous-month expenses to compare</small>{% endif %}</div><i class="kpi-icon mint fas fa-chart-line"></i></article>
+        <article class="electronics-kpi"><div><span>Largest category</span>{% if biggest_category %}<strong class="kpi-text">{{ biggest_category.category__name }}</strong><small>{{ user.business.currency }} {{ biggest_category.amount|floatformat:0 }}</small>{% else %}<strong>—</strong><small>No categorized expenses this month</small>{% endif %}</div><i class="kpi-icon mint fas fa-tags"></i></article>
+    </section>
+    <section class="electronics-panel electronics-expense-breakdown">
+        <div class="electronics-panel-heading"><div><h2><i class="fas fa-chart-pie"></i> Spending by category</h2><p>Expense totals recorded this month.</p></div><span class="electronics-badge">This month</span></div>
+        {% if expense_breakdown %}
+        <div class="electronics-chart-layout"><div class="electronics-donut" style="background: conic-gradient({{ expense_chart_gradient|safe }});"><span>{{ user.business.currency }}<strong>{{ breakdown_total|floatformat:0 }}</strong></span></div>
+            <div class="electronics-chart-legend">{% for row in expense_breakdown %}<div><i style="--legend-color:{{ row.color }}"></i><span>{{ row.category__name }}</span><strong>{{ user.business.currency }} {{ row.amount|floatformat:0 }}</strong><small>{{ row.share|floatformat:0 }}%</small></div>{% endfor %}</div>
+        </div>
+        {% else %}<div class="electronics-empty-state compact"><i class="fas fa-chart-pie"></i><strong>No category spending yet</strong><span>Category totals will appear after expenses are recorded.</span></div>{% endif %}
+    </section>
+    <section class="electronics-panel electronics-expense-list">
+        <div class="electronics-panel-heading"><div><h2>Expense records</h2><p>{{ expense_count }} matching record{{ expense_count|pluralize }} · {{ user.business.currency }} {{ total|floatformat:2 }} in this view</p></div></div>
+        <form method="get" class="electronics-filter-form">
+            <label><span>Period</span><select class="input-field" name="period"><option value="this_month" {% if period == "this_month" %}selected{% endif %}>This month</option><option value="last_month" {% if period == "last_month" %}selected{% endif %}>Last month</option><option value="all" {% if period == "all" %}selected{% endif %}>All time</option><option value="custom" {% if period == "custom" %}selected{% endif %}>Custom range</option></select></label>
+            <label><span>From</span><input class="input-field" type="date" name="date_from" value="{{ date_from }}"></label>
+            <label><span>To</span><input class="input-field" type="date" name="date_to" value="{{ date_to }}"></label>
+            <label><span>Category</span><select class="input-field" name="category"><option value="">All categories</option>{% for item in categories %}<option value="{{ item.id }}" {% if request.GET.category == item.id|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
+            <label><span>Payment</span><select class="input-field" name="payment_method"><option value="">All methods</option>{% for value,label in payment_methods %}<option value="{{ value }}" {% if payment_method_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Search description or vendor"></label>
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button>
+            <a class="electronics-clear-filters" href="{% url 'expenses:list' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Category</th><th>Description / vendor</th><th>Amount</th><th>Paid via</th><th>Receipt</th><th>Actions</th></tr></thead><tbody>
+            {% for expense in page_obj %}<tr>
+                <td>{{ expense.expense_date|date:"j M Y" }}</td>
+                <td><span class="electronics-badge info">{{ expense.category.name|default:"Uncategorized" }}</span></td>
+                <td><strong>{{ expense.title }}</strong>{% if expense.vendor %}<br><small>{{ expense.vendor }}</small>{% endif %}</td>
+                <td><strong>{{ user.business.currency }} {{ expense.amount|floatformat:2 }}</strong></td>
+                <td>{{ expense.get_payment_method_display }}</td>
+                <td>{% if expense.receipt %}<a class="electronics-table-link" href="{{ expense.receipt.url }}" target="_blank" rel="noopener" aria-label="View receipt"><i class="fas fa-paperclip"></i> View</a>{% else %}—{% endif %}</td>
+                <td class="electronics-row-actions"><a href="{% url 'expenses:update' expense.id %}" aria-label="Edit expense"><i class="fas fa-pen"></i></a><form method="post" action="{% url 'expenses:delete' expense.id %}">{% csrf_token %}<button type="submit" aria-label="Delete expense"><i class="fas fa-trash"></i></button></form></td>
+            </tr>{% empty %}<tr><td colspan="7"><div class="electronics-empty-state"><i class="fas fa-receipt"></i><strong>No expenses match these filters</strong><span>Add an expense to start tracking your operating costs.</span><a class="electronics-button electronics-button-accent" href="{% url 'expenses:create' %}">Add expense</a></div></td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if page_obj.has_other_pages %}<nav class="electronics-pagination" aria-label="Expense pages">{% if page_obj.has_previous %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>{% if page_obj.has_next %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+    <section class="electronics-panel electronics-recurring-panel">
+        <div class="electronics-panel-heading"><div><h2><i class="fas fa-repeat"></i> Recurring expenses</h2><p>Due expenses are recorded only after a manager confirms them.</p></div></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Expense</th><th>Category</th><th>Amount</th><th>Frequency</th><th>Next due</th><th>Schedule</th><th>Action</th></tr></thead><tbody>
+            {% for schedule in recurring_schedules %}<tr class="{% if schedule.is_active and schedule.next_due_date <= today %}row-warning{% endif %}">
+                <td><strong>{{ schedule.title }}</strong>{% if schedule.vendor %}<br><small>{{ schedule.vendor }}</small>{% endif %}</td>
+                <td>{{ schedule.category.name|default:"Uncategorized" }}</td>
+                <td><strong>{{ user.business.currency }} {{ schedule.amount|floatformat:2 }}</strong></td>
+                <td>{{ schedule.get_frequency_display }}</td>
+                <td>{{ schedule.next_due_date|date:"j M Y" }}</td>
+                <td>{% if schedule.is_active %}<span class="electronics-badge {% if schedule.next_due_date <= today %}warning{% endif %}">{% if schedule.next_due_date <= today %}Awaiting confirmation{% else %}Active{% endif %}</span>{% else %}<span class="electronics-badge danger">Paused</span>{% endif %}</td>
+                <td class="electronics-recurring-actions">
+                    {% if can_approve_recurring %}{% if schedule.is_active and schedule.next_due_date <= today %}<form method="post" action="{% url 'expenses:recurring_confirm' schedule.id %}">{% csrf_token %}<button class="electronics-button electronics-button-accent" type="submit">Confirm expense</button></form>{% endif %}
+                    <form method="post" action="{% url 'expenses:recurring_toggle' schedule.id %}">{% csrf_token %}<button class="electronics-inline-action" type="submit">{% if schedule.is_active %}Pause{% else %}Resume{% endif %}</button></form>{% endif %}
+                </td>
+            </tr>{% empty %}<tr><td colspan="7">No recurring schedules have been created.</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if can_manage_recurring %}<details class="electronics-recurring-create"><summary><i class="fas fa-plus"></i> Add recurring schedule</summary>
+            <form method="post" class="electronics-form-grid">{% csrf_token %}<input type="hidden" name="form_type" value="recurring">
+                {% for field in recurring_form %}<label class="{% if field.name == 'notes' %}full-width{% endif %}">{{ field.label }}{{ field }}{% for error in field.errors %}<small class="text-danger-700">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                <div class="full-width"><button class="electronics-button electronics-button-accent" type="submit">Save recurring schedule</button></div>
+            </form>
+        </details>{% endif %}
+    </section>
+</div></div>
+{% endblock %}

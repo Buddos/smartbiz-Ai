@@ -1,0 +1,14 @@
+<aside class="admin-sidebar" aria-label="Business administration navigation">
+    <a href="{% url 'dashboard' %}" class="admin-back"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Main dashboard</span></a>
+    <p class="admin-sidebar-label">{{ user.business.name }}</p>
+    <p class="admin-sidebar-title">Administration</p>
+    <a href="{% url 'business_admin' %}" class="admin-nav-link{% if request.resolver_match.url_name == 'business_admin' %} active{% endif %}"><i class="fas fa-th-large" aria-hidden="true"></i><span>Overview</span></a>
+    <a href="{% url 'accounts:users_list' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'accounts' and request.resolver_match.url_name|slice:':4' == 'user' %} active{% endif %}"><i class="fas fa-users" aria-hidden="true"></i><span>Team access</span></a>
+    <a href="{% url 'products:list' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'products' %} active{% endif %}"><i class="fas fa-box" aria-hidden="true"></i><span>Products</span></a>
+    <a href="{% url 'inventory:alerts' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'inventory' and request.resolver_match.url_name == 'alerts' or request.resolver_match.url_name == 'alert_resolve' %} active{% endif %}"><i class="fas fa-bell" aria-hidden="true"></i><span>Inventory alerts</span></a>
+    <a href="{% url 'businesses:settings' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'businesses' %} active{% endif %}"><i class="fas fa-sliders-h" aria-hidden="true"></i><span>Business settings</span></a>
+    <a href="{% url 'analytics:financial' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'analytics' and request.resolver_match.url_name == 'financial' %} active{% endif %}"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Financial reports</span></a>
+    <a href="{% url 'reports:list' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'reports' %} active{% endif %}"><i class="fas fa-file-alt" aria-hidden="true"></i><span>Reports</span></a>
+    <div class="admin-sidebar-spacer"></div>
+    <a href="{% url 'accounts:settings' %}?from=admin" class="admin-nav-link{% if request.resolver_match.app_name == 'accounts' and request.resolver_match.url_name == 'settings' %} active{% endif %}"><i class="fas fa-cog" aria-hidden="true"></i><span>Settings</span></a>
+</aside>

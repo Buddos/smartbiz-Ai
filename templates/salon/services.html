@@ -1,0 +1,43 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Services &amp; Packages | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div><p class="salon-eyebrow">{{ user.business.name }} · Menu</p><h1>Services &amp; packages</h1><p class="salon-subtitle">Manage your saved service menu and prices. Services are available at checkout.</p></div>
+    <a class="salon-primary-action" href="#addService"><i class="fas fa-plus" aria-hidden="true"></i> Add service</a>
+</section>
+<section class="salon-page-kpis" aria-label="Service menu summary">
+    <article><span>Active services</span><strong>{{ active_count }}</strong><small>Available to book and sell</small></article>
+    <article><span>Client packages</span><strong>{{ package_count }}</strong><small><a class="salon-text-link" href="{% url 'salon:client_packages' %}">Track session balances</a></small></article>
+    <article><span>Menu currency</span><strong>{{ user.business.currency }}</strong><small>Business setting</small></article>
+    <article><span>Source</span><strong>Saved menu</strong><small>Current business records</small></article>
+</section>
+<section class="salon-page-panel">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Current menu</p><h2>Salon services</h2></div></div>
+    <div class="salon-service-list">
+        {% for service in services %}
+        <article class="salon-service-row">
+            <span class="salon-service-icon"><i class="fas fa-spa" aria-hidden="true"></i></span>
+            <div class="salon-service-info"><strong>{{ service.name }}</strong><small>{{ service.metadata.duration_min|default:30 }} min · {% if service.is_active %}Available{% else %}Inactive{% endif %}</small></div>
+            <strong class="salon-service-price">{{ user.business.currency }} {{ service.selling_price|floatformat:2 }}</strong>
+            {% if service.is_active %}<form method="post">{% csrf_token %}<input type="hidden" name="service_id" value="deactivate"><input type="hidden" name="product_id" value="{{ service.id }}"><button type="submit" class="salon-link-button">Deactivate</button></form>{% endif %}
+        </article>
+        {% empty %}
+        <div class="salon-data-empty"><i class="fas fa-scissors" aria-hidden="true"></i><strong>No salon services saved yet</strong><p>Add a service below; saved services will be offered on the booking and checkout screens.</p></div>
+        {% endfor %}
+    </div>
+</section>
+<section class="salon-page-panel salon-new-service" id="addService">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Saved directly to your business catalog</p><h2>Add a service</h2></div></div>
+    <form method="post" class="salon-service-form">
+        {% csrf_token %}
+        {% for field in form %}
+        <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        {% endfor %}
+        <div class="salon-booking-actions"><button class="salon-primary-action" type="submit"><i class="fas fa-plus" aria-hidden="true"></i> Save service</button></div>
+    </form>
+</section>
+<section class="salon-page-panel salon-package-placeholder">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Session tracking</p><h2>Client packages</h2></div><a class="salon-secondary-action" href="{% url 'salon:client_packages' %}">Manage packages <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+    <p class="salon-muted-copy">Track service bundles, session balances, expiry dates, and redemption history for each client.</p>
+</section>
+{% endblock %}

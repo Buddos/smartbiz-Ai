@@ -7,7 +7,7 @@
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="mb-8">
-            <a href="{% if request.GET.from == 'admin' %}{% url 'business_admin' %}{% else %}{% url 'dashboard' %}{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>{% if request.GET.from == 'admin' %}Back to Administration{% else %}Back to Dashboard{% endif %}</span></a>
+            {% if request.GET.from != 'admin' %}<a href="{% url 'dashboard' %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Dashboard</span></a>{% endif %}
             <h1 class="text-2xl font-bold text-primary-700">Settings</h1>
             <p class="text-gray-600">Manage your personal SmartBiz application preferences.</p>
         </div>

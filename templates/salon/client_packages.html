@@ -1,0 +1,80 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Client packages | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div><p class="salon-eyebrow">{{ user.business.name }} · Client retention</p><h1>Client packages</h1><p class="salon-subtitle">Track service bundles, session balances, expiry dates, and every redemption.</p></div>
+    <a class="salon-primary-action" href="#newPackage"><i class="fas fa-plus" aria-hidden="true"></i> Add package</a>
+</section>
+<section class="salon-page-kpis" aria-label="Client package summary">
+    <article><span>Packages tracked</span><strong>{{ package_count }}</strong><small>Saved for this salon</small></article>
+    <article><span>Usable balances</span><strong>{{ usable_count }}</strong><small>Not expired with sessions remaining</small></article>
+    <article><span>Fully used</span><strong>{{ exhausted_count }}</strong><small>All included sessions redeemed</small></article>
+    <article><span>Redemptions today</span><strong>{{ redemptions_today }}</strong><small>Recorded session usage</small></article>
+</section>
+<section class="salon-page-panel">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Saved client entitlements</p><h2>Package balances</h2></div></div>
+    <form method="get" class="salon-package-search"><label for="packageSearch">Find client or service</label><input id="packageSearch" class="salon-field" type="search" name="search" value="{{ search }}" placeholder="Search package, client, or service"><button class="salon-secondary-action" type="submit">Search</button></form>
+    <div class="salon-package-list">
+        {% for package in packages %}
+        <article class="salon-package-card">
+            <header><div><span class="salon-eyebrow">{{ package.customer.name }}</span><h3>{{ package.name }}</h3></div><span class="salon-package-state {% if package.is_expired %}is-expired{% elif package.sessions_remaining == 0 %}is-empty{% else %}is-usable{% endif %}">{% if package.is_expired %}Expired{% elif package.sessions_remaining == 0 %}Fully used{% else %}Active{% endif %}</span></header>
+            <div class="salon-package-balance"><strong>{{ package.sessions_remaining }}</strong><span>of {{ package.sessions_total }} sessions remaining</span><div class="salon-package-progress" role="progressbar" aria-valuenow="{{ package.sessions_redeemed }}" aria-valuemin="0" aria-valuemax="{{ package.sessions_total }}"><span style="width:{% widthratio package.sessions_redeemed package.sessions_total 100 %}%"></span></div></div>
+            <div class="salon-package-services"><strong>Included services</strong><p>{% for service in package.services.all %}{{ service.name }}{% if not forloop.last %}, {% endif %}{% empty %}No active services attached{% endfor %}</p></div>
+            <footer><span>Purchased {{ package.purchased_at|date:'j M Y' }}</span><span>{% if package.expires_at %}Expires {{ package.expires_at|date:'j M Y' }}{% else %}No expiry recorded{% endif %}</span>{% if package.purchase_sale %}<a href="{% url 'sales:detail' package.purchase_sale.id %}">Sale {{ package.purchase_sale.sale_number }}</a>{% else %}<span>No sale linked</span>{% endif %}</footer>
+            {% if package.notes %}<p class="salon-package-note">{{ package.notes }}</p>{% endif %}
+        </article>
+        {% empty %}<div class="salon-data-empty"><i class="fas fa-gift" aria-hidden="true"></i><strong>No client packages recorded</strong><p>Add a package to begin tracking service sessions. Add a related sale when one exists so the package can be reconciled with recorded business sales.</p></div>{% endfor %}
+    </div>
+</section>
+<section class="salon-page-panel salon-package-redemption">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Save a session redemption</p><h2>Redeem a session</h2></div></div>
+    {% if redemption_form.client_package.field.queryset.exists %}
+    <form method="post" class="salon-package-form">
+        {% csrf_token %}<input type="hidden" name="action" value="redeem">
+        {% if redemption_form.non_field_errors %}<div class="salon-form-errors" role="alert">{{ redemption_form.non_field_errors }}</div>{% endif %}
+        {% for field in redemption_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+        <div class="salon-booking-actions"><button class="salon-primary-action" type="submit"><i class="fas fa-ticket" aria-hidden="true"></i> Redeem session</button><span>One session is deducted and added to the history.</span></div>
+    </form>
+    {% else %}<p class="salon-muted-copy">There are no usable packages to redeem. Add a package or check package balances and expiry dates.</p>{% endif %}
+</section>
+<section class="salon-page-panel salon-redemption-history">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Audit trail</p><h2>Recent redemptions</h2></div></div>
+    <div class="salon-redemption-list">
+        {% for redemption in redemption_history %}<article><div><strong>{{ redemption.client_package.customer.name }}</strong><small>{{ redemption.client_package.name }} · {{ redemption.service.name }}</small></div><span>{% if redemption.appointment %}{{ redemption.appointment.starts_at|date:'j M · g:i A' }}{% else %}{{ redemption.redeemed_at|date:'j M · g:i A' }}{% endif %}</span><small>{{ redemption.redeemed_by.get_full_name|default:'Team member' }}</small></article>
+        {% empty %}<p class="salon-muted-copy">No package sessions have been redeemed yet.</p>{% endfor %}
+    </div>
+</section>
+<section class="salon-page-panel salon-new-service" id="newPackage">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Record an existing package</p><h2>Add client package</h2></div></div>
+    <p class="salon-muted-copy">This tracker does not create a sale. Link the package to an existing recorded sale where available.</p>
+    <form method="post" class="salon-package-form">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        {% if package_form.non_field_errors %}<div class="salon-form-errors" role="alert">{{ package_form.non_field_errors }}</div>{% endif %}
+        {% for field in package_form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+        <div class="salon-booking-actions"><button class="salon-primary-action" type="submit"><i class="fas fa-plus" aria-hidden="true"></i> Save package</button></div>
+    </form>
+</section>
+{% endblock %}
+{% block salon_extra_js %}
+{{ package_service_map|json_script:"salonPackageServiceMap" }}
+<script>
+    (() => {
+        const packageField = document.getElementById("id_client_package");
+        const serviceField = document.getElementById("id_service");
+        const serviceMapElement = document.getElementById("salonPackageServiceMap");
+        if (!packageField || !serviceField || !serviceMapElement) return;
+
+        const serviceMap = JSON.parse(serviceMapElement.textContent);
+        const allOptions = Array.from(serviceField.options, (option) => option.cloneNode(true));
+        packageField.addEventListener("change", () => {
+            const selectedService = serviceField.value;
+            const allowedServices = new Set(serviceMap[packageField.value] || []);
+            serviceField.replaceChildren(...allOptions
+                .filter((option) => !option.value || allowedServices.has(option.value))
+                .map((option) => option.cloneNode(true)));
+            if (allowedServices.has(selectedService)) serviceField.value = selectedService;
+        });
+        if (packageField.value) packageField.dispatchEvent(new Event("change"));
+    })();
+</script>
+{% endblock %}

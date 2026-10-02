@@ -1,10 +1,12 @@
+import csv
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.db import models, transaction
-from django.db.models import Q, Sum, Count, Avg, F
+from django.db.models import Q, Sum, Count, Avg, F, Max
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta
@@ -15,7 +17,7 @@ from .forms import (
     InventoryTransactionForm, StockCountForm, StockCountItemForm,
     StockAdjustmentForm, InventorySearchForm
 )
-from products.models import Product
+from products.models import Category, Product
 from accounts.models import UserActivity
 from accounts.decorators import business_required, permission_required, role_required
 
@@ -29,7 +31,8 @@ def inventory_dashboard_view(request):
     business = request.user.business
     
     # Stock summary
-    total_products = Product.objects.filter(business=business, is_active=True).count()
+    active_products = Product.objects.filter(business=business, is_active=True)
+    total_products = active_products.count()
     low_stock_count = Product.objects.filter(
         business=business,
         current_stock__lte=F('reorder_level'),
@@ -48,9 +51,44 @@ def inventory_dashboard_view(request):
     ).order_by('-transaction_date')[:10]
     
     # Stock value
-    stock_value = Product.objects.filter(business=business).aggregate(
+    stock_value = active_products.aggregate(
         total=Sum(F('current_stock') * F('purchase_price'))
     )['total'] or 0
+    total_units = active_products.aggregate(total=Sum("current_stock"))["total"] or 0
+    healthy_count = active_products.filter(current_stock__gt=F("reorder_level")).count()
+    overstocked_count = active_products.filter(
+        maximum_stock__isnull=False, current_stock__gt=F("maximum_stock")
+    ).count()
+
+    stock_products = active_products.select_related("category").annotate(
+        electronics_stock_value=F("current_stock") * F("purchase_price"),
+        last_restock=Max(
+            "inventory_transactions__transaction_date",
+            filter=Q(inventory_transactions__transaction_type__in=["PURCHASE", "RECEIVED"]),
+        )
+    )
+    search = request.GET.get("q", "").strip()
+    category_id = request.GET.get("category", "")
+    supplier_name = request.GET.get("supplier", "").strip()
+    status_filter = request.GET.get("status", "")
+    if search:
+        stock_products = stock_products.filter(
+            Q(name__icontains=search) | Q(sku__icontains=search) | Q(barcode__icontains=search)
+        )
+    if category_id:
+        stock_products = stock_products.filter(category_id=category_id, category__business=business)
+    if supplier_name:
+        stock_products = stock_products.filter(supplier_name=supplier_name)
+    if status_filter == "LOW":
+        stock_products = stock_products.filter(current_stock__gt=0, current_stock__lte=F("reorder_level"))
+    elif status_filter == "OUT":
+        stock_products = stock_products.filter(current_stock=0)
+    elif status_filter == "HEALTHY":
+        stock_products = stock_products.filter(current_stock__gt=F("reorder_level"))
+    elif status_filter == "OVERSTOCKED":
+        stock_products = stock_products.filter(
+            maximum_stock__isnull=False, current_stock__gt=F("maximum_stock")
+        )
     
     # Top moving products (based on sales)
     from sales.models import SaleItem
@@ -72,13 +110,34 @@ def inventory_dashboard_view(request):
         'low_stock_count': low_stock_count,
         'out_of_stock_count': out_of_stock_count,
         'stock_value': stock_value,
+        'total_units': total_units,
+        'healthy_count': healthy_count,
+        'overstocked_count': overstocked_count,
+        'attention_products': active_products.filter(
+            Q(current_stock=0) | Q(current_stock__gt=0, current_stock__lte=F("reorder_level"))
+        ).order_by("current_stock", "name")[:10],
+        'stock_products': Paginator(
+            stock_products.order_by("current_stock", "name"), 25
+        ).get_page(request.GET.get("page")),
+        'categories': Category.objects.filter(business=business, is_active=True),
+        'suppliers': active_products.exclude(supplier_name="").values_list(
+            "supplier_name", flat=True
+        ).distinct().order_by("supplier_name"),
+        'search': search,
+        'category_filter': category_id,
+        'supplier_filter': supplier_name,
+        'status_filter': status_filter,
         'recent_transactions': recent_transactions,
         'top_products': top_products,
         'alerts': alerts,
         'title': 'Inventory Dashboard'
     }
     
-    return render(request, 'inventory/dashboard.html', context)
+    return render(
+        request,
+        "electronics/inventory.html" if business.business_type == "ELECTRONICS" else "inventory/dashboard.html",
+        context,
+    )
 
 # === Inventory Transactions ===
 
@@ -131,12 +190,45 @@ def transaction_list_view(request):
         'total_adjustments': transactions.filter(transaction_type='ADJUSTMENT').count(),
     }
     
-    return render(request, 'inventory/transactions.html', {
+    return render(request, (
+        "electronics/inventory_movements.html"
+        if business.business_type == "ELECTRONICS"
+        else "inventory/transactions.html"
+    ), {
         'page_obj': page_obj,
         'form': form,
         'stats': stats,
         'title': 'Inventory Transactions'
     })
+
+
+@login_required
+@business_required
+@permission_required("manage_inventory")
+def inventory_export_view(request):
+    products = Product.objects.filter(
+        business=request.user.business,
+        is_active=True,
+    ).select_related("category").order_by("name")
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="inventory.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "Product", "SKU", "Category", "Units in stock", "Reorder level",
+        "Supplier", "Unit cost", "Stock value",
+    ])
+    for product in products.iterator():
+        writer.writerow([
+            product.name,
+            product.sku,
+            product.category.name if product.category else "Uncategorized",
+            product.current_stock,
+            product.reorder_level,
+            product.supplier_name,
+            product.purchase_price,
+            product.current_stock * product.purchase_price,
+        ])
+    return response
 
 @login_required
 @business_required
@@ -176,7 +268,11 @@ def transaction_create_view(request):
                 )
                 return redirect('inventory:transactions')
     else:
-        form = InventoryTransactionForm(business=business)
+        initial = {}
+        product_id = request.GET.get("product")
+        if product_id:
+            initial["product"] = get_object_or_404(Product, id=product_id, business=business)
+        form = InventoryTransactionForm(business=business, initial=initial)
     
     return render(request, 'inventory/transaction_form.html', {
         'form': form,
@@ -415,7 +511,11 @@ def stock_adjustment_view(request):
                 )
                 return redirect('inventory:dashboard')
     else:
-        form = StockAdjustmentForm(business=business)
+        initial = {}
+        product_id = request.GET.get("product")
+        if product_id:
+            initial["product"] = get_object_or_404(Product, id=product_id, business=business)
+        form = StockAdjustmentForm(business=business, initial=initial)
     
     return render(request, 'inventory/adjustment.html', {
         'form': form,

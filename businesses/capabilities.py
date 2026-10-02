@@ -62,6 +62,7 @@ CATEGORY_PRESETS = {
     "RETAIL": ["inventory"],
     "RESTAURANT": ["menu", "tables", "inventory"],
     "SALON": ["appointments", "staff", "clients"],
+    "BARBER": ["appointments", "staff", "clients"],
     "WHOLESALE": ["inventory", "delivery", "customer_credit"],
     "SERVICE": ["jobs", "clients", "staff"],
     "ELECTRONICS": ["inventory", "customer_credit"],
@@ -118,6 +119,14 @@ BUSINESS_SALE_PROFILES = {
         "item_label": "Services",
         "product_label": "Service",
         "entry_template": "sales/entries/salon.html",
+    },
+    "BARBER": {
+        "label": "Barbershop service sale",
+        "title": "New Barber Service Sale",
+        "description": "Record barber services and client payments.",
+        "item_label": "Services",
+        "product_label": "Service",
+        "entry_template": "sales/entries/barber.html",
     },
     "SERVICE": {
         "label": "Service invoice",
@@ -186,6 +195,13 @@ DASHBOARD_PROFILES = {
         "focus": "Appointments, client history, and services delivered.",
         "metric_label": "Service sales this period",
         "primary_action": "Record service sale",
+    },
+    "BARBER": {
+        "id": "barber",
+        "title": "Barbershop desk",
+        "focus": "Walk-ins, client history, barber services, and daily revenue.",
+        "metric_label": "Service sales this period",
+        "primary_action": "Record barber service",
     },
     "WHOLESALE": {
         "id": "wholesale",

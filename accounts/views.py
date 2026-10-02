@@ -220,11 +220,11 @@ def user_list_view(request):
 def user_create_view(request):
     """Create a new user."""
     is_system_admin = request.user.is_superuser or request.user.role == 'SUPER_ADMIN'
-    allowed_roles = (
-        [role for role, _ in User.ROLE_CHOICES]
-        if is_system_admin
-        else ['MANAGER', 'STAFF', 'ACCOUNTANT']
-    )
+    allowed_roles = [role for role, _ in User.ROLE_CHOICES] if is_system_admin else [
+        'MANAGER', 'STAFF', 'ACCOUNTANT',
+    ]
+    if not is_system_admin and request.user.business and request.user.business.business_type == 'BARBER':
+        allowed_roles.append('BARBER')
     if request.method == 'POST':
         form = UserRegistrationForm(
             request.POST,
@@ -269,11 +269,14 @@ def user_update_view(request, user_id):
             return redirect('accounts:users_list')
     
     if request.method == 'POST':
+        allowed_roles = None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT']
+        if not is_system_admin and request.user.business and request.user.business.business_type == 'BARBER':
+            allowed_roles.append('BARBER')
         form = UserUpdateForm(
             request.POST,
             request.FILES,
             instance=user,
-            allowed_roles=None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT'],
+            allowed_roles=allowed_roles,
         )
         if form.is_valid():
             changes = {field: getattr(user, field) for field in ['email', 'role']}
@@ -293,9 +296,12 @@ def user_update_view(request, user_id):
             messages.success(request, f'User {user.get_full_name()} updated successfully!')
             return redirect('accounts:users_list')
     else:
+        allowed_roles = None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT']
+        if not is_system_admin and request.user.business and request.user.business.business_type == 'BARBER':
+            allowed_roles.append('BARBER')
         form = UserUpdateForm(
             instance=user,
-            allowed_roles=None if is_system_admin else ['MANAGER', 'STAFF', 'ACCOUNTANT'],
+            allowed_roles=allowed_roles,
         )
     
     return render(request, 'accounts/user_update.html', {

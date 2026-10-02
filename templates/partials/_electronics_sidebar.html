@@ -1,0 +1,32 @@
+{% load static %}
+<aside class="electronics-sidebar" id="electronicsSidebar" aria-label="Electronics navigation">
+    <a class="electronics-brand" href="{% url 'dashboard' %}">
+        <span class="electronics-brand-mark"><img src="{% static 'images/logo.png' %}" alt=""></span>
+        <span>Smart Biz AI</span>
+    </a>
+    <nav class="electronics-nav">
+        <p class="electronics-nav-label">Main</p>
+        <a class="electronics-nav-link {% if page == 'dashboard' or request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="fas fa-house"></i><span>Dashboard</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'sales' %}active{% endif %}" href="{% url 'sales:list' %}"><i class="fas fa-money-bill-wave"></i><span>Sales</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'expenses' %}active{% endif %}" href="{% url 'expenses:list' %}"><i class="fas fa-receipt"></i><span>Expenses</span></a>
+        <p class="electronics-nav-label">Inventory</p>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'products' %}active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-box"></i><span>Products</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:dashboard' %}"><i class="fas fa-warehouse"></i><span>Inventory</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.url_name == 'suppliers' %}active{% endif %}" href="{% url 'electronics:suppliers' %}"><i class="fas fa-truck"></i><span>Suppliers</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.url_name == 'repairs' or request.resolver_match.url_name == 'repair_create' %}active{% endif %}" href="{% url 'electronics:repairs' %}"><i class="fas fa-screwdriver-wrench"></i><span>Repairs</span></a>
+
+        <p class="electronics-nav-label">Customers</p>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'customers' %}active{% endif %}" href="{% url 'customers:list' %}"><i class="fas fa-users"></i><span>Customers</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.url_name == 'customer_credit' %}active{% endif %}" href="{% url 'electronics:customer_credit' %}"><i class="fas fa-credit-card"></i><span>Customer Credit</span></a>
+
+        <p class="electronics-nav-label">SmartBiz AI</p>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}?view=assistant#assistant"><i class="fas fa-robot"></i><span>AI Assistant</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view != 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb"></i><span>AI Insights</span></a>
+    </nav>
+    <div class="electronics-sidebar-account">
+        <span class="electronics-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</span>
+        <span class="electronics-user-name"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></span>
+        <a href="{% url 'businesses:settings' %}" aria-label="Settings" title="Settings"><i class="fas fa-gear"></i></a>
+    </div>
+</aside>
+<button class="electronics-sidebar-scrim" type="button" data-electronics-close aria-label="Close navigation"></button>

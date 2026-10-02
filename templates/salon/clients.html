@@ -1,0 +1,36 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Clients | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div><p class="salon-eyebrow">{{ user.business.name }} · Client relationships</p><h1>Clients <span class="salon-count-chip">{{ client_count }}</span></h1><p class="salon-subtitle">Profiles and visit value from your saved customer and sales records.</p></div>
+    <a class="salon-primary-action" href="#addClient"><i class="fas fa-user-plus" aria-hidden="true"></i> Add client</a>
+</section>
+<section class="salon-page-kpis salon-client-kpis" aria-label="Client summary">
+    <a href="{% url 'salon:clients' %}" class="salon-client-kpi"><span>Active clients</span><strong>{{ client_count }}</strong><small>Current salon records</small></a>
+    <a href="?segment=new" class="salon-client-kpi"><span>New this month</span><strong>{{ new_client_count }}</strong><small>Joined in the last 30 days</small></a>
+    <a href="?segment=vip" class="salon-client-kpi"><span>VIP by lifetime sales</span><strong>{{ vip_count }}</strong><small>Saved client sales ≥ {{ user.business.currency }} 50,000</small></a>
+    <div class="salon-client-kpi"><span>Clients with a sale this month</span><strong>{{ active_sale_client_count }}</strong><small>Distinct customers on recorded sales</small></div>
+</section>
+<section class="salon-page-panel">
+    <div class="salon-client-toolbar">
+        <form method="get" class="salon-client-search"><label class="salon-sr-only" for="clientSearch">Search clients</label><i class="fas fa-search" aria-hidden="true"></i><input id="clientSearch" name="search" type="search" value="{{ search }}" placeholder="Search name, phone or email"><button type="submit">Search</button></form>
+        <label class="salon-segment-filter">Filter<select class="salon-field" onchange="window.location.href='?segment='+encodeURIComponent(this.value)"><option value="" {% if not segment %}selected{% endif %}>All clients</option><option value="new" {% if segment == 'new' %}selected{% endif %}>New this month</option><option value="vip" {% if segment == 'vip' %}selected{% endif %}>VIP by lifetime spend</option></select></label>
+    </div>
+    <div class="salon-client-table-wrap"><table class="salon-client-table"><thead><tr><th>Client</th><th>Phone</th><th>Last recorded sale</th><th>Sales visits</th><th>Lifetime spend</th><th>Profile</th></tr></thead><tbody>
+    {% for customer in page_obj %}
+        <tr><td><span class="salon-client-avatar">{{ customer.name|first|upper }}</span><strong>{{ customer.name }}</strong></td><td>{% if customer.phone %}<a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>{% else %}—{% endif %}</td><td>{% if customer.last_visit %}{{ customer.last_visit|date:'j M Y' }}{% else %}No sale recorded{% endif %}</td><td>{{ customer.visit_count }}</td><td>{{ user.business.currency }} {{ customer.lifetime_spend|default:0|floatformat:2 }}</td><td><a class="salon-text-link" href="{% url 'customers:detail' customer.id %}">Open <i class="fas fa-arrow-right" aria-hidden="true"></i></a></td></tr>
+    {% empty %}<tr><td colspan="6"><div class="salon-data-empty"><i class="fas fa-users" aria-hidden="true"></i><strong>No saved clients match this view</strong><p>Add a client or clear the current search and filter.</p></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if page_obj.has_other_pages %}<nav class="salon-pagination" aria-label="Client pages">{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&search={{ search|urlencode }}&segment={{ segment|urlencode }}">Previous</a>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&search={{ search|urlencode }}&segment={{ segment|urlencode }}">Next</a>{% endif %}</nav>{% endif %}
+</section>
+<section class="salon-page-panel salon-add-client" id="addClient">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Save a client profile</p><h2>Add client</h2></div></div>
+    <form method="post" class="salon-service-form">
+        {% csrf_token %}
+        {% for field in form %}
+        <div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        {% endfor %}
+        <div class="salon-booking-actions"><button class="salon-primary-action" type="submit"><i class="fas fa-user-plus" aria-hidden="true"></i> Save client</button></div>
+    </form>
+</section>
+{% endblock %}

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static dashboard_notifications %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +14,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
         tailwind.config = {
@@ -100,8 +102,70 @@
     </script>
     
     <style>
+        :root {
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+            --fw-regular: 400;
+            --fw-medium: 500;
+            --fw-semibold: 600;
+            --fw-bold: 700;
+            --fw-extrabold: 800;
+            --fw-black: 800;
+            --fs-xs: 12px;
+            --fs-sm: 12px;
+            --fs-base: 14px;
+            --fs-md: 16px;
+            --fs-lg: 18px;
+            --fs-xl: 20px;
+            --fs-2xl: 24px;
+            --fs-3xl: 32px;
+            --lh-tight: 1.25;
+            --lh-snug: 1.4;
+            --lh-base: 1.5;
+            --ls-tight: -0.025em;
+            --ls-normal: 0;
+            --ls-wide: 0.08em;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        html, body {
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            line-height: var(--lh-base);
+            color: #1e1e2f;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
         * {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-sans);
+        }
+
+        button, .btn {
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            font-weight: var(--fw-semibold);
+        }
+
+        input, select, textarea {
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            font-weight: var(--fw-regular);
+        }
+
+        code, kbd, samp, pre,
+        .font-mono, .monospace, .sku, .imei, .serial-number,
+        .receipt-number, .reference-code, [data-monospace="true"],
+        input[name*="sku" i], input[name*="imei" i], input[name*="serial" i] {
+            font-family: var(--font-mono);
+        }
+
+        table, .kpi-value, .metric-value, .stat-value, [data-numeric="true"] {
+            font-variant-numeric: tabular-nums;
         }
         
         .btn-primary {
@@ -216,10 +280,33 @@
         }
     </style>
     
+    {% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' %}
+    <link rel="stylesheet" href="{% static 'css/electronics.css' %}">
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' %}
+    <link rel="stylesheet" href="{% static 'css/retail.css' %}">
+    {% endif %}
+    {% if request.GET.from == 'admin' %}
+    <link rel="stylesheet" href="{% static 'css/business-admin.css' %}">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'css/dashboard-notifications.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dashboard-account-menu.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <main>
+    {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
+    <div class="retail-app-shell">
+        {% include 'retail/_sidebar.html' %}
+        <div class="retail-workspace">
+            {% include 'retail/_topbar.html' %}
+            <div class="retail-main">
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
+    <div class="electronics-app-shell">
+        {% include 'partials/_electronics_sidebar.html' %}
+        <button class="electronics-sidebar-trigger" type="button" data-electronics-open aria-controls="electronicsSidebar" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i><span class="sr-only">Open navigation</span></button>
+    {% endif %}
+    <main class="{% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}electronics-main{% endif %}">
         <!-- Messages -->
         {% if messages %}
             <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full">
@@ -243,8 +330,23 @@
             </div>
         {% endif %}
 
+        {% if user.is_authenticated and user.business and request.GET.from == 'admin' %}
+        <div class="admin-shell"><div class="admin-layout">
+            {% include 'partials/_business_admin_sidebar.html' %}
+            <div class="admin-content">
+        {% endif %}
         {% block content %}{% endblock %}
+        {% if user.is_authenticated and user.business and request.GET.from == 'admin' %}
+            </div>
+        </div></div>
+        {% endif %}
     </main>
+    {% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}</div>{% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
     
     <script>
         // Auto-dismiss messages after 5 seconds
@@ -260,5 +362,13 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' %}
+    <script src="{% static 'js/electronics.js' %}" defer></script>
+    {% endif %}
+    <script src="{% static 'js/dashboard-notifications.js' %}" defer></script>
+    <script src="{% static 'js/dashboard-account-menu.js' %}" defer></script>
+    {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' %}
+    <script src="{% static 'js/retail.js' %}" defer></script>
+    {% endif %}
 </body>
 </html>

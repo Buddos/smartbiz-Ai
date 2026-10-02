@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}New repair job | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar"><div><h1>New repair job</h1><p>Capture device, customer, estimate, deposit, and promised date.</p></div><a class="electronics-button electronics-button-outline" href="{% url 'electronics:repairs' %}">Back to repairs</a></header>
+    <section class="electronics-panel">
+        <form method="post">{% csrf_token %}
+            {% if form.non_field_errors %}<div class="electronics-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="electronics-form-grid">
+                {% for field in form %}<label class="{% if field.name == 'issue' or field.name == 'notes' %}full-width{% endif %}">{{ field.label }}{{ field }}{% for error in field.errors %}<small class="text-danger-700">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                <div class="full-width"><button class="electronics-button electronics-button-accent" type="submit"><i class="fas fa-floppy-disk"></i> Save repair job</button></div>
+            </div>
+        </form>
+    </section>
+</div></div>
+{% endblock %}

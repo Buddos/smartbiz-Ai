@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} | Products{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><p class="electronics-breadcrumb"><a href="{% url 'products:list' %}">Products</a> / Product details</p><h1>{{ product.name }}</h1><p><code>{{ product.sku }}</code> · {{ product.category.name|default:"Uncategorized" }}</p></div>
+        <div class="electronics-heading-actions"><a class="electronics-button electronics-button-outline" href="{% url 'inventory:transaction_create' %}?product={{ product.id }}"><i class="fas fa-boxes-stacked"></i> Record stock</a><a class="electronics-button electronics-button-accent" href="{% url 'products:update' product.id %}"><i class="fas fa-pen"></i> Edit product</a></div>
+    </header>
+    <div class="electronics-product-detail-grid">
+        <section class="electronics-panel electronics-product-summary">
+            {% if product.image %}<img class="electronics-product-image" src="{{ product.image.url }}" alt="{{ product.name }}">{% else %}<div class="electronics-product-placeholder"><i class="fas fa-box-open"></i></div>{% endif %}
+            <div><h2>{{ product.name }}</h2><p>{{ product.description|default:"No product description has been added." }}</p><span class="electronics-badge {% if product.is_active %}{% else %}danger{% endif %}">{{ product.get_status_display }}</span></div>
+        </section>
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2><i class="fas fa-tags"></i> Pricing</h2><p>Prices recorded on the product catalog.</p></div></div>
+            <div class="electronics-detail-list"><div><span>Cost</span><strong>{{ user.business.currency }} {{ product.purchase_price|floatformat:2 }}</strong></div><div><span>Selling price</span><strong>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</strong></div><div><span>Gross margin / unit</span><strong>{{ user.business.currency }} {{ unit_margin|floatformat:2 }} ({{ margin_percent|floatformat:1 }}%)</strong></div><div><span>Taxable</span><strong>{% if product.is_taxable %}Yes{% else %}No{% endif %}</strong></div></div>
+        </section>
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2><i class="fas fa-warehouse"></i> Stock</h2><p>Current inventory values.</p></div></div>
+            <div class="electronics-detail-list"><div><span>In stock</span><strong>{{ product.current_stock }} {{ product.get_unit_display|lower }}</strong></div><div><span>Reorder level</span><strong>{{ product.reorder_level }}</strong></div><div><span>Maximum stock</span><strong>{{ product.maximum_stock|default:"Not set" }}</strong></div><div><span>Supplier</span><strong>{{ product.supplier_name|default:"Not set" }}</strong></div></div>
+            {% if product.is_low_stock %}<p class="electronics-detail-alert"><i class="fas fa-triangle-exclamation"></i> Stock is at or below the recorded reorder level.</p>{% endif %}
+        </section>
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2><i class="fas fa-barcode"></i> Serialization</h2><p>Tracking configuration for this product.</p></div></div>
+            <div class="electronics-detail-list"><div><span>Serialized</span><strong>{% if product.is_serialized %}Yes{% else %}No{% endif %}</strong></div><div><span>SKU</span><strong><code>{{ product.sku }}</code></strong></div><div><span>Barcode</span><strong>{{ product.barcode|default:"Not recorded" }}</strong></div></div>
+            {% if product.is_serialized %}<p class="electronics-detail-note">This product is marked for serialization. Individual IMEI/serial inventory is not stored on the product record.</p>{% endif %}
+        </section>
+    </div>
+    <section class="electronics-kpis electronics-product-sales-kpis">
+        <article class="electronics-kpi"><div><span>Units sold · 30 days</span><strong>{{ sales_summary.units|default:0 }}</strong><small>Recorded sale items</small></div><i class="kpi-icon mint fas fa-arrow-trend-up"></i></article>
+        <article class="electronics-kpi"><div><span>Sales revenue · 30 days</span><strong>{{ user.business.currency }} {{ sales_summary.revenue|default:0|floatformat:0 }}</strong><small>From recorded sales</small></div><i class="kpi-icon coral fas fa-chart-column"></i></article>
+    </section>
+    <section class="electronics-panel">
+        <div class="electronics-panel-heading"><div><h2>Recent sales</h2><p>Latest sale items for this product.</p></div></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Receipt</th><th>Customer</th><th>Quantity</th><th>Unit price</th><th>Line total</th></tr></thead><tbody>
+            {% for item in recent_sales %}<tr><td>{{ item.sale.sale_date|date:"j M Y" }}</td><td><a class="electronics-table-link" href="{% url 'sales:detail' item.sale.id %}">{{ item.sale.sale_number }}</a></td><td>{{ item.sale.customer_name|default:"Walk-in" }}</td><td>{{ item.quantity }}</td><td>{{ user.business.currency }} {{ item.unit_price|floatformat:2 }}</td><td>{{ user.business.currency }} {{ item.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">No sale records exist for this product.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div></div>
+{% endblock %}

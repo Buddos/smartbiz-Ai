@@ -24,4 +24,6 @@ urlpatterns = [
     # API Endpoints
     path('api/barcode/', views.get_product_by_barcode, name='api_barcode'),
     path('api/update-stock/', views.update_stock, name='api_update_stock'),
+    path('api/live-barber-products/', views.live_barber_products, name='api_live_barber_products'),
+    path('<uuid:product_id>/barber-action/', views.barber_product_action, name='barber_product_action'),
 ]

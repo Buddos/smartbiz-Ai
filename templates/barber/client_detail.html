@@ -1,0 +1,26 @@
+{% extends 'barber/page_base.html' %}
+{% block page_content %}
+<section class="barber-page-heading">
+  <div class="client-detail-title"><a class="board-back" href="{% url 'barber:clients' %}" aria-label="Back to clients"><i class="fas fa-arrow-left" aria-hidden="true"></i></a><div><p class="salon-eyebrow">Client profile</p><h1>{{ customer.name }}</h1><p class="salon-subtitle">{% if customer.phone %}<a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>{% endif %}{% if customer.email %} · {{ customer.email }}{% endif %}</p></div></div>
+  <div class="barber-page-actions">{% if customer.phone %}<a class="salon-primary-action" href="tel:{{ customer.phone }}"><i class="fas fa-phone" aria-hidden="true"></i> Call</a>{% endif %}<a class="page-secondary-action" href="{% url 'barber:board' %}">Book</a><a class="page-secondary-action" href="{% url 'customers:update' customer.id %}">Edit notes</a></div>
+</section>
+<section class="barber-client-profile-stats">
+  <article><span>Visits</span><strong>{{ visit_count }}</strong></article>
+  <article><span>Lifetime spend</span><strong>KSh {{ spend|floatformat:0 }}</strong></article>
+  <article><span>Average spend</span><strong>KSh {{ average_spend|floatformat:0 }}</strong></article>
+  <article><span>Average visit gap</span><strong>{% if average_gap %}{{ average_gap }} days{% else %}Not enough visits{% endif %}</strong></article>
+</section>
+<section class="barber-client-detail-grid">
+  <article class="barber-page-panel client-timeline"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Visit history</p><h2>Recent visits</h2></div><span class="detail-count">{{ timeline|length }} records</span></div>
+    {% for item in timeline %}<div class="client-timeline-row"><time datetime="{{ item.date|date:'c' }}">{{ item.date|date:"d M Y" }}</time><div><strong>{{ item.service }}</strong><span>{{ item.barber }}</span></div><strong class="timeline-amount">KSh {{ item.amount|floatformat:0 }}</strong></div>{% empty %}<p class="table-empty">No completed visits or sales are recorded for this client.</p>{% endfor %}
+  </article>
+  <aside class="barber-page-panel client-notes"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Visit patterns</p><h2>What we know</h2></div></div>
+    <dl><div><dt>Average visit gap</dt><dd>{% if average_gap %}{{ average_gap }} days{% else %}Not enough visits{% endif %}</dd></div><div><dt>Average spend</dt><dd>KSh {{ average_spend|floatformat:0 }}</dd></div><div><dt>Most booked service</dt><dd>{{ most_booked_service }}{% if most_booked_share %} · {{ most_booked_share }}%{% endif %}</dd></div><div><dt>Favourite time</dt><dd>{{ favorite_time }}</dd></div></dl>
+  </aside>
+  <aside class="barber-page-panel client-notes"><div class="barber-panel-heading"><div><p class="salon-eyebrow">Preferences</p><h2>Client notes</h2></div><a class="table-action" href="{% url 'customers:update' customer.id %}">Edit</a></div>
+    <dl><div><dt>Preferred barber</dt><dd>{{ preferred_barber }}</dd></div><div><dt>Member since</dt><dd>{{ customer.created_at|date:"d M Y" }}</dd></div><div><dt>Phone</dt><dd>{{ customer.phone|default:"Not provided" }}</dd></div></dl>
+    <p class="client-note-copy">{{ customer.notes|default:"No client notes have been saved."|linebreaksbr }}</p>
+    {% if overdue_days %}<p class="retention-note">Based on recorded visits, this client is {{ overdue_days }} days past their average return interval.</p>{% endif %}
+  </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Repairs | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Repairs</h1><p>Track customer devices, repair status, promised dates, and deposits.</p></div>
+        <a class="electronics-button electronics-button-accent" href="{% url 'electronics:repair_create' %}"><i class="fas fa-plus"></i> New repair job</a>
+    </header>
+    <div class="electronics-stat-row">
+        <article class="electronics-stat"><span>Open jobs</span><strong>{{ open_count }}</strong></article>
+        <article class="electronics-stat"><span>Ready for pickup</span><strong>{{ ready_count }}</strong></article>
+        <article class="electronics-stat"><span>Completed this month</span><strong>{{ completed_month }}</strong></article>
+        <article class="electronics-stat"><span>Repair estimates completed this month</span><strong>{{ user.business.currency }} {{ repair_revenue|floatformat:0 }}</strong></article>
+    </div>
+    <section class="electronics-panel">
+        <form class="electronics-toolbar" method="get" style="margin-bottom:12px">
+            <input class="input-field" type="search" name="q" value="{{ search }}" placeholder="Search job, phone, customer, device or IMEI" aria-label="Search repair jobs">
+            <select class="input-field" name="status" aria-label="Filter by repair status"><option value="">All statuses</option>{% for code,label in statuses %}<option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Job</th><th>Customer</th><th>Device</th><th>Issue</th><th>Promised</th><th>Technician</th><th>Status</th><th>Estimate / deposit</th><th>Update</th></tr></thead><tbody>
+            {% for job in jobs %}<tr>
+                <td><strong>{{ job.job_number }}</strong><br><small>{{ job.created_at|date:"j M Y" }}</small></td>
+                <td>{{ job.customer_name }}<br><small>{{ job.customer_phone|default:"No phone" }}</small></td>
+                <td>{{ job.device_brand }} {{ job.device_model }}{% if job.imei %}<br><small>IMEI {{ job.imei }}</small>{% endif %}</td>
+                <td>{{ job.issue|truncatechars:70 }}</td><td>{{ job.promised_date|date:"j M Y"|default:"—" }}</td>
+                <td>{{ job.technician.get_full_name|default:"Unassigned" }}</td>
+                <td><span class="electronics-badge {% if job.status == 'READY' %}warning{% elif job.status == 'CANCELLED' %}danger{% endif %}">{{ job.get_status_display }}</span></td>
+                <td>{{ user.business.currency }} {{ job.estimate|floatformat:2 }}<br><small>Deposit {{ user.business.currency }} {{ job.deposit|floatformat:2 }}</small></td>
+                <td><form method="post" action="{% url 'electronics:repair_status' job.id %}" class="electronics-inline-form">{% csrf_token %}<select class="input-field" name="status" aria-label="Status for {{ job.job_number }}">{% for code,label in statuses %}<option value="{{ code }}" {% if job.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button type="submit">Save</button></form></td>
+            </tr>{% empty %}<tr><td colspan="9">No repair jobs match this filter. Create a job to start tracking repairs.</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if jobs.has_other_pages %}<nav class="electronics-pagination" aria-label="Repair job pages">{% if jobs.has_previous %}<a href="?page={{ jobs.previous_page_number }}&q={{ search|urlencode }}&status={{ status_filter|urlencode }}">Previous</a>{% endif %}<span>Page {{ jobs.number }} of {{ jobs.paginator.num_pages }}</span>{% if jobs.has_next %}<a href="?page={{ jobs.next_page_number }}&q={{ search|urlencode }}&status={{ status_filter|urlencode }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+</div></div>
+{% endblock %}

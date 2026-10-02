@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Stock movements | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><p class="electronics-breadcrumb"><a href="{% url 'inventory:dashboard' %}">Inventory</a> / Movement log</p><h1>Stock movement log</h1><p>Auditable product stock changes recorded for this business.</p></div>
+        <div class="electronics-heading-actions"><a class="electronics-button electronics-button-outline" href="{% url 'inventory:export' %}"><i class="fas fa-download"></i> Export stock</a><a class="electronics-button electronics-button-accent" href="{% url 'inventory:transaction_create' %}"><i class="fas fa-plus"></i> Record movement</a></div>
+    </header>
+    <section class="electronics-kpis" aria-label="Movement summary">
+        <article class="electronics-kpi"><div><span>Transactions</span><strong>{{ stats.total_transactions }}</strong><small>Matching current filters</small></div><i class="kpi-icon mint fas fa-list-check"></i></article>
+        <article class="electronics-kpi"><div><span>Purchases received</span><strong>{{ stats.total_purchases }}</strong><small>Recorded purchase movements</small></div><i class="kpi-icon mint fas fa-arrow-down"></i></article>
+        <article class="electronics-kpi"><div><span>Sales movements</span><strong>{{ stats.total_sales }}</strong><small>Recorded sale deductions</small></div><i class="kpi-icon coral fas fa-arrow-up"></i></article>
+        <article class="electronics-kpi"><div><span>Adjustments</span><strong>{{ stats.total_adjustments }}</strong><small>Stock corrections</small></div><i class="kpi-icon lavender fas fa-sliders"></i></article>
+    </section>
+    <section class="electronics-panel">
+        <form method="get" class="electronics-filter-form">
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="search" value="{{ form.search.value|default:'' }}" placeholder="Product, SKU, or reference"></label>
+            <label><span>Movement type</span><select class="input-field" name="transaction_type">{% for value,label in form.fields.transaction_type.choices %}<option value="{{ value }}" {% if form.transaction_type.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <label><span>From</span><input class="input-field" type="date" name="date_from" value="{{ form.date_from.value|default:'' }}"></label>
+            <label><span>To</span><input class="input-field" type="date" name="date_to" value="{{ form.date_to.value|default:'' }}"></label>
+            <label><span>Status</span><select class="input-field" name="status">{% for value,label in form.fields.status.choices %}<option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button><a class="electronics-clear-filters" href="{% url 'inventory:transactions' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Type</th><th>Product</th><th>Quantity</th><th>Balance after</th><th>Unit cost</th><th>User</th><th>Reference</th><th>Status</th></tr></thead><tbody>
+            {% for movement in page_obj %}<tr>
+                <td>{{ movement.transaction_date|date:"j M Y · g:i A" }}</td>
+                <td><span class="electronics-badge {% if movement.transaction_type == 'SALE' or movement.transaction_type == 'WASTE' %}danger{% elif movement.transaction_type == 'RETURN' %}info{% elif movement.transaction_type == 'ADJUSTMENT' %}warning{% endif %}">{{ movement.get_transaction_type_display }}</span></td>
+                <td><a class="electronics-table-link" href="{% url 'products:detail' movement.product_id %}">{{ movement.product.name }}</a></td>
+                <td>{% if movement.transaction_type == "SALE" or movement.transaction_type == "WASTE" or movement.transaction_type == "RETURNED_TO_SUPPLIER" %}−{% else %}+{% endif %}{{ movement.quantity }}</td>
+                <td>{{ movement.new_stock }}</td><td>{{ user.business.currency }} {{ movement.unit_cost|floatformat:2 }}</td>
+                <td>{% if movement.created_by %}{{ movement.created_by.get_full_name|default:movement.created_by.email }}{% else %}—{% endif %}</td>
+                <td>{{ movement.reference_number|default:"—" }}</td><td>{{ movement.get_status_display }}</td>
+            </tr>{% empty %}<tr><td colspan="9"><div class="electronics-empty-state"><i class="fas fa-clock-rotate-left"></i><strong>No stock movements found</strong><span>Try changing filters or record a movement.</span><a class="electronics-button electronics-button-accent" href="{% url 'inventory:transaction_create' %}">Record movement</a></div></td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if page_obj.has_other_pages %}<nav class="electronics-pagination" aria-label="Movement pages">{% if page_obj.has_previous %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>{% if page_obj.has_next %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+</div></div>
+{% endblock %}

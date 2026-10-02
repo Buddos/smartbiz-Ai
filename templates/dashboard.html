@@ -1,6 +1,7 @@
 <!-- templates/dashboard.html -->
 {% extends 'base.html' %}
 {% load static %}
+{% load dashboard_notifications %}
 
 {% block title %}Dashboard - SmartBiz AI{% endblock %}
 
@@ -21,9 +22,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button class="p-2 rounded-lg hover:bg-gray-100">
-                        <i class="fas fa-bell text-gray-500"></i>
-                    </button>
+                    {% dashboard_notifications %}
                     <div class="flex items-center gap-3">
                         <div class="text-right hidden sm:block">
                             <p class="text-sm font-medium text-gray-700">{{ user.full_name }}</p>

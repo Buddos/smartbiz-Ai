@@ -10,7 +10,8 @@ class Business(models.Model):
     BUSINESS_TYPES = [
         ('RETAIL', 'Retail Shop'),
         ('RESTAURANT', 'Restaurant'),
-        ('SALON', 'Salon/Barbershop'),
+        ('SALON', 'Salon'),
+        ('BARBER', 'Barbershop'),
         ('WHOLESALE', 'Wholesale'),
         ('SERVICE', 'Service Business'),
         ('ELECTRONICS', 'Electronics Shop'),

@@ -1,0 +1,48 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Retail products | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<div class="salon-products-page">
+    <section class="salon-page-heading">
+        <div><p class="salon-eyebrow">{{ user.business.name }} · Inventory</p><h1>Retail products</h1><p class="salon-subtitle">Browse salon retail stock, selling prices, and reorder needs.</p></div>
+        <a class="salon-primary-action" href="{% url 'products:create' %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}"><i class="fas fa-plus" aria-hidden="true"></i> Add product</a>
+    </section>
+    <section class="salon-page-kpis" aria-label="Retail inventory summary">
+        <article><span>Retail products</span><strong>{{ product_count }}</strong><small>{{ active_count }} active in the catalog</small></article>
+        <article><span>Low stock</span><strong>{{ low_stock_count }}</strong><small>Above zero, at or below reorder level</small></article>
+        <article><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong><small>Active products with zero units</small></article>
+        <article><span>Stock value</span><strong>{{ user.business.currency }} {{ total_stock_value|floatformat:0 }}</strong><small>At recorded purchase cost</small></article>
+    </section>
+    <section class="salon-page-panel">
+        <form method="get" class="salon-product-filter">
+            <label for="{{ form.search.id_for_label }}">Search<input id="{{ form.search.id_for_label }}" type="search" name="{{ form.search.html_name }}" value="{{ form.search.value|default:'' }}" class="salon-field" placeholder="Product, SKU, barcode, supplier"></label>
+            <label for="{{ form.category.id_for_label }}">Category{{ form.category }}</label>
+            <label for="{{ form.status.id_for_label }}">Catalog status{{ form.status }}</label>
+            <label for="stockFilter">Stock level<select id="stockFilter" name="stock" class="salon-field"><option value="">All stock</option><option value="low" {% if stock_filter == 'low' %}selected{% endif %}>Low stock</option><option value="out" {% if stock_filter == 'out' %}selected{% endif %}>Out of stock</option><option value="healthy" {% if stock_filter == 'healthy' %}selected{% endif %}>Above reorder level</option></select></label>
+            <label for="{{ form.sort_by.id_for_label }}">Sort{{ form.sort_by }}</label>
+            <button class="salon-secondary-action" type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Filter</button>
+        </form>
+    </section>
+    <section class="salon-product-grid" aria-label="Salon retail product catalog">
+        {% for product in page_obj %}
+        <article class="salon-product-card">
+            <a class="salon-product-image" href="{% url 'products:detail' product.id %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}" aria-label="View {{ product.name }}">
+                {% if product.image %}<img src="{{ product.image.url }}" alt="{{ product.name }}">{% else %}<i class="fas fa-bottle-droplet" aria-hidden="true"></i>{% endif %}
+            </a>
+            <div class="salon-product-content">
+                <div class="salon-product-heading"><div><a href="{% url 'products:detail' product.id %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}">{{ product.name }}</a><span class="salon-product-sku">{{ product.category.name|default:'Uncategorized' }}{% if product.sku %} · {{ product.sku }}{% endif %}</span></div></div>
+                <span class="salon-stock-chip {% if product.current_stock == 0 %}is-empty{% elif product.current_stock <= product.reorder_level %}is-low{% endif %}">{% if not product.is_active %}Inactive · {% endif %}{% if product.current_stock == 0 %}Out of stock{% elif product.current_stock <= product.reorder_level %}Low stock{% else %}In stock{% endif %} · {{ product.current_stock }} {{ product.unit }}</span>
+                <div class="salon-product-values"><div><span>Sell price</span><strong>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</strong></div><div><span>Reorder at</span><strong>{{ product.reorder_level }} {{ product.unit }}</strong></div></div>
+                <div class="salon-product-actions"><a href="{% url 'products:detail' product.id %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}">View details <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a class="salon-secondary-action" href="{% url 'products:update' product.id %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}">Edit</a></div>
+            </div>
+        </article>
+        {% empty %}<div class="salon-page-panel salon-data-empty"><i class="fas fa-box-open" aria-hidden="true"></i><strong>No matching retail products</strong><p>Add salon retail products to track inventory here. Salon services are managed separately in Services &amp; Packages.</p><a class="salon-primary-action" href="{% url 'products:create' %}"><i class="fas fa-plus" aria-hidden="true"></i> Add retail product</a></div>{% endfor %}
+    </section>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="salon-product-pagination" aria-label="Product pages">
+        {% if page_obj.has_previous %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{% if querystring %}{{ querystring }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

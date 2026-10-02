@@ -37,6 +37,7 @@ class User(AbstractUser):
         ('ADMIN', 'Platform Admin'),
         ('OWNER', 'Business Owner'),
         ('MANAGER', 'Business Manager'),
+        ('BARBER', 'Barber'),
         ('STAFF', 'Staff Member'),
         ('ACCOUNTANT', 'Accountant / Bookkeeper'),
     ]
@@ -120,6 +121,9 @@ class User(AbstractUser):
             'STAFF': {
                 'view_dashboard', 'record_sales', 'update_stock_counts',
                 'submit_expenses', 'chat_assistant_limited',
+            },
+            'BARBER': {
+                'view_dashboard', 'record_sales', 'chat_assistant_limited',
             },
             'ACCOUNTANT': {
                 'view_dashboard_financial', 'review_expenses',

@@ -3,105 +3,87 @@
 
 {% block title %}Users - SmartBiz AI{% endblock %}
 
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/business-admin.css' %}">{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<main class="team-access-page">
+    <div class="team-access-container">
         <!-- Page Header -->
-        <a href="{% url 'business_admin' %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Administration</span></a>
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+        {% if request.GET.from != 'admin' %}<a href="{% url 'business_admin' %}" class="team-access-back"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Administration</span></a>{% endif %}
+        <div class="team-access-heading">
             <div>
-                <h1 class="text-2xl font-bold text-primary-700">Users</h1>
-                <p class="text-gray-600">Manage your team members and their access</p>
+                <p class="admin-eyebrow">Team access</p>
+                <h1>Team members</h1>
+                <p>Manage your team members and their access.</p>
             </div>
-            <div class="mt-4 sm:mt-0">
-                <a href="{% url 'accounts:user_create' %}" class="btn-primary inline-flex items-center">
-                    <i class="fas fa-user-plus mr-2"></i>Add User
-                </a>
-            </div>
+            <a href="{% url 'accounts:user_create' %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}" class="team-add-button"><i class="fas fa-user-plus" aria-hidden="true"></i>Create team member</a>
         </div>
         
         <!-- Search and Filter -->
-        <div class="card mb-6">
-            <form method="GET" class="flex flex-col sm:flex-row gap-4">
-                <div class="flex-1">
-                    <input type="text" name="search" value="{{ search_query|default:'' }}" 
-                           placeholder="Search by name, email, or phone..." 
-                           class="input-field">
-                </div>
-                <div>
-                    <button type="submit" class="btn-primary inline-flex items-center w-full sm:w-auto">
-                        <i class="fas fa-search mr-2"></i>Search
-                    </button>
-                </div>
+        <div class="team-search-card">
+            <form method="GET" class="team-search-form">
+                <input type="text" name="search" value="{{ search_query|default:'' }}"
+                       placeholder="Search by name, email, or phone..." aria-label="Search team members">
+                <button type="submit" class="team-search-button"><i class="fas fa-search" aria-hidden="true"></i>Search</button>
             </form>
         </div>
         
         <!-- Users Table -->
-        <div class="card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+        <div class="team-table-card">
+            <div class="team-table-scroll">
+                <table class="team-table">
+                    <thead>
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th scope="col">User</th>
+                            <th scope="col">Email</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Joined</th>
+                            <th scope="col" class="team-actions-heading">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody>
                         {% for user in page_obj %}
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-10 w-10">
+                            <tr>
+                                <td>
+                                    <div class="team-user-cell">
+                                        <div class="team-user-avatar">
                                             {% if user.profile_picture %}
-                                                <img src="{{ user.profile_picture.url }}" alt="" class="h-10 w-10 rounded-full object-cover">
+                                                <img src="{{ user.profile_picture.url }}" alt="">
                                             {% else %}
-                                                <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                                                    <span class="text-sm font-medium text-primary-500">
-                                                        {{ user.first_name|first }}{{ user.last_name|first }}
-                                                    </span>
-                                                </div>
+                                                <span>{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
                                             {% endif %}
                                         </div>
-                                        <div class="ml-3">
-                                            <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
-                                            <div class="text-sm text-gray-500">{{ user.phone_number|default:'No phone' }}</div>
+                                        <div>
+                                            <div class="team-user-name">{{ user.full_name|default:user.email }}</div>
+                                            <div class="team-user-phone">{{ user.phone_number|default:'No phone' }}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ user.email }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs rounded-full 
-                                        {% if user.role == 'OWNER' %}bg-primary-100 text-primary-700
-                                        {% elif user.role == 'MANAGER' %}bg-accent-100 text-accent-700
-                                        {% elif user.role == 'STAFF' %}bg-gray-100 text-gray-700
-                                        {% elif user.role == 'ADMIN' %}bg-insight-100 text-insight-700
-                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="team-role-chip {% if user.role == 'OWNER' %}owner{% elif user.role == 'MANAGER' %}manager{% elif user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}admin{% endif %}">
                                         {{ user.get_role_display }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs rounded-full 
-                                        {% if user.is_active %}bg-success-100 text-success-700{% else %}bg-danger-100 text-danger-700{% endif %}">
+                                <td>
+                                    <span class="team-status-chip {% if user.is_active %}active{% else %}inactive{% endif %}">
                                         {% if user.is_active %}Active{% else %}Inactive{% endif %}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td>
                                     {{ user.created_at|date:"M d, Y" }}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <a href="{% url 'accounts:user_update' user.id %}" 
-                                           class="text-primary-500 hover:text-primary-700" title="Edit">
-                                            <i class="fas fa-edit"></i>
+                                <td>
+                                    <div class="team-table-actions">
+                                        <a href="{% url 'accounts:user_update' user.id %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}"
+                                           title="Edit {{ user.full_name|default:user.email }}" aria-label="Edit {{ user.full_name|default:user.email }}">
+                                            <i class="fas fa-edit" aria-hidden="true"></i>
                                         </a>
                                         {% if user != request.user %}
-                                            <a href="{% url 'accounts:user_delete' user.id %}" 
-                                               class="text-danger-500 hover:text-danger-700" title="Delete">
-                                                <i class="fas fa-trash"></i>
+                                            <a href="{% url 'accounts:user_delete' user.id %}"
+                                               class="delete-action" title="Delete {{ user.full_name|default:user.email }}" aria-label="Delete {{ user.full_name|default:user.email }}">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
                                             </a>
                                         {% endif %}
                                     </div>
@@ -109,7 +91,7 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <td colspan="6" class="team-empty-state">
                                     <i class="fas fa-users text-4xl text-gray-300 mb-2 block"></i>
                                     No users found
                                 </td>
@@ -121,20 +103,18 @@
             
             <!-- Pagination -->
             {% if page_obj.has_other_pages %}
-                <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <div class="text-sm text-gray-500">
+                <div class="team-pagination">
+                    <div>
                         Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} users
                     </div>
-                    <div class="flex gap-2">
+                    <div class="team-pagination-links">
                         {% if page_obj.has_previous %}
-                            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" 
-                               class="px-3 py-1 rounded border border-gray-300 text-sm hover:bg-gray-50">
+                            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&amp;search={{ search_query }}{% endif %}{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}">
                                 Previous
                             </a>
                         {% endif %}
                         {% if page_obj.has_next %}
-                            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" 
-                               class="px-3 py-1 rounded border border-gray-300 text-sm hover:bg-gray-50">
+                            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&amp;search={{ search_query }}{% endif %}{% if request.GET.from == 'admin' %}&amp;from=admin{% endif %}">
                                 Next
                             </a>
                         {% endif %}
@@ -143,5 +123,5 @@
             {% endif %}
         </div>
     </div>
-</div>
+</main>
 {% endblock %}

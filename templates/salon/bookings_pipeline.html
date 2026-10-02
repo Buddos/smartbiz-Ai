@@ -1,0 +1,81 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Bookings pipeline | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div><p class="salon-eyebrow">{{ user.business.name }} · Live bookings</p><h1>Bookings pipeline</h1><p class="salon-subtitle">Move real salon appointments from request through the service floor.</p></div>
+    <a class="salon-primary-action" href="{% url 'salon:appointments' %}#newAppointment"><i class="fas fa-plus" aria-hidden="true"></i> New booking</a>
+</section>
+<section class="salon-page-kpis" aria-label="Booking pipeline summary">
+    <article><span>Open stages</span><strong>{{ open_count }}</strong><small>Requests through in-service today</small></article>
+    <article><span>Completed</span><strong>{{ completed_count }}</strong><small>Completed through checkout</small></article>
+    <article><span>Closed without sale</span><strong>{{ closed_count }}</strong><small>No-show or cancelled</small></article>
+    <article><span>Selected date</span><strong>{{ selected_date|date:'j M' }}</strong><small>{{ selected_date|date:'l, Y' }}</small></article>
+</section>
+<section class="salon-page-panel salon-pipeline-panel">
+    <div class="salon-pipeline-toolbar">
+        <form method="get" class="salon-pipeline-search">
+            <label for="pipelineDate">Date</label><input id="pipelineDate" class="salon-field" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+            <label for="pipelineSearch">Search bookings</label><input id="pipelineSearch" class="salon-field" type="search" name="search" value="{{ search }}" placeholder="Client, stylist or service">
+            <button type="submit" class="salon-secondary-action"><i class="fas fa-filter" aria-hidden="true"></i> Apply</button>
+        </form>
+        <nav class="salon-date-nav" aria-label="Pipeline date">
+            <a href="?date={{ previous_date|date:'Y-m-d' }}{% if search %}&search={{ search|urlencode }}{% endif %}" aria-label="Previous day">‹</a>
+            <strong>{{ selected_date|date:'D, j M Y' }}</strong>
+            <a href="?date={{ next_date|date:'Y-m-d' }}{% if search %}&search={{ search|urlencode }}{% endif %}" aria-label="Next day">›</a>
+            <a class="salon-today-link" href="?">Today</a>
+        </nav>
+    </div>
+    <div class="salon-pipeline-board">
+        {% for column in columns %}
+        <section class="salon-pipeline-column" aria-label="{{ column.label }}">
+            <header><h2>{{ column.label }}</h2><span>{{ column.appointments.count }}</span></header>
+            <div class="salon-pipeline-cards">
+                {% for appointment in column.appointments %}
+                <article class="salon-pipeline-card">
+                    <div class="salon-pipeline-card-top"><strong>{{ appointment.starts_at|date:'g:i A' }}</strong><span class="salon-booking-status status-{{ appointment.status|lower|cut:'_' }}">{{ appointment.get_status_display }}</span></div>
+                    <h3>{{ appointment.display_client_name }}</h3>
+                    <p>{% for service in appointment.services.all %}{{ service.name }}{% if not forloop.last %}, {% endif %}{% empty %}No service recorded{% endfor %}</p>
+                    <small><i class="fas fa-user-scissors" aria-hidden="true"></i> {{ appointment.stylist.get_full_name|default:'Stylist unassigned' }} · {{ appointment.duration_min }} min</small>
+                    {% if appointment.display_client_phone %}<small><i class="fas fa-phone" aria-hidden="true"></i> {{ appointment.display_client_phone }}</small>{% endif %}
+                    {% if appointment.notes %}<details><summary>Booking note</summary><p>{{ appointment.notes }}</p></details>{% endif %}
+                    <div class="salon-pipeline-card-actions">
+                        <form method="post" class="salon-pipeline-move">
+                            {% csrf_token %}<input type="hidden" name="appointment_id" value="{{ appointment.id }}"><input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+                            <label class="salon-sr-only" for="stage-{{ appointment.id }}">Move {{ appointment.display_client_name }}</label>
+                            <select id="stage-{{ appointment.id }}" class="salon-field" name="status">
+                                <option value="BOOKED" {% if appointment.status == 'BOOKED' %}selected{% endif %}>Requested</option>
+                                <option value="CONFIRMED" {% if appointment.status == 'CONFIRMED' %}selected{% endif %}>Confirmed</option>
+                                <option value="CHECKED_IN" {% if appointment.status == 'CHECKED_IN' %}selected{% endif %}>Checked in</option>
+                                <option value="IN_SERVICE" {% if appointment.status == 'IN_SERVICE' %}selected{% endif %}>In service</option>
+                                <option value="NO_SHOW">No-show</option><option value="CANCELLED">Cancelled</option>
+                            </select>
+                            <button class="salon-status-save" type="submit">Move</button>
+                        </form>
+                        {% if appointment.status == 'CHECKED_IN' or appointment.status == 'IN_SERVICE' %}<a class="salon-checkout-link" href="{% url 'sales:create' %}?appointment={{ appointment.id }}">Checkout</a>{% endif %}
+                    </div>
+                </article>
+                {% empty %}<p class="salon-pipeline-empty">No bookings in this stage.</p>{% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+    <section class="salon-pipeline-closed">
+        <header><h2>Closed today</h2><span>{{ closed_count }}</span></header>
+        <div class="salon-closed-list">
+            {% for appointment in appointments %}{% if appointment.status == 'NO_SHOW' or appointment.status == 'CANCELLED' %}
+            <div><strong>{{ appointment.display_client_name }}</strong><span>{{ appointment.starts_at|date:'g:i A' }}</span><span class="salon-booking-status status-{{ appointment.status|lower|cut:'_' }}">{{ appointment.get_status_display }}</span></div>
+            {% endif %}{% endfor %}
+            {% if not closed_count %}<p class="salon-muted-copy">No cancelled or no-show bookings for this date.</p>{% endif %}
+        </div>
+    </section>
+    <section class="salon-pipeline-closed">
+        <header><h2>Completed</h2><span>{{ completed_count }}</span></header>
+        <div class="salon-closed-list">
+            {% for appointment in appointments %}{% if appointment.status == 'COMPLETED' %}
+            <div><strong>{{ appointment.display_client_name }}</strong><span>{{ appointment.starts_at|date:'g:i A' }}</span><span class="salon-booking-status status-completed">{% if appointment.sale_id %}Sale recorded{% else %}Completed{% endif %}</span></div>
+            {% endif %}{% endfor %}
+            {% if not completed_count %}<p class="salon-muted-copy">No completed bookings for this date.</p>{% endif %}
+        </div>
+    </section>
+</section>
+{% endblock %}

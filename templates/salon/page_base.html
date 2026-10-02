@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/salon.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/salon-pages.css' %}?v=2">
+{% endblock %}
+{% block content %}
+<div class="salon-shell salon-page-shell" data-salon-live-refresh="60000">
+    {% include 'partials/_salon_sidebar.html' %}
+    <div class="salon-workspace">
+        {% include 'partials/_salon_topbar.html' %}
+        <main class="salon-content salon-live-content" data-salon-page="{{ page }}">
+            {% block salon_page %}{% endblock %}
+        </main>
+    </div>
+</div>
+<div class="salon-sidebar-scrim" data-salon-close></div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/salon.js' %}" defer></script>
+{% block salon_extra_js %}{% endblock %}
+{% endblock %}

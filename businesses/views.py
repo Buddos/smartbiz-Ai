@@ -12,6 +12,15 @@ from accounts.models import UserActivity
 from accounts.decorators import role_required, business_required
 from .capabilities import CAPABILITY_REGISTRY, CATEGORY_PRESETS, capabilities_for_business
 
+
+def _dashboard_redirect_for(business):
+    """Send a newly created business to its type-specific workspace."""
+    if business.business_type == "BARBER":
+        return redirect("barber:dashboard")
+    # The main dashboard resolves salon and every other supported business type
+    # to its matching workspace/template.
+    return redirect("dashboard")
+
 @login_required
 def business_setup(request):
     """Setup business for first-time owners."""
@@ -19,7 +28,7 @@ def business_setup(request):
     # Check if user already has a business
     if request.user.business:
         messages.info(request, 'You already have a business set up.')
-        return redirect('dashboard')
+        return _dashboard_redirect_for(request.user.business)
     
     if request.method == 'POST':
         form = BusinessSetupForm(request.POST, request.FILES)
@@ -28,11 +37,9 @@ def business_setup(request):
                 # Create the business
                 business = form.save(commit=False)
                 business.created_by = request.user
-                requested_capabilities = request.POST.getlist('capabilities')
-                business.enabled_capabilities = [
-                    capability_id for capability_id in requested_capabilities
-                    if capability_id in CAPABILITY_REGISTRY
-                ] or CATEGORY_PRESETS.get(business.business_type, [])
+                # Capabilities are derived from the selected business type at
+                # signup. They are not an extra onboarding decision.
+                business.enabled_capabilities = CATEGORY_PRESETS.get(business.business_type, [])
                 business.save()
                 
                 # Create default settings
@@ -55,19 +62,18 @@ def business_setup(request):
                 )
                 
                 messages.success(request, f'Business "{business.name}" created successfully!')
-                return redirect('dashboard')
+                return _dashboard_redirect_for(business)
     else:
         form = BusinessSetupForm()
     
     return render(request, 'businesses/setup.html', {
         'form': form,
-        'capability_registry': CAPABILITY_REGISTRY,
-        'category_presets': CATEGORY_PRESETS,
         'title': 'Set Up Your Business'
     })
 
 @login_required
 @business_required
+@role_required(["OWNER", "ADMIN", "SUPER_ADMIN"])
 def business_settings_view(request):
     """View and edit business settings."""
     business = request.user.business
@@ -114,6 +120,7 @@ def business_settings_view(request):
 
 @login_required
 @business_required
+@role_required(["OWNER", "ADMIN", "SUPER_ADMIN"])
 @require_POST
 def business_settings_save(request):
     """Save business settings via AJAX."""
@@ -128,6 +135,7 @@ def business_settings_save(request):
 
 @login_required
 @business_required
+@role_required(["OWNER", "ADMIN", "SUPER_ADMIN"])
 @require_POST
 def capabilities_save(request):
     """Enable or disable capability modules without re-onboarding."""
@@ -249,4 +257,3 @@ def branch_delete_view(request, branch_id):
     branch.delete()
     messages.success(request, f'Branch "{branch_name}" deleted successfully!')
     return redirect('businesses:branches')
-

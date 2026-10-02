@@ -1,0 +1,29 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Stylists | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div><p class="salon-eyebrow">{{ user.business.name }} · Client &amp; staff</p><h1>Stylists</h1><p class="salon-subtitle">Team profiles with appointment and sales totals from saved records.</p></div>
+</section>
+<section class="salon-page-kpis" aria-label="Stylist team summary">
+    <article><span>Active stylists</span><strong>{{ staff_count }}</strong><small>Active salon team members</small></article>
+    <article><span>Appointments today</span><strong>{{ appointments_today }}</strong><small>From saved salon bookings</small></article>
+    <article><span>Services completed</span><strong>{{ completed_today }}</strong><small>Marked complete today</small></article>
+    <article><span>Sales today</span><strong>{{ sales_today }}</strong><small>Attributed to team members</small></article>
+</section>
+<form method="get" class="salon-stylist-search"><label for="stylistSearch">Search stylists</label><input id="stylistSearch" name="search" value="{{ search }}" type="search" class="salon-field" placeholder="Name, email or phone"><button class="salon-secondary-action" type="submit">Search</button></form>
+<section class="salon-stylist-grid" aria-label="Active salon stylists">
+    {% for stylist in stylists %}
+    <article class="salon-page-panel salon-stylist-card">
+        <div class="salon-stylist-card-heading">
+            <span class="salon-stylist-avatar">{% if stylist.profile_picture %}<img src="{{ stylist.profile_picture.url }}" alt="">{% else %}{{ stylist.first_name|first|upper }}{{ stylist.last_name|first|upper }}{% endif %}</span>
+            <div><h2>{{ stylist.get_full_name|default:stylist.email }}</h2><span class="salon-role-chip">{{ stylist.get_role_display }}</span></div>
+            <span class="salon-active-dot" title="Active team member"></span>
+        </div>
+        <p class="salon-stylist-contact">{{ stylist.email }}{% if stylist.phone_number %} · {{ stylist.phone_number }}{% endif %}</p>
+        <div class="salon-stylist-stats"><div><span>Today</span><strong>{{ stylist.appointments_today }} appointments</strong><small>{{ stylist.services_done_today }} completed · {{ user.business.currency }} {{ stylist.revenue_today|floatformat:0 }} sales</small></div><div><span>This month</span><strong>{{ user.business.currency }} {{ stylist.revenue_month|floatformat:0 }}</strong><small>Attributed recorded sales</small></div></div>
+    </article>
+    {% empty %}
+    <div class="salon-page-panel salon-data-empty"><i class="fas fa-user-group" aria-hidden="true"></i><strong>No active salon stylists found</strong><p>Team member creation and access management are available from Business admin in the account menu.</p></div>
+    {% endfor %}
+</section>
+{% endblock %}

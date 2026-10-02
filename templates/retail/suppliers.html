@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Suppliers | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="retail-content">
+    <section class="retail-page-heading"><div><p class="retail-eyebrow">Inventory · purchasing</p><h1>Suppliers &amp; purchase orders</h1><p>Maintain vendor contacts and receive ordered products into live inventory.</p></div><div class="retail-heading-actions"><a href="#supplier-form" class="retail-button retail-button-secondary">Add supplier</a><a href="#order-form" class="retail-button retail-button-primary">New purchase order</a></div></section>
+    <section class="retail-panel" id="supplier-form"><div class="retail-section-heading"><div><h2>Add supplier</h2><p>Supplier records are scoped to this retail business.</p></div></div>
+        <form method="post" class="retail-form-grid">{% csrf_token %}<input type="hidden" name="form_type" value="supplier">
+            {% for field in supplier_form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="retail-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+            <button class="retail-button retail-button-primary" type="submit">Save supplier</button>
+        </form>
+    </section>
+    <section class="retail-panel retail-panel-spaced"><div class="retail-section-heading"><div><h2>Supplier directory <span class="retail-count">{{ suppliers|length }}</span></h2></div></div>
+        <div class="retail-table-wrap"><table class="retail-table"><thead><tr><th>Name</th><th>Contact</th><th>Products on orders</th><th>Lead time</th></tr></thead><tbody>
+            {% for supplier in suppliers %}<tr><td><strong>{{ supplier.name }}</strong></td><td>{{ supplier.phone|default:"—" }}{% if supplier.email %}<small>{{ supplier.email }}</small>{% endif %}</td><td>{{ supplier.purchase_orders.count }}</td><td>{{ supplier.lead_time_days }} days</td></tr>{% empty %}<tr><td colspan="4" class="retail-empty">No suppliers added yet.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="retail-panel retail-panel-spaced" id="order-form"><div class="retail-section-heading"><div><h2>New purchase order</h2><p>Add one or more business products; receipt updates stock and records inventory movements.</p></div></div>
+        {% if not suppliers %}<p class="retail-empty">Add a supplier before creating a purchase order.</p>{% else %}
+        <form method="post" class="retail-form-grid" data-retail-order-form>{% csrf_token %}<input type="hidden" name="form_type" value="order">
+            {% for field in order_form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="retail-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+            <div class="retail-order-lines full-width"><h3>Order items</h3>{{ item_formset.management_form }}{% if item_formset.non_form_errors %}<p class="retail-form-error">{{ item_formset.non_form_errors }}</p>{% endif %}
+                <div data-retail-order-lines>{% for form in item_formset %}<div class="retail-order-line" data-order-line>
+                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                    {% for field in form.visible_fields %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="retail-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                    {% if form.DELETE %}<label class="retail-delete-line">{{ form.DELETE }} Remove</label>{% endif %}
+                </div>{% endfor %}</div>
+                <template data-order-empty-form><div class="retail-order-line" data-order-line>{% for field in item_formset.empty_form.visible_fields %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="retail-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}<label class="retail-delete-line"><input type="checkbox" name="items-__prefix__-DELETE" id="id_items-__prefix__-DELETE"> Remove</label></div></template>
+                <button class="retail-button retail-button-secondary" type="button" data-add-order-line>Add item</button>
+            </div>
+            <button class="retail-button retail-button-primary full-width" type="submit">Create purchase order</button>
+        </form>{% endif %}
+    </section>
+    <section class="retail-panel retail-panel-spaced"><div class="retail-section-heading"><div><h2>Purchase orders</h2><p>Recent purchasing activity and receiving status.</p></div></div>
+        <div class="retail-table-wrap"><table class="retail-table"><thead><tr><th>PO #</th><th>Supplier</th><th>Created</th><th>Products</th><th>Total</th><th>Status / action</th></tr></thead><tbody>
+            {% for order in orders %}<tr><td><strong>{{ order.order_number }}</strong></td><td>{{ order.supplier.name }}</td><td>{{ order.created_at|date:"j M Y" }}</td><td>{% for item in order.items.all %}<small>{{ item.product.name }} · {{ item.quantity }}</small>{% endfor %}</td><td>{{ user.business.currency }} {{ order.total|floatformat:2 }}</td><td><span class="retail-status">{{ order.get_status_display }}</span>{% if order.status == "DRAFT" or order.status == "SENT" or order.status == "PARTIAL" %}<form method="post" action="{% url 'retail:purchase_order_receive' order.id %}">{% csrf_token %}<button class="retail-table-action" type="submit">Receive stock</button></form>{% endif %}</td></tr>
+            {% empty %}<tr><td colspan="6" class="retail-empty">No purchase orders recorded.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div>
+{% endblock %}

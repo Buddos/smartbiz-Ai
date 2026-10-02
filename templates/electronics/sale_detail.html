@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ sale.sale_number }} | Sales{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><p class="electronics-breadcrumb"><a href="{% url 'sales:list' %}">Sales</a> / Receipt</p><h1>{{ sale.sale_number }}</h1><p>{{ sale.sale_date|date:"j M Y · g:i A" }} · <span class="electronics-badge {% if sale.payment_status == 'PENDING' %}warning{% elif sale.payment_status == 'REFUNDED' %}danger{% endif %}">{{ sale.get_payment_status_display }}</span></p></div>
+        <div class="electronics-heading-actions">
+            <a class="electronics-button electronics-button-outline" href="{% url 'sales:invoice_pdf' sale.id %}"><i class="fas fa-file-pdf"></i> Download PDF</a>
+            {% if receipt_payment %}<a class="electronics-button electronics-button-outline" href="{% url 'sales:receipt' receipt_payment.id %}"><i class="fas fa-print"></i> Print receipt</a>{% endif %}
+            {% if sale.order_status != "RETURNED" and sale.order_status != "CANCELLED" %}<a class="electronics-button electronics-button-outline" href="{% url 'sales:return' sale.id %}"><i class="fas fa-rotate-left"></i> Return</a>{% endif %}
+        </div>
+    </header>
+    <section class="electronics-split electronics-sale-detail">
+        <article class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2><i class="fas fa-user"></i> Customer</h2><p>Contact and purchase history.</p></div></div>
+            <h3 class="electronics-customer-name">{% if sale.customer_name %}{{ sale.customer_name }}{% elif sale.customer %}{{ sale.customer.name }}{% else %}Walk-in customer{% endif %}</h3>
+            {% if sale.customer_phone %}<p><a href="tel:{{ sale.customer_phone }}">{{ sale.customer_phone }}</a></p>{% endif %}
+            {% if sale.customer_email %}<p>{{ sale.customer_email }}</p>{% endif %}
+            {% if customer_summary %}<div class="electronics-detail-list"><div><span>Purchases</span><strong>{{ customer_summary.purchases }}</strong></div><div><span>Lifetime spend</span><strong>{{ currency }} {{ customer_summary.spent|default:0|floatformat:2 }}</strong></div></div>{% endif %}
+        </article>
+        <article class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2><i class="fas fa-credit-card"></i> Payment summary</h2><p>Payment and balance values from this sale.</p></div></div>
+            <div class="electronics-detail-list"><div><span>Subtotal</span><strong>{{ currency }} {{ sale.subtotal|floatformat:2 }}</strong></div><div><span>Discount</span><strong>{{ currency }} {{ sale.discount|floatformat:2 }}</strong></div><div><span>Tax{% if sale.metadata.tax.enabled and sale.metadata.tax.inclusive %} (included){% endif %}</span><strong>{{ currency }} {{ sale.tax|floatformat:2 }}</strong></div><div><span>Total</span><strong>{{ currency }} {{ sale.total|floatformat:2 }}</strong></div><div><span>Payment method</span><strong>{{ sale.get_payment_method_display }}</strong></div><div><span>Amount paid</span><strong>{{ currency }} {{ sale.amount_paid|floatformat:2 }}</strong></div><div><span>Balance due</span><strong class="{% if sale.balance_due %}metric-negative{% endif %}">{{ currency }} {{ sale.balance_due|floatformat:2 }}</strong></div>{% if transaction_code %}<div><span>Reference</span><strong>{{ transaction_code }}</strong></div>{% endif %}</div>
+            {% if sale.customer_email %}<form method="post" action="{% url 'sales:send_invoice' sale.id %}" class="electronics-send-invoice">{% csrf_token %}<button class="electronics-button electronics-button-outline" type="submit"><i class="fas fa-envelope"></i> Email invoice</button></form>{% endif %}
+        </article>
+    </section>
+    <section class="electronics-panel electronics-customer-detail-section">
+        <div class="electronics-panel-heading"><div><h2>Items purchased</h2><p>Products recorded on this receipt.</p></div><span class="electronics-badge">{{ sale.get_order_status_display }}</span></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Product</th><th>SKU</th><th>Serial / IMEI</th><th>Qty</th><th>Unit price</th><th>Line total</th></tr></thead><tbody>
+            {% for item in items %}<tr><td><strong>{{ item.product_name }}</strong></td><td><code>{{ item.product_sku }}</code></td><td>{% if item.metadata.serial_number %}{{ item.metadata.serial_number }}{% elif sale_serial_number %}{{ sale_serial_number }}{% else %}—{% endif %}</td><td>{{ item.quantity }}</td><td>{{ currency }} {{ item.unit_price|floatformat:2 }}</td><td>{{ currency }} {{ item.total|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6">No product items are recorded on this sale.</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if warranty_period %}<p class="electronics-detail-note"><i class="fas fa-shield-halved"></i> Warranty recorded for this sale: {{ warranty_period }}.</p>{% endif %}
+    </section>
+    <div class="electronics-customer-lower-grid">
+        <section class="electronics-panel"><div class="electronics-panel-heading"><div><h2>Payment history</h2><p>Payments linked to this sale.</p></div>{% if sale.balance_due %}<a href="{% url 'sales:payment' sale.id %}">Record payment <i class="fas fa-arrow-right"></i></a>{% endif %}</div>
+            <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Payment</th><th>Method</th><th>Reference</th><th>Status</th></tr></thead><tbody>{% for payment in payments %}<tr><td>{{ payment.payment_date|date:"j M Y · g:i A" }}</td><td>{{ currency }} {{ payment.amount|floatformat:2 }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.reference_number|default:payment.mpesa_receipt|default:"—" }}</td><td>{{ payment.get_payment_status_display }}</td></tr>{% empty %}<tr><td colspan="5">No payment records have been added.</td></tr>{% endfor %}</tbody></table></div>
+        </section>
+        <section class="electronics-panel"><div class="electronics-panel-heading"><div><h2>Sale timeline</h2><p>Recorded events for this transaction.</p></div></div>
+            <div class="electronics-timeline"><div><i class="fas fa-circle-check"></i><span><strong>Sale recorded</strong><small>{{ sale.created_at|date:"j M Y · g:i A" }}</small></span></div>{% for payment in payments %}<div><i class="fas fa-money-bill-wave"></i><span><strong>{{ payment.get_payment_status_display }} payment · {{ currency }} {{ payment.amount|floatformat:2 }}</strong><small>{{ payment.payment_date|date:"j M Y · g:i A" }}</small></span></div>{% endfor %}{% if return_obj %}<div><i class="fas fa-rotate-left"></i><span><strong>Return {{ return_obj.get_status_display }} · {{ currency }} {{ return_obj.refund_amount|floatformat:2 }}</strong><small>{{ return_obj.return_date|date:"j M Y · g:i A" }}</small></span></div>{% endif %}</div>
+        </section>
+    </div>
+</div></div>
+{% endblock %}

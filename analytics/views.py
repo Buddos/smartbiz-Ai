@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
@@ -20,7 +20,7 @@ from .models import DashboardWidget, BusinessMetric, BusinessInsight, ExportLog
 
 from accounts.decorators import business_required, role_required
 from accounts.models import UserActivity
-from ai_engine.services import run_intelligence_pipeline
+from ai_engine.gemini import GeminiError, generate_ai_engine_review
 from businesses.capabilities import (
     capabilities_for_business,
     dashboard_capabilities_for_business,
@@ -28,15 +28,24 @@ from businesses.capabilities import (
     navigation_for_business,
     sale_template_for_business,
 )
+from salon.models import SalonAppointment
 
 # === Main Dashboard ===
 
 @login_required
 @business_required
-@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def dashboard_view(request):
     """Main business dashboard."""
     business = request.user.business
+    allowed_roles = {"OWNER", "MANAGER", "BARBER", "ADMIN", "SUPER_ADMIN"}
+    salon_staff = request.user.role == "STAFF" and business.business_type == "SALON"
+    if (
+        request.user.role not in allowed_roles
+        and not salon_staff
+        and not request.user.is_superuser
+    ):
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect("accounts:profile")
     
     # Date range (last 30 days)
     end_date = timezone.now().date()
@@ -44,22 +53,58 @@ def dashboard_view(request):
     
     # Get dashboard data
     context = get_dashboard_data(business, start_date, end_date)
+    context['today'] = timezone.localdate()
     context['title'] = 'Dashboard'
     context['generated_navigation'] = navigation_for_business(business)
     context['selected_capabilities'] = dashboard_capabilities_for_business(business)
     context['sale_template'] = sale_template_for_business(business)
     context['business_type_label'] = business.get_business_type_display()
     context['dashboard_profile'] = dashboard_profile_for_business(business)
+    context["page"] = "dashboard"
+
+    if business.business_type == "ELECTRONICS":
+        from electronics.views import electronics_dashboard_view
+
+        return electronics_dashboard_view(request, context)
+
+    if business.business_type == "RETAIL":
+        from retail.views import retail_dashboard_view
+
+        return retail_dashboard_view(request)
+
+    if business.business_type == "BARBER":
+        return render(request, "barber/dashboard.html", context)
+
+    if business.business_type == "SALON":
+        today = timezone.localdate()
+        active_appointments = SalonAppointment.objects.filter(
+            business=business,
+            starts_at__date=today,
+        ).exclude(status__in=["CANCELLED", "NO_SHOW"])
+        context["appointments_today"] = active_appointments.count()
+        context["completed_appointments_today"] = active_appointments.filter(
+            status="COMPLETED"
+        ).count()
+        context["today_appointments"] = active_appointments.select_related(
+            "customer", "stylist"
+        ).prefetch_related("services").order_by("starts_at")[:8]
+        return render(request, "salon/dashboard.html", context)
     
     return render(request, 'analytics/dashboard.html', context)
 
 
 @login_required
 @business_required
-@role_required(["OWNER", "MANAGER"])
+@role_required(["OWNER", "ADMIN", "SUPER_ADMIN"])
 def business_admin_dashboard_view(request):
     """Business administration dashboard for authorized in-app users."""
     business = request.user.business
+    period_start = timezone.localdate() - timedelta(days=30)
+    financial_sales = Sale.objects.filter(business=business, sale_date__date__gte=period_start)
+    revenue = financial_sales.aggregate(total=Sum("total"))["total"] or 0
+    expenses_total = Expense.objects.filter(
+        business=business, expense_date__gte=period_start
+    ).aggregate(total=Sum("amount"))["total"] or 0
     activity = UserActivity.objects.filter(user__business=business).select_related("user")
     return render(request, "analytics/business_admin.html", {
         "business": business,
@@ -67,6 +112,9 @@ def business_admin_dashboard_view(request):
         "product_count": Product.objects.filter(business=business, is_active=True).count(),
         "customer_count": Customer.objects.filter(business=business, is_active=True).count(),
         "sales_count": Sale.objects.filter(business=business).count(),
+        "revenue_30_days": revenue,
+        "expenses_30_days": expenses_total,
+        "profit_30_days": revenue - expenses_total,
         "open_alert_count": InventoryAlert.objects.filter(business=business, status="ACTIVE").count(),
         "open_insight_count": BusinessInsight.objects.filter(
             business=business, is_dismissed=False, is_read=False
@@ -78,6 +126,10 @@ def business_admin_dashboard_view(request):
 
 def get_dashboard_data(business, start_date, end_date):
     """Get all dashboard data."""
+
+    today = timezone.localdate()
+    today_sales = Sale.objects.filter(business=business, sale_date__date=today)
+    recent_sales = Sale.objects.filter(business=business).select_related("customer").order_by("-sale_date")[:6]
     
     # Sales Data
     sales = Sale.objects.filter(
@@ -194,6 +246,9 @@ def get_dashboard_data(business, start_date, end_date):
         'recent_insights': recent_insights,
         'unread_insights': unread_insights,
         'payment_methods': payment_methods,
+        'today_revenue': today_sales.aggregate(total=Sum('total'))['total'] or 0,
+        'today_sales_count': today_sales.count(),
+        'recent_sales': recent_sales,
         'start_date': start_date,
         'end_date': end_date,
     }
@@ -658,11 +713,17 @@ def calculate_growth(business, start_date, end_date, metric_type):
 @business_required
 @role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def generate_insights_view(request):
-    """Generate AI-powered business insights."""
+    """Generate current business insights through the AI engine and Gemini."""
     business = request.user.business
-    insights_generated = len(run_intelligence_pipeline(business))
-    
-    messages.success(request, f'Generated {insights_generated} new insights!')
+    try:
+        insights_generated, review = generate_ai_engine_review(business)
+    except GeminiError as exc:
+        messages.error(request, f'Gemini insight generation failed: {exc}')
+    else:
+        messages.success(
+            request,
+            f'Generated {len(insights_generated)} data-based alerts and refreshed the Gemini business review: {review.title}',
+        )
     return redirect('analytics:dashboard')
 
 def generate_sales_insights(business):

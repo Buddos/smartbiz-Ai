@@ -1,3 +1,186 @@
-{% extends 'sales/form.html' %}
-{% block sale_profile_kicker %}<p class="invoice-create-kicker">Electronics sales ticket</p>{% endblock %}
-{% block sale_profile_intro %}<div class="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-4"><strong class="text-indigo-900"><i class="fas fa-microchip mr-2"></i>Register the device sale</strong><p class="mt-1 text-sm text-indigo-800">Select the device or SKU and keep the customer contact details attached to the transaction.</p></div>{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}New Sale | {{ user.business.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/electronics-sale-create.css' %}">{% endblock %}
+
+{% block content %}
+<div class="electronics-page e-sale-create" data-currency="{{ user.business.currency|escape }}"
+    data-tax-enabled="{{ electronics_tax.enabled|yesno:'true,false' }}"
+    data-tax-rate="{{ electronics_tax.rate }}"
+    data-tax-inclusive="{{ electronics_tax.inclusive|yesno:'true,false' }}">
+    <div class="e-sale-wrap">
+        <header class="e-sale-header">
+            <a class="e-sale-back" href="{% url 'sales:list' %}" aria-label="Back to sales"><i class="fas fa-arrow-left"></i></a>
+            <div class="e-sale-title">
+                <span class="e-sale-title-icon"><i class="fas fa-cart-shopping"></i></span>
+                <div><h1>New sale</h1><p>{{ user.get_full_name|default:user.email }} · {% now "j M Y, g:i A" %}</p></div>
+            </div>
+            <div class="e-sale-receipt"><span>Receipt number</span><strong>Assigned on completion</strong></div>
+        </header>
+
+        <form method="post" id="electronicsSaleForm" class="e-sale-columns">
+            {% csrf_token %}
+            {% if invoice_mode %}<input type="hidden" name="mode" value="invoice">{% endif %}
+            {% if form.non_field_errors or form.errors or formset.non_form_errors %}
+                <div class="e-sale-errors" role="alert">
+                    <strong><i class="fas fa-circle-exclamation"></i> Please review the sale details.</strong>
+                    {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+                    {% for error in form.errors.values %}{% for message in error %}<span>{{ message }}</span>{% endfor %}{% endfor %}
+                    {% for error in formset.non_form_errors %}<span>{{ error }}</span>{% endfor %}
+                </div>
+            {% endif %}
+            {% if appointment_id_value %}<input type="hidden" name="appointment_id" value="{{ appointment_id_value }}">{% endif %}
+
+            <section class="e-sale-panel e-sale-products" aria-labelledby="eSaleProductsHeading">
+                <div class="e-sale-panel-heading"><div><span class="e-sale-eyebrow">Catalog</span><h2 id="eSaleProductsHeading">Products</h2></div><span class="e-sale-live"><i></i> Live stock</span></div>
+                <label class="e-sale-search"><i class="fas fa-search"></i><input id="productSearch" type="search" placeholder="Search name, SKU, or barcode" autocomplete="off" autofocus><kbd>/</kbd></label>
+                <div class="e-sale-categories" aria-label="Filter by product category">
+                    <button type="button" class="is-active" data-category-filter="all">All products</button>
+                    {% for category in electronics_categories %}<button type="button" data-category-filter="{{ category.id }}">{{ category.name }}</button>{% endfor %}
+                    <button type="button" data-category-filter="uncategorized">Uncategorized</button>
+                </div>
+                {% if recent_electronics_products %}
+                    <div class="e-sale-quick-section"><h3><i class="far fa-clock"></i> Recently sold</h3><div class="e-sale-quick-list">
+                        {% for product in recent_electronics_products %}<button type="button" class="e-sale-quick" data-add-product data-product-name="{{ product.name|escape }}" data-product-sku="{{ product.sku|escape }}" data-product-price="{{ product.selling_price }}" data-product-stock="{{ product.current_stock }}" data-product-taxable="{{ product.is_taxable|yesno:'true,false' }}"><span>{{ product.name }}</span><strong>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</strong></button>{% endfor %}
+                    </div></div>
+                {% endif %}
+                {% if frequent_electronics_products %}
+                    <div class="e-sale-quick-section"><h3><i class="fas fa-star"></i> Frequently sold this week</h3><div class="e-sale-quick-list">
+                        {% for product in frequent_electronics_products %}<button type="button" class="e-sale-quick" data-add-product data-product-name="{{ product.name|escape }}" data-product-sku="{{ product.sku|escape }}" data-product-price="{{ product.selling_price }}" data-product-stock="{{ product.current_stock }}" data-product-taxable="{{ product.is_taxable|yesno:'true,false' }}"><span>{{ product.name }} <small>{{ product.recent_units_sold }} sold</small></span><strong>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</strong></button>{% endfor %}
+                    </div></div>
+                {% endif %}
+                <div class="e-sale-product-grid" id="productGrid">
+                    {% for product in electronics_products %}
+                        <button type="button" class="e-sale-product {% if product.current_stock <= 0 %}is-out-of-stock{% elif product.current_stock <= product.reorder_level %}is-low-stock{% endif %}"
+                            data-add-product data-product-name="{{ product.name|escape }}" data-product-sku="{{ product.sku|escape }}"
+                            data-product-barcode="{{ product.barcode|escape }}" data-product-price="{{ product.selling_price }}"
+                            data-product-stock="{{ product.current_stock }}" data-product-category="{% if product.category_id %}{{ product.category_id }}{% else %}uncategorized{% endif %}"
+                            data-product-taxable="{{ product.is_taxable|yesno:'true,false' }}"
+                            data-product-serialized="{{ product.is_serialized|yesno:'true,false' }}" {% if product.current_stock <= 0 %}disabled{% endif %}>
+                            {% if product.image %}<img src="{{ product.image.url }}" alt="" loading="lazy">{% else %}<span class="e-sale-product-image"><i class="fas fa-box-open"></i></span>{% endif %}
+                            <span class="e-sale-product-info"><strong>{{ product.name }}</strong><small>{{ product.sku }}{% if product.category %} · {{ product.category.name }}{% endif %}</small></span>
+                            <span class="e-sale-product-price">{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</span>
+                            <span class="e-sale-stock {% if product.current_stock <= 0 %}stock-empty{% elif product.current_stock <= product.reorder_level %}stock-low{% endif %}">{% if product.current_stock <= 0 %}Out of stock{% else %}{{ product.current_stock }} in stock{% endif %}</span>
+                            {% if product.is_serialized %}<span class="e-sale-serialized" title="This product is marked as serialized"><i class="fas fa-barcode"></i> Serialized product</span>{% endif %}
+                        </button>
+                    {% empty %}
+                        <div class="e-sale-empty"><i class="fas fa-box-open"></i><strong>No active products</strong><span>Add products to your catalog before recording a sale.</span></div>
+                    {% endfor %}
+                    <div class="e-sale-empty e-sale-no-results" id="noProductResults" hidden><i class="fas fa-magnifying-glass"></i><strong>No matching products</strong><span>Try another name, SKU, or barcode.</span></div>
+                </div>
+            </section>
+
+            <div class="e-sale-order-panel">
+            <section class="e-sale-cart" aria-labelledby="eSaleCartHeading">
+                <div class="e-sale-panel-heading"><div><span class="e-sale-eyebrow">Sale details</span><h2 id="eSaleCartHeading">Cart <span class="e-sale-count" id="cartCount">0</span></h2></div><button type="button" class="e-sale-text-button" id="clearCart">Clear cart</button></div>
+                {{ formset.management_form }}
+                <div class="e-sale-cart-rows" id="cartRows">
+                    {% for item_form in formset %}
+                        <div class="e-sale-cart-row" data-cart-row>
+                            {{ item_form.id }}
+                            <span class="e-sale-delete-field">{{ item_form.DELETE }}</span>
+                            <div class="e-sale-cart-fields">
+                                <div class="e-sale-cart-product"><label for="{{ item_form.product.id_for_label }}">Product / SKU</label>{{ item_form.product }}{% for error in item_form.product.errors %}<small class="e-sale-field-error">{{ error }}</small>{% endfor %}</div>
+                                <div class="e-sale-quantity"><label for="{{ item_form.quantity.id_for_label }}">Qty</label><div class="e-sale-quantity-control"><button type="button" data-quantity-step="-1" aria-label="Decrease quantity">−</button>{{ item_form.quantity }}<button type="button" data-quantity-step="1" aria-label="Increase quantity">+</button></div>{% for error in item_form.quantity.errors %}<small class="e-sale-field-error">{{ error }}</small>{% endfor %}</div>
+                                <div class="e-sale-cart-price"><label for="{{ item_form.unit_price.id_for_label }}">Unit price</label>{{ item_form.unit_price }}</div>
+                                <div class="e-sale-line-total"><label>Item amount</label><strong data-line-total>{{ user.business.currency }} 0.00</strong></div>
+                                <button type="button" class="e-sale-remove" data-remove-row aria-label="Remove item"><i class="fas fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="e-sale-add-row" id="addCartRow"><i class="fas fa-plus"></i> Add a line manually</button>
+                <template id="cartRowTemplate">
+                    <div class="e-sale-cart-row" data-cart-row>
+                        {{ formset.empty_form.id }}
+                        <span class="e-sale-delete-field">{{ formset.empty_form.DELETE }}</span>
+                        <div class="e-sale-cart-fields">
+                            <div class="e-sale-cart-product"><label for="{{ formset.empty_form.product.id_for_label }}">Product / SKU</label>{{ formset.empty_form.product }}</div>
+                            <div class="e-sale-quantity"><label for="{{ formset.empty_form.quantity.id_for_label }}">Qty</label><div class="e-sale-quantity-control"><button type="button" data-quantity-step="-1" aria-label="Decrease quantity">−</button>{{ formset.empty_form.quantity }}<button type="button" data-quantity-step="1" aria-label="Increase quantity">+</button></div></div>
+                            <div class="e-sale-cart-price"><label for="{{ formset.empty_form.unit_price.id_for_label }}">Unit price</label>{{ formset.empty_form.unit_price }}</div>
+                            <div class="e-sale-line-total"><label>Item amount</label><strong data-line-total>{{ user.business.currency }} 0.00</strong></div>
+                            <button type="button" class="e-sale-remove" data-remove-row aria-label="Remove item"><i class="fas fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                </template>
+                {% if formset.non_form_errors %}<div class="e-sale-field-error">{{ formset.non_form_errors }}</div>{% endif %}
+                <div class="e-sale-discount"><label for="id_discount"><i class="fas fa-tag"></i> Discount amount</label><div class="e-sale-input-with-currency"><span>{{ user.business.currency }}</span>{{ form.discount }}</div></div>
+                {% for error in form.discount.errors %}<small class="e-sale-field-error">{{ error }}</small>{% endfor %}
+                <div class="e-sale-totals" aria-live="polite">
+                    <div><span>Subtotal</span><strong id="saleSubtotal">{{ user.business.currency }} 0.00</strong></div>
+                    {% if electronics_tax.enabled %}<div class="e-sale-tax-total"><span>VAT ({{ electronics_tax.rate }}% {% if electronics_tax.inclusive %}included{% else %}added{% endif %})</span><strong id="saleTax">{{ user.business.currency }} 0.00</strong></div>{% endif %}
+                    <div class="e-sale-discount-total"><span>Discount</span><strong id="saleDiscount">− {{ user.business.currency }} 0.00</strong></div>
+                    <div class="e-sale-grand-total"><span>Total due</span><strong id="saleTotal">{{ user.business.currency }} 0.00</strong></div>
+                    <small id="saleItemSummary">0 products · 0 units</small>
+                </div>
+                <div class="e-sale-customer">
+                    <div class="e-sale-section-label"><span><i class="fas fa-user"></i> Customer</span><small>Optional for walk-in sales</small></div>
+                    <label class="e-sale-customer-search" for="customerSearch"><i class="fas fa-search"></i><input id="customerSearch" type="search" placeholder="Filter saved customers by name or phone" autocomplete="off"></label>
+                    <label class="e-sale-field-label" for="id_customer">Saved customer</label>
+                    <select id="id_customer" name="customer" class="input-field" data-customer-select>
+                        <option value="">Walk-in customer</option>
+                        {% for customer in electronics_customers %}
+                            <option value="{{ customer.id }}" data-name="{{ customer.name|escape }}" data-phone="{{ customer.phone|escape }}" data-email="{{ customer.email|escape }}" {% if form.customer.value == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.name }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.customer.errors %}<small class="e-sale-field-error">{{ error }}</small>{% endfor %}
+                    <div class="e-sale-customer-fields">
+                        <label>Name<input class="input-field" type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" placeholder="Walk-in customer"></label>
+                        <label>Phone<input class="input-field" type="tel" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" placeholder="Phone number"></label>
+                        <label>Email<input class="input-field" type="email" name="customer_email" id="customer_email" value="{{ form.customer_email.value|default:'' }}" placeholder="Email address"></label>
+                    </div>
+                    <p class="e-sale-customer-help" id="customerHelp">Leave customer blank for a walk-in sale. Credit sales require a saved customer.</p>
+                </div>
+            </section>
+
+            <section class="e-sale-payment" aria-labelledby="eSalePaymentHeading">
+                <div class="e-sale-panel-heading"><div><span class="e-sale-eyebrow">Checkout</span><h2 id="eSalePaymentHeading">Payment</h2></div></div>
+                <div class="e-sale-payment-body">
+                    <div class="e-sale-payment-methods">
+                        <div class="e-sale-amount-due"><span>Amount due</span><strong id="paymentTotal">{{ user.business.currency }} 0.00</strong><small id="paymentItemCount">0 items · 0 units</small></div>
+                        <label class="e-sale-field-label" for="id_payment_method">Payment method</label>
+                        {{ form.payment_method }}
+                        <div class="e-sale-payment-options" role="group" aria-label="Choose a payment method">
+                            {% for value,label in form.fields.payment_method.choices %}
+                                <button type="button" class="e-sale-payment-choice" data-payment-choice="{{ value }}" aria-pressed="{% if form.payment_method.value == value %}true{% else %}false{% endif %}">
+                                    <i class="fas {% if value == 'CASH' %}fa-money-bill-wave{% elif value == 'M-PESA' %}fa-mobile-screen-button{% elif value == 'CARD' %}fa-credit-card{% elif value == 'CREDIT' %}fa-calendar-days{% elif value == 'BANK' %}fa-building-columns{% else %}fa-ellipsis{% endif %}"></i><span>{{ label }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                        <div class="e-sale-payment-note" id="paymentNote" aria-live="polite"></div>
+                    </div>
+                    <div class="e-sale-payment-details">
+                        <div class="e-sale-reference" id="transactionCodeGroup">
+                            <label class="e-sale-field-label" for="id_transaction_code">Payment reference <span>Optional</span></label>
+                            {{ form.transaction_code }}
+                            <small>Enter the M-Pesa receipt or bank/card reference if available.</small>
+                        </div>
+                        {% if form.served_by %}
+                            <div class="e-sale-reference"><label class="e-sale-field-label" for="id_served_by">Served by <span>Optional</span></label>{{ form.served_by }}</div>
+                        {% endif %}
+                        <details class="e-sale-more-details">
+                            <summary><i class="fas fa-mobile-screen"></i> Device and delivery notes <span>Optional</span></summary>
+                            <div class="e-sale-more-fields">
+                                <label class="e-sale-field-label" for="id_serial_number">Serial / IMEI reference</label>{{ form.serial_number }}
+                                <small>This records a note on the sale; individual serialized stock is not managed by this form.</small>
+                                <label class="e-sale-field-label" for="id_warranty_period">Warranty note</label>{{ form.warranty_period }}
+                                <label class="e-sale-field-label" for="id_delivery_address">Delivery address</label>{{ form.delivery_address }}
+                                <label class="e-sale-field-label" for="id_notes">Sale notes</label>{{ form.notes }}
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <div class="e-sale-payment-footer">
+                    <div class="e-sale-receipt-note"><i class="fas fa-receipt"></i><span>After saving, open the receipt from the sale details page.</span></div>
+                    <button type="submit" class="e-sale-complete" id="completeSale"><i class="fas fa-circle-check"></i><span>Complete sale</span><small><span id="completeTotal">{{ user.business.currency }} 0.00</span> · <kbd>F9</kbd></small></button>
+                    <a class="e-sale-cancel" href="{% url 'sales:list' %}" id="cancelSale">Cancel and return to sales</a>
+                </div>
+            </section>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/electronics-sale-create.js' %}" defer></script>{% endblock %}

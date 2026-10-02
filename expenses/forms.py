@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Expense, ExpenseCategory
+from .models import Expense, ExpenseCategory, RecurringExpense
 
 
 class ExpenseCategoryForm(forms.ModelForm):
@@ -36,3 +36,37 @@ class ExpenseForm(forms.ModelForm):
             self.fields["category"].queryset = ExpenseCategory.objects.filter(
                 business=business, is_active=True
             )
+
+
+class RecurringExpenseForm(forms.ModelForm):
+    class Meta:
+        model = RecurringExpense
+        fields = [
+            "title",
+            "category",
+            "amount",
+            "payment_method",
+            "vendor",
+            "frequency",
+            "next_due_date",
+            "notes",
+        ]
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "input-field"}),
+            "category": forms.Select(attrs={"class": "input-field"}),
+            "amount": forms.NumberInput(attrs={"class": "input-field", "step": "0.01", "min": 0}),
+            "payment_method": forms.Select(attrs={"class": "input-field"}),
+            "vendor": forms.TextInput(attrs={"class": "input-field"}),
+            "frequency": forms.Select(attrs={"class": "input-field"}),
+            "next_due_date": forms.DateInput(attrs={"class": "input-field", "type": "date"}),
+            "notes": forms.Textarea(attrs={"class": "input-field", "rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        business = kwargs.pop("business", None)
+        super().__init__(*args, **kwargs)
+        if business:
+            self.fields["category"].queryset = ExpenseCategory.objects.filter(
+                business=business, is_active=True
+            )
+        self.fields["category"].required = False

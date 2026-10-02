@@ -42,6 +42,14 @@ class Expense(models.Model):
         blank=True,
         related_name="expenses",
     )
+    recurring_schedule = models.ForeignKey(
+        "RecurringExpense",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="entries",
+    )
+    recurring_due_date = models.DateField(null=True, blank=True)
     title = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
     expense_date = models.DateField(default=timezone.now)
@@ -60,6 +68,60 @@ class Expense(models.Model):
             models.Index(fields=["business", "expense_date"]),
             models.Index(fields=["business", "category"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recurring_schedule", "recurring_due_date"],
+                name="unique_recurring_expense_due_entry",
+            )
+        ]
 
     def __str__(self):
         return f"{self.title} - {self.amount}"
+
+
+class RecurringExpense(models.Model):
+    FREQUENCY_CHOICES = [
+        ("WEEKLY", "Weekly"),
+        ("MONTHLY", "Monthly"),
+        ("QUARTERLY", "Quarterly"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="recurring_expenses"
+    )
+    category = models.ForeignKey(
+        ExpenseCategory,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="recurring_schedules",
+    )
+    title = models.CharField(max_length=200)
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
+    payment_method = models.CharField(max_length=20, choices=Expense.PAYMENT_METHODS, default="CASH")
+    vendor = models.CharField(max_length=200, blank=True)
+    frequency = models.CharField(max_length=12, choices=FREQUENCY_CHOICES, default="MONTHLY")
+    next_due_date = models.DateField()
+    anchor_day = models.PositiveSmallIntegerField(default=0)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="recurring_expenses_created"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["next_due_date", "title"]
+
+    def save(self, *args, **kwargs):
+        if not self.anchor_day:
+            self.anchor_day = self.next_due_date.day
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title

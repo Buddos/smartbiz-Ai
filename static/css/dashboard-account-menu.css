@@ -1,0 +1,84 @@
+.electronics-account-menu {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.electronics-account-menu > .electronics-avatar {
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+}
+
+.electronics-account-menu > .electronics-avatar:focus-visible {
+    outline: 2px solid #1b7a4d;
+    outline-offset: 3px;
+}
+
+.electronics-account-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 150;
+    width: 220px;
+    padding: 7px;
+    border: 1px solid #e8ecf1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 14px 34px rgb(26 43 60 / 16%);
+}
+
+.electronics-account-popover[hidden] {
+    display: none;
+}
+
+.electronics-account-summary {
+    padding: 8px 9px 10px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #e8ecf1;
+}
+
+.electronics-account-summary strong,
+.electronics-account-summary small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.electronics-account-summary strong {
+    color: #1a2b3c;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.electronics-account-summary small {
+    margin-top: 3px;
+    color: #7a8b9a;
+    font-size: 10px;
+}
+
+.electronics-account-popover > a {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 9px;
+    padding: 0 9px;
+    border-radius: 7px;
+    color: #4a5568;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.electronics-account-popover > a > i {
+    width: 15px;
+    color: #1b7a4d;
+    text-align: center;
+}
+
+.electronics-account-popover > a:hover,
+.electronics-account-popover > a:focus-visible {
+    background: #e6f4ea;
+    color: #1b7a4d;
+}

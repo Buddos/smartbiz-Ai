@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Quick sale - SmartBiz AI{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/barber.css' %}">
+<style>
+.barber-checkout{--checkout-ink:#1e1e2f;--checkout-muted:#56566f;--checkout-green:#0f6e56;min-height:100vh;background:#f4f7f5;color:var(--checkout-ink);font-family:var(--font-sans)}.checkout-shell{max-width:1040px;margin:0 auto;padding:24px 16px 48px}.checkout-card{background:#fff;border:1px solid #d9e4de;border-radius:18px;box-shadow:0 12px 36px rgba(24,47,38,.08);overflow:hidden}.checkout-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 26px;border-bottom:1px solid #e2e9e5}.checkout-heading{display:flex;align-items:center;gap:14px}.checkout-back{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border:1px solid #bdcec4;border-radius:11px;background:#fff;color:#155b45;font-size:18px;text-decoration:none}.checkout-back:hover,.checkout-back:focus-visible{border-color:var(--checkout-green);background:#eff8f3;outline:3px solid rgba(15,110,86,.14)}.checkout-title{margin:0;font-size:26px;line-height:1.2;letter-spacing:-.02em;font-weight:700}.checkout-eyebrow,.checkout-section-label{font-size:11px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:#4c6257}.checkout-eyebrow{margin:0 0 4px;color:var(--checkout-green)}.checkout-steps{display:flex;gap:8px;flex-wrap:wrap}.checkout-step{display:flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid #d9e4de;border-radius:999px;color:#4c6257;font-size:12px;font-weight:600}.checkout-step b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#e9f4ee;color:#155b45}.checkout-body{padding:24px 26px;display:grid;gap:24px}.checkout-section{border-bottom:1px solid #e7ede9;padding-bottom:22px}.checkout-section:last-child{border:0;padding-bottom:0}.checkout-section-heading{margin:0 0 12px;font-size:15px;line-height:1.35;font-weight:700;color:#17352b}.checkout-help{margin:6px 0 0;color:var(--checkout-muted);font-size:13px;line-height:1.5}.checkout-field,.barber-checkout .input-field{width:100%;min-height:48px;border:1px solid #bdcec4;border-radius:10px;background:#fff;padding:11px 13px;color:var(--checkout-ink);font:400 14px/1.4 var(--font-sans)}.checkout-field:focus,.barber-checkout .input-field:focus{outline:3px solid rgba(15,110,86,.18);border-color:var(--checkout-green)}.checkout-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.service-card{width:100%;min-height:84px;padding:14px;border:1px solid #c9d9d0;border-radius:12px;background:#fbfdfc;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}.service-card:hover,.service-card:focus-visible{border-color:var(--checkout-green);background:#eff8f3;outline:3px solid rgba(15,110,86,.14)}.service-card.is-selected{border-color:var(--checkout-green);background:#eaf5ef;box-shadow:inset 0 0 0 1px var(--checkout-green)}.service-card strong{display:block;font-size:15px;line-height:1.35;font-weight:600;color:#183f31}.service-card span{display:block;margin-top:5px;font-size:14px;line-height:1.4;font-weight:700;color:#155b45}.appointment-banner{padding:13px 15px;border:1px solid #b9d9c8;border-radius:12px;background:#eff8f3;color:#174934;font-size:14px;line-height:1.5}.appointment-banner strong{font-weight:700}.payment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.payment-option{display:flex;align-items:center;gap:10px;min-height:54px;padding:12px;border:1px solid #c9d9d0;border-radius:11px;cursor:pointer;font-size:14px;font-weight:600}.payment-option:has(input:checked){border-color:var(--checkout-green);background:#eff8f3;box-shadow:inset 0 0 0 1px var(--checkout-green)}.payment-option input{width:18px;height:18px;accent-color:var(--checkout-green)}.checkout-summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0}.checkout-total-label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#4c6257}.checkout-total{font-size:28px;line-height:1.1;letter-spacing:-.02em;font-weight:800;font-variant-numeric:tabular-nums;color:#17352b}.checkout-submit{width:100%;min-height:54px;border:0;border-radius:11px;background:#0f6e56;color:#fff;font:600 15px/1.3 var(--font-sans);cursor:pointer}.checkout-submit:hover{background:#0a4d3b}.checkout-submit:disabled{opacity:.75;cursor:wait}.checkout-error{padding:12px 14px;border:1px solid #d6a2a2;border-radius:10px;background:#fff4f4;color:#7b2222;font-size:14px;line-height:1.5}.checkout-cart{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(90px,.5fr) minmax(110px,.6fr);gap:10px;align-items:center}.checkout-cart .checkout-field,.checkout-cart .input-field{min-width:0}.checkout-hidden-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.checkout-items{display:grid;gap:10px}.checkout-cart{grid-template-columns:minmax(0,1.5fr) minmax(70px,.5fr) minmax(100px,.6fr) auto}.checkout-remove,.checkout-add{min-height:44px;border:1px solid #9abaaa;border-radius:9px;background:#fff;color:#155b45;padding:8px 12px;font:600 14px/1.3 var(--font-sans);cursor:pointer}.checkout-remove:hover,.checkout-add:hover{background:#eff8f3;border-color:var(--checkout-green)}.checkout-add{margin-top:12px}.checkout-delete{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+@media(min-width:700px){.checkout-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.checkout-shell{padding:12px 10px 30px}.checkout-header{align-items:flex-start;flex-direction:column;padding:19px}.checkout-body{padding:19px;gap:20px}.checkout-title{font-size:24px}.checkout-cart{grid-template-columns:minmax(0,1fr) 64px 96px auto;gap:6px}.checkout-cart .checkout-field{padding:9px 8px}.checkout-remove{padding:7px;font-size:12px}.checkout-step{font-size:11px}.checkout-summary{align-items:flex-end}}
+</style>
+{% endblock %}
+{% block content %}
+<main class="barber-checkout" data-service-name="{% if active_appointment %}{{ active_appointment.service.name }}{% endif %}" data-service-price="{% if active_appointment %}{{ active_appointment.service.price }}{% endif %}">
+  <div class="checkout-shell">
+    <div class="checkout-card">
+      <header class="checkout-header">
+        <div class="checkout-heading">
+          <a class="checkout-back" href="{% url 'dashboard' %}" aria-label="Back to dashboard" title="Back to dashboard"><i class="fas fa-arrow-left" aria-hidden="true"></i></a>
+          <div>
+          <p class="checkout-eyebrow">Barbershop · Quick sale</p>
+          <h1 class="checkout-title">Complete a sale</h1>
+          </div>
+        </div>
+        <nav class="checkout-steps" aria-label="Checkout steps">
+          <span class="checkout-step"><b>1</b> Service</span>
+          <span class="checkout-step"><b>2</b> Client</span>
+          <span class="checkout-step"><b>3</b> Payment</span>
+        </nav>
+      </header>
+
+      <form method="post" id="barberSaleForm">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <input type="hidden" name="discount" value="0">
+        {% if appointment_id_value %}<input type="hidden" name="appointment_id" value="{{ appointment_id_value }}">{% endif %}
+
+        <div class="checkout-body">
+          {% if form.non_field_errors or form.errors or formset.non_form_errors or formset.errors %}
+            <div class="checkout-error" role="alert">
+              <strong>Please check the sale details.</strong>
+              {% for field in form %}{% for error in field.errors %}<p>{{ field.label }}: {{ error }}</p>{% endfor %}{% endfor %}
+              {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+              {% for error in formset.non_form_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+          {% endif %}
+
+          {% if active_appointment %}
+            <div class="appointment-banner" role="status">
+              <strong>{{ active_appointment.display_client_name }}</strong>
+              is in your chair{% if active_appointment.chair %} at {{ active_appointment.chair.label }}{% endif %}.
+              Scheduled service: {{ active_appointment.service.name }}.
+            </div>
+          {% endif %}
+
+          <section class="checkout-section" aria-labelledby="service-heading">
+            <h2 class="checkout-section-heading" id="service-heading">1. Choose a service or product</h2>
+            <div class="checkout-grid" id="quickProducts">
+              {% for product in quick_products %}
+                <button type="button" class="service-card quick-product" data-product-name="{{ product.name }}" data-product-price="{{ product.selling_price }}">
+                  <strong>{{ product.name }}</strong>
+                  <span>KSh {{ product.selling_price|floatformat:0 }}</span>
+                </button>
+              {% empty %}
+                <p class="checkout-help">No active services or products are available. Add them to your catalogue to use quick sale.</p>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="checkout-section" aria-labelledby="client-heading">
+            <h2 class="checkout-section-heading" id="client-heading">2. Client</h2>
+            <div class="checkout-grid">
+              <div>
+                <label class="checkout-section-label" for="id_customer">Saved client</label>
+                {{ form.customer }}
+              </div>
+              <div>
+                <label class="checkout-section-label" for="id_customer_name">Client name</label>
+                <input class="checkout-field" type="text" id="id_customer_name" name="customer_name" value="{{ form.customer_name.value|default:'' }}" placeholder="Walk-in or client name">
+              </div>
+              <div>
+                <label class="checkout-section-label" for="id_customer_phone">Phone (optional)</label>
+                <input class="checkout-field" type="tel" id="id_customer_phone" name="customer_phone" value="{{ form.customer_phone.value|default:'' }}" placeholder="Phone number">
+              </div>
+            </div>
+            <p class="checkout-help">Client details are optional for a walk-in.</p>
+            <input type="hidden" name="customer_email" value="{{ form.customer_email.value|default:'' }}">
+          </section>
+
+          {% if user.role != 'BARBER' and not active_appointment %}
+            <section class="checkout-section" aria-labelledby="barber-heading">
+              <h2 class="checkout-section-heading" id="barber-heading">Barber</h2>
+              <label class="checkout-section-label" for="{{ form.served_by.id_for_label }}">Assign this sale to</label>
+              {{ form.served_by }}
+              <p class="checkout-help">Choose the barber who provided this service so their sales appear in team performance.</p>
+            </section>
+          {% elif form.served_by %}
+            {{ form.served_by.as_hidden }}
+          {% endif %}
+
+          <section class="checkout-section" aria-labelledby="selected-item-heading">
+            <div class="checkout-section-heading" id="selected-item-heading">Selected items</div>
+            <div class="checkout-items" id="checkoutItems">
+              {% for item_form in formset %}
+                <div class="checkout-cart formset-item" {% if item_form.DELETE.value %}hidden{% endif %}>
+                  {{ item_form.id }}
+                  <div>
+                    <label class="checkout-hidden-label" for="{{ item_form.product.id_for_label }}">Service or product name</label>
+                    {{ item_form.product }}
+                    {% for error in item_form.product.errors %}<p class="checkout-help">{{ error }}</p>{% endfor %}
+                  </div>
+                  <div>
+                    <label class="checkout-hidden-label" for="{{ item_form.quantity.id_for_label }}">Quantity</label>
+                    {{ item_form.quantity }}
+                  </div>
+                  <div>
+                    <label class="checkout-hidden-label" for="{{ item_form.unit_price.id_for_label }}">Unit price</label>
+                    {{ item_form.unit_price }}
+                  </div>
+                  <div class="checkout-delete">{{ item_form.DELETE }}</div>
+                  {% if not forloop.first %}<button type="button" class="checkout-remove" data-remove-item aria-label="Remove this item">Remove</button>{% else %}<span></span>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+            <button type="button" class="checkout-add" id="addItem">+ Add another item</button>
+            <p class="checkout-help">Tap a service tile to fill the first empty item row, or enter a product name and price.</p>
+            <template id="itemFormTemplate">
+              <div class="checkout-cart formset-item">
+                {{ formset.empty_form.id }}
+                <div>
+                  <label class="checkout-hidden-label" for="{{ formset.empty_form.product.id_for_label }}">Service or product name</label>
+                  {{ formset.empty_form.product }}
+                </div>
+                <div>
+                  <label class="checkout-hidden-label" for="{{ formset.empty_form.quantity.id_for_label }}">Quantity</label>
+                  {{ formset.empty_form.quantity }}
+                </div>
+                <div>
+                  <label class="checkout-hidden-label" for="{{ formset.empty_form.unit_price.id_for_label }}">Unit price</label>
+                  {{ formset.empty_form.unit_price }}
+                </div>
+                <div class="checkout-delete">{{ formset.empty_form.DELETE }}</div>
+                <button type="button" class="checkout-remove" data-remove-item aria-label="Remove this item">Remove</button>
+              </div>
+            </template>
+          </section>
+
+          <section class="checkout-section" aria-labelledby="payment-heading">
+            <h2 class="checkout-section-heading" id="payment-heading">3. Payment</h2>
+            <div class="payment-grid">
+              {% for value,label in form.fields.payment_method.choices %}
+                {% if value == 'CASH' or value == 'M-PESA' %}
+                  <label class="payment-option">
+                    <input type="radio" name="payment_method" value="{{ value }}"{% if value == 'M-PESA' %} checked{% endif %}>
+                    <span>{{ label }}</span>
+                  </label>
+                {% endif %}
+              {% endfor %}
+            </div>
+            <label class="checkout-section-label" for="id_transaction_code">M-Pesa reference (optional)</label>
+            {{ form.transaction_code }}
+          </section>
+
+          <div>
+            <div class="checkout-summary">
+              <span class="checkout-total-label">Total due</span>
+              <output class="checkout-total" id="checkoutTotal" aria-live="polite">KSh 0</output>
+            </div>
+            <button class="checkout-submit" id="completeSale" type="submit">Confirm sale</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+<script>
+(() => {
+  const form = document.getElementById('barberSaleForm');
+  const totalOutput = document.getElementById('checkoutTotal');
+  const serviceCards = document.querySelectorAll('.quick-product');
+  const items = document.getElementById('checkoutItems');
+  const totalForms = document.getElementById('id_sale_items-TOTAL_FORMS');
+  const itemTemplate = document.getElementById('itemFormTemplate');
+  if (!form || !totalOutput || !items || !totalForms || !itemTemplate) return;
+
+  const money = (amount) => `KSh ${amount.toLocaleString('en-KE', { maximumFractionDigits: 0 })}`;
+
+  const updateTotal = () => {
+    const total = Array.from(items.querySelectorAll('.formset-item:not([hidden])')).reduce((sum, row) => {
+      const quantity = Number(row.querySelector('input[name$="-quantity"]')?.value || 0);
+      const price = Number(row.querySelector('input[name$="-unit_price"]')?.value || 0);
+      return sum + quantity * price;
+    }, 0);
+    totalOutput.textContent = money(total);
+  };
+
+  const addItem = () => {
+    const index = Number(totalForms.value);
+    const itemHtml = itemTemplate.innerHTML.replaceAll('__prefix__', String(index));
+    items.insertAdjacentHTML('beforeend', itemHtml);
+    totalForms.value = String(index + 1);
+    return items.lastElementChild;
+  };
+
+  serviceCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      let targetRow = Array.from(items.querySelectorAll('.formset-item:not([hidden])')).find((row) => (
+        !row.querySelector('input[name$="-product"]')?.value.trim()
+      ));
+      if (!targetRow) targetRow = addItem();
+      const nameField = targetRow.querySelector('input[name$="-product"]');
+      const quantityField = targetRow.querySelector('input[name$="-quantity"]');
+      const priceField = targetRow.querySelector('input[name$="-unit_price"]');
+      if (!nameField || !quantityField || !priceField) return;
+      nameField.value = card.dataset.productName || '';
+      quantityField.value = '1';
+      priceField.value = card.dataset.productPrice || '';
+      serviceCards.forEach((item) => item.classList.toggle('is-selected', item === card));
+      updateTotal();
+    });
+  });
+
+  document.getElementById('addItem')?.addEventListener('click', () => {
+    const row = addItem();
+    row.querySelector('input[name$="-product"]')?.focus();
+  });
+  items.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-remove-item]');
+    if (!removeButton) return;
+    const row = removeButton.closest('.formset-item');
+    if (!row) return;
+    const deleteField = row.querySelector('input[name$="-DELETE"]');
+    if (deleteField) deleteField.checked = true;
+    row.hidden = true;
+    updateTotal();
+  });
+  items.addEventListener('input', updateTotal);
+  const appointmentService = document.querySelector('.barber-checkout')?.dataset.serviceName?.trim().toLocaleLowerCase();
+  if (appointmentService) {
+    const matchingCard = Array.from(serviceCards).find((card) => (
+      card.dataset.productName?.trim().toLocaleLowerCase() === appointmentService
+    ));
+    const firstItem = items.querySelector('.formset-item:not([hidden])');
+    const nameField = firstItem?.querySelector('input[name$="-product"]');
+    const priceField = firstItem?.querySelector('input[name$="-unit_price"]');
+    const selectedName = nameField?.value.trim().toLocaleLowerCase();
+    if (selectedName) {
+      serviceCards.forEach((card) => {
+        card.classList.toggle('is-selected', card.dataset.productName?.trim().toLocaleLowerCase() === selectedName);
+      });
+    } else if (matchingCard && nameField && priceField) {
+      nameField.value = matchingCard.dataset.productName || '';
+      firstItem.querySelector('input[name$="-quantity"]').value = '1';
+      serviceCards.forEach((card) => card.classList.toggle('is-selected', card === matchingCard));
+      if (priceField && document.querySelector('.barber-checkout')?.dataset.servicePrice) {
+        priceField.value = document.querySelector('.barber-checkout').dataset.servicePrice;
+        matchingCard.dataset.productPrice = priceField.value;
+        const priceLabel = matchingCard.querySelector('span');
+        if (priceLabel) priceLabel.textContent = money(Number(priceField.value));
+      }
+      updateTotal();
+    }
+  }
+  updateTotal();
+  form.addEventListener('submit', () => {
+    const button = document.getElementById('completeSale');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Recording sale…';
+    }
+  });
+})();
+</script>
+{% endblock %}

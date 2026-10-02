@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Products | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Products <span class="electronics-count">({{ product_count }})</span></h1><p>Catalog, pricing, supplier details, and serialized-product settings.</p></div>
+        <div class="electronics-heading-actions">
+            <a class="electronics-button electronics-button-outline" href="{% url 'products:bulk_upload' %}"><i class="fas fa-file-import"></i> Import</a>
+            <a class="electronics-button electronics-button-outline" href="{% url 'products:export' %}"><i class="fas fa-download"></i> Export</a>
+            <a class="electronics-button electronics-button-accent" href="{% url 'products:create' %}"><i class="fas fa-plus"></i> Add product</a>
+        </div>
+    </header>
+    <section class="electronics-kpis" aria-label="Product summary">
+        <article class="electronics-kpi"><div><span>Active products</span><strong>{{ active_count }}</strong><small>{{ category_count }} categories</small></div><i class="kpi-icon mint fas fa-box"></i></article>
+        <article class="electronics-kpi"><div><span>Total stock value</span><strong>{{ user.business.currency }} {{ total_stock_value|floatformat:0 }}</strong><small>At recorded purchase cost</small></div><i class="kpi-icon mint fas fa-sack-dollar"></i></article>
+        <article class="electronics-kpi compact warning"><div><span>Low stock</span><strong>{{ low_stock_count }}</strong><small>At or below reorder level</small></div><i class="kpi-icon lavender fas fa-triangle-exclamation"></i></article>
+        <article class="electronics-kpi compact danger"><div><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong><small>Currently zero units</small></div><i class="kpi-icon coral fas fa-circle-exclamation"></i></article>
+    </section>
+    <nav class="electronics-category-tabs" aria-label="Product categories">
+        <a class="{% if not request.GET.category %}active{% endif %}" href="{% url 'products:list' %}">All <span>{{ product_count }}</span></a>
+        {% for category in categories %}<a class="{% if request.GET.category == category.id|stringformat:'s' %}active{% endif %}" href="?category={{ category.id }}">{{ category.name }} <span>{{ category.product_count }}</span></a>{% endfor %}
+    </nav>
+    <nav class="electronics-filter-pills" aria-label="Product stock status">
+        <a class="{% if not stock_filter %}active{% endif %}" href="{% url 'products:list' %}">All stock</a>
+        <a class="{% if stock_filter == 'healthy' %}active{% endif %}" href="?stock=healthy">Healthy</a>
+        <a class="{% if stock_filter == 'low' %}active{% endif %}" href="?stock=low">Low stock ({{ low_stock_count }})</a>
+        <a class="{% if stock_filter == 'out' %}active{% endif %}" href="?stock=out">Out of stock ({{ out_of_stock_count }})</a>
+    </nav>
+    <section class="electronics-panel">
+        <form method="get" class="electronics-filter-form">
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="search" value="{{ form.search.value|default:'' }}" placeholder="Search name, SKU, barcode, IMEI"></label>
+            <label><span>Category</span><select class="input-field" name="category"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.id }}" {% if form.category.value == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+            <label><span>Supplier</span><input class="input-field" name="supplier" value="{{ supplier_filter }}" placeholder="Supplier name"></label>
+            <label><span>Product status</span><select class="input-field" name="status">{% for value,label in form.fields.status.choices %}<option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            {% if stock_filter %}<input type="hidden" name="stock" value="{{ stock_filter }}">{% endif %}
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button>
+            <a class="electronics-clear-filters" href="{% url 'products:list' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>SKU</th><th>Product</th><th>Category</th><th>Cost</th><th>Price</th><th>Supplier</th><th>Stock</th><th>Reorder at</th><th>Tracking</th><th>Actions</th></tr></thead><tbody>
+            {% for product in page_obj %}<tr class="{% if product.current_stock == 0 %}row-danger{% elif product.current_stock <= product.reorder_level %}row-warning{% endif %}">
+                <td><code>{{ product.sku }}</code></td>
+                <td><a class="electronics-table-link" href="{% url 'products:detail' product.id %}"><strong>{{ product.name }}</strong></a>{% if not product.is_active %}<br><span class="electronics-badge danger">Inactive</span>{% endif %}</td>
+                <td>{{ product.category.name|default:"Uncategorized" }}</td>
+                <td>{{ user.business.currency }} {{ product.purchase_price|floatformat:2 }}</td>
+                <td><strong>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</strong></td>
+                <td>{{ product.supplier_name|default:"—" }}</td>
+                <td><span class="electronics-stock-value {% if product.current_stock == 0 %}out{% elif product.current_stock <= product.reorder_level %}low{% endif %}">{{ product.current_stock }} {{ product.get_unit_display|lower }}</span></td>
+                <td>{{ product.reorder_level }}</td>
+                <td>{% if product.is_serialized %}<span class="electronics-badge info">Serial / IMEI</span>{% else %}Standard{% endif %}</td>
+                <td class="electronics-row-actions"><a href="{% url 'products:detail' product.id %}" aria-label="View {{ product.name }}"><i class="fas fa-eye"></i></a><a href="{% url 'products:update' product.id %}" aria-label="Edit {{ product.name }}"><i class="fas fa-pen"></i></a></td>
+            </tr>{% empty %}<tr><td colspan="10"><div class="electronics-empty-state"><i class="fas fa-box-open"></i><strong>No products match these filters</strong><span>Add a product or adjust the selected filters.</span><a class="electronics-button electronics-button-accent" href="{% url 'products:create' %}">Add product</a></div></td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if page_obj.has_other_pages %}<nav class="electronics-pagination" aria-label="Product pages">{% if page_obj.has_previous %}<a href="?{{ querystring }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>{% if page_obj.has_next %}<a href="?{{ querystring }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+</div></div>
+{% endblock %}

@@ -34,10 +34,18 @@ class SaleForm(forms.ModelForm):
         if self.business:
             from businesses.capabilities import capabilities_for_business
             capabilities = capabilities_for_business(self.business)
+            served_by = User.objects.filter(
+                business=self.business,
+                is_active=True,
+            ).order_by('first_name', 'last_name')
+            served_by_label = 'Served by'
+            if self.business.business_type == 'BARBER':
+                served_by = served_by.filter(role='BARBER')
+                served_by_label = 'Barber'
             self.fields['served_by'] = forms.ModelChoiceField(
-                queryset=User.objects.filter(business=self.business, is_active=True).order_by('first_name', 'last_name'),
+                queryset=served_by,
                 required=False,
-                label='Served by',
+                label=served_by_label,
                 widget=forms.Select(attrs={'class': 'input-field'}),
             )
             if 'tables' in capabilities:
@@ -69,6 +77,17 @@ class SaleForm(forms.ModelForm):
                 f"{customer.name} - {customer.phone or 'No phone'}"
                 f" - {customer.email or 'No email'}"
             )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (
+            self.business
+            and self.business.business_type == 'ELECTRONICS'
+            and cleaned_data.get('payment_method') == 'CREDIT'
+            and not cleaned_data.get('customer')
+        ):
+            self.add_error('customer', 'Select a saved customer for a credit sale.')
+        return cleaned_data
 
 class SaleItemForm(forms.ModelForm):
     """Form for sale items."""
@@ -112,6 +131,21 @@ class SaleItemForm(forms.ModelForm):
             raise forms.ValidationError('Enter the exact name or SKU of an active product in your catalog.')
         return product
 
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+        product = self.cleaned_data.get('product')
+        if (
+            self.business
+            and self.business.business_type == 'ELECTRONICS'
+            and quantity
+            and product
+            and quantity > product.current_stock
+        ):
+            raise forms.ValidationError(
+                f'Only {product.current_stock} unit(s) are currently in stock.'
+            )
+        return quantity
+
 class BaseSaleItemFormSet(forms.BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         self.business = kwargs.pop("business", None)
@@ -129,6 +163,17 @@ SaleItemFormSet = inlineformset_factory(
     form=SaleItemForm,
     formset=BaseSaleItemFormSet,
     extra=1,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)
+
+BarberSaleItemFormSet = inlineformset_factory(
+    Sale,
+    SaleItem,
+    form=SaleItemForm,
+    formset=BaseSaleItemFormSet,
+    extra=0,
     can_delete=True,
     min_num=1,
     validate_min=True,

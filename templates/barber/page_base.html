@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ page|title }} | {{ user.business.name }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/salon.css' %}">
+<link rel="stylesheet" href="{% static 'css/barber.css' %}">
+<link rel="stylesheet" href="{% static 'css/barber-pages.css' %}">
+{% endblock %}
+{% block content %}
+<div class="salon-shell barber-shell">
+  {% include 'partials/_barber_sidebar.html' %}
+  <div class="salon-workspace">
+    {% include 'partials/_barber_topbar.html' %}
+    <main class="salon-content barber-live-page">
+      {% block page_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

@@ -15,7 +15,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Page Header -->
         <div class="mb-8">
-            <a href="{% if request.GET.from == 'admin' %}{% url 'business_admin' %}{% else %}{% url 'dashboard' %}{% endif %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>{% if request.GET.from == 'admin' %}Back to Administration{% else %}Back to Dashboard{% endif %}</span></a>
+            {% if request.GET.from != 'admin' %}<a href="{% url 'dashboard' %}" class="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-800 mb-4"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Back to Dashboard</span></a>{% endif %}
             <h1 class="text-2xl font-bold text-primary-700">Business Settings</h1>
             <p class="text-gray-600">Manage your business information and preferences</p>
         </div>
@@ -86,7 +86,8 @@
                                 <select name="business_type" id="business_type" class="input-field">
                                     <option value="RETAIL" {% if form.business_type.value == 'RETAIL' %}selected{% endif %}>Retail Shop</option>
                                     <option value="RESTAURANT" {% if form.business_type.value == 'RESTAURANT' %}selected{% endif %}>Restaurant</option>
-                                    <option value="SALON" {% if form.business_type.value == 'SALON' %}selected{% endif %}>Salon/Barbershop</option>
+                                    <option value="SALON" {% if form.business_type.value == 'SALON' %}selected{% endif %}>Salon</option>
+                                    <option value="BARBER" {% if form.business_type.value == 'BARBER' %}selected{% endif %}>Barbershop</option>
                                     <option value="WHOLESALE" {% if form.business_type.value == 'WHOLESALE' %}selected{% endif %}>Wholesale</option>
                                     <option value="SERVICE" {% if form.business_type.value == 'SERVICE' %}selected{% endif %}>Service Business</option>
                                     <option value="OTHER" {% if form.business_type.value == 'OTHER' %}selected{% endif %}>Other</option>

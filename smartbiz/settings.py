@@ -3,10 +3,16 @@ import shutil
 import urllib.parse
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-in-production")
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "t")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -48,11 +54,15 @@ INSTALLED_APPS = [
     "products.apps.ProductsConfig",
     "customers.apps.CustomersConfig",
     "sales.apps.SalesConfig",
+    "barber.apps.BarberConfig",
+    "salon.apps.SalonConfig",
     "expenses.apps.ExpensesConfig",
     "inventory.apps.InventoryConfig",
     "analytics.apps.AnalyticsConfig",
     "ai_engine.apps.AiEngineConfig",
     "reports.apps.ReportsConfig",
+    "electronics.apps.ElectronicsConfig",
+    "retail.apps.RetailConfig",
 ]
 
 MIDDLEWARE = [
@@ -74,6 +84,9 @@ TEMPLATES = [
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
+            "libraries": {
+                "dashboard_notifications": "analytics.templatetags.dashboard_notifications",
+            },
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",

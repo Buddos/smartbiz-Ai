@@ -1,21 +1,30 @@
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import business_required, role_required
 from .models import AIInsight, AIInsightFeedback, AIQuery, AIRecommendation, ForecastResult
-from .services import answer_question, run_intelligence_pipeline, run_sales_forecast
+from .services import run_sales_forecast
+from .gemini import (
+    GeminiError,
+    answer_business_question,
+    generate_ai_engine_review,
+)
 
 
 class AssistantForm(forms.Form):
     question = forms.CharField(
+        max_length=1000,
         widget=forms.Textarea(attrs={
             "class": "input-field",
             "rows": 3,
+            "maxlength": 1000,
             "placeholder": "e.g. Which products should I pay attention to?",
         })
     )
@@ -33,7 +42,8 @@ def intelligence_home(request):
     ).order_by("-score", "-created_at")[:12] if business else []
     recs = AIRecommendation.objects.filter(business=business, status="OPEN").order_by("-created_at")[:12] if business else []
     forecast = ForecastResult.objects.filter(business=business).first() if business else None
-    queries = AIQuery.objects.filter(business=business)[:8] if business else []
+    queries = list(AIQuery.objects.filter(business=business)[:8]) if business else []
+    queries.reverse()
     form = AssistantForm()
     return render(request, "ai_engine/home.html", {
         "insights": insights,
@@ -42,6 +52,8 @@ def intelligence_home(request):
         "queries": queries,
         "form": form,
         "has_business": bool(business),
+        "gemini_configured": bool(getattr(settings, "GEMINI_API_KEY", "").strip()),
+        "gemini_model": getattr(settings, "GEMINI_MODEL", "gemini-3.8-flash"),
         "title": "AI Decision Support",
     })
 
@@ -54,8 +66,18 @@ def generate_view(request):
     if not request.user.business:
         messages.warning(request, "Set up a business before generating insights.")
         return redirect("businesses:setup")
-    created = run_intelligence_pipeline(request.user.business)
-    messages.success(request, f"Generated {len(created)} ranked insights and recommendations from your business data.")
+    try:
+        created, review = generate_ai_engine_review(request.user.business)
+    except GeminiError as exc:
+        messages.error(
+            request,
+            f"Gemini insight generation failed: {exc}",
+        )
+    else:
+        messages.success(
+            request,
+            f"Generated {len(created)} data-based alerts and refreshed the Gemini business review: {review.title}",
+        )
     return redirect("ai_engine:home")
 
 
@@ -77,21 +99,27 @@ def forecast_view(request):
 @role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def assistant_view(request):
     if request.method != "POST":
-        return redirect("ai_engine:home")
+        return redirect(f"{reverse('ai_engine:home')}#assistant")
     form = AssistantForm(request.POST)
     if form.is_valid():
         question = form.cleaned_data["question"]
         if not request.user.business:
             messages.info(request, "The assistant uses live data from your business. Set up a business first, then ask your question again.")
             return redirect("ai_engine:home")
-        answer = answer_question(request.user.business, question)
+        try:
+            answer = answer_business_question(request.user.business, question)
+        except GeminiError as exc:
+            messages.error(request, f"The Gemini assistant could not answer: {exc}")
+            return redirect(f"{reverse('ai_engine:home')}#assistant")
         AIQuery.objects.create(
             business=request.user.business,
             user=request.user,
             question=question,
             answer=answer,
         )
-    return redirect("ai_engine:home")
+    else:
+        messages.error(request, "Enter a question of up to 1,000 characters.")
+    return redirect(f"{reverse('ai_engine:home')}#assistant")
 
 
 @login_required

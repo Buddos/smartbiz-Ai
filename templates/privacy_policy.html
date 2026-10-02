@@ -6,7 +6,7 @@
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
   .legal-page {
@@ -49,7 +49,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-sans);
     font-size: 20px;
     font-weight: 700;
     color: var(--brand-teal-900);
@@ -127,7 +127,7 @@
   }
 
   .legal-hero h1 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-sans);
     font-size: clamp(32px, 5vw, 44px);
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -182,7 +182,7 @@
   }
 
   .legal-card h2 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--font-sans);
     font-size: 22px;
     font-weight: 700;
     color: var(--brand-teal-900);

@@ -40,6 +40,9 @@ class Sale(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='sales')
+    barber = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='barber_sales'
+    )
     
     # Sale Information
     sale_number = models.CharField(max_length=50, unique=True, db_index=True)
@@ -82,6 +85,7 @@ class Sale(models.Model):
         validators=[MinValueValidator(0)],
         default=0.00
     )
+    tip = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     total = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -166,7 +170,19 @@ class Sale(models.Model):
             ).count() + 1
             self.sale_number = f"{prefix}-{date_str}-{str(count).zfill(4)}"
         
-        self.total = (self.subtotal or 0) + (self.tax or 0) + (self.shipping or 0) - (self.discount or 0)
+        tax_configuration = self.metadata.get("tax") if isinstance(self.metadata, dict) else None
+        inclusive_tax = (
+            isinstance(tax_configuration, dict)
+            and tax_configuration.get("enabled")
+            and tax_configuration.get("inclusive")
+        )
+        self.total = (
+            (self.subtotal or 0)
+            + (0 if inclusive_tax else (self.tax or 0))
+            + (self.shipping or 0)
+            + (self.tip or 0)
+            - (self.discount or 0)
+        )
         self.balance_due = max(0, self.total - (self.amount_paid or 0))
         if self.total > 0 and self.amount_paid >= self.total:
             self.payment_status = "PAID"
@@ -263,8 +279,19 @@ class SaleItem(models.Model):
         discount = Decimal(str(self.discount or 0))
         self.subtotal = unit_price * self.quantity
         tax_rate = Decimal(str(self.tax_rate or 0))
-        self.tax_amount = self.subtotal * (tax_rate / Decimal('100'))
-        self.total = self.subtotal + self.tax_amount - discount
+        sale_metadata = self.sale.metadata
+        tax_configuration = sale_metadata.get("tax") if isinstance(sale_metadata, dict) else None
+        inclusive_tax = (
+            isinstance(tax_configuration, dict)
+            and tax_configuration.get("enabled")
+            and tax_configuration.get("inclusive")
+        )
+        if inclusive_tax and tax_rate:
+            self.tax_amount = self.subtotal * tax_rate / (Decimal('100') + tax_rate)
+            self.total = self.subtotal - discount
+        else:
+            self.tax_amount = self.subtotal * (tax_rate / Decimal('100'))
+            self.total = self.subtotal + self.tax_amount - discount
         super().save(*args, **kwargs)
 
 class Payment(models.Model):

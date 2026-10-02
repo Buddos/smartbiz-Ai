@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Retail dashboard | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="retail-content">
+    <section class="retail-page-heading">
+        <div><p class="retail-eyebrow">Retail overview · {{ today|date:"l, j F Y" }}</p><h1>Welcome back, {{ user.first_name|default:user.email }}</h1><p>Your live sales, stock health, and store operations at a glance.</p></div>
+        <div class="retail-heading-actions"><a class="retail-button retail-button-primary" href="{% url 'sales:create' %}"><i class="fas fa-plus" aria-hidden="true"></i> New sale</a><a class="retail-button retail-button-secondary" href="{% url 'reports:list' %}"><i class="fas fa-file-lines" aria-hidden="true"></i> Reports</a></div>
+    </section>
+    <section class="retail-metric-grid" aria-label="Today's business performance">
+        <article class="retail-metric"><span>Today's sales</span><strong>{{ user.business.currency }} {{ today_revenue|floatformat:0 }}</strong><small class="{% if revenue_change >= 0 %}is-positive{% else %}is-negative{% endif %}">{{ revenue_change|floatformat:1 }}% vs yesterday</small><i class="fas fa-money-bill-wave metric-mint" aria-hidden="true"></i></article>
+        <article class="retail-metric"><span>Transactions</span><strong>{{ today_transactions }}</strong><small>{{ user.business.currency }} {{ average_ticket|floatformat:0 }} average ticket</small><i class="fas fa-receipt metric-pink" aria-hidden="true"></i></article>
+        <article class="retail-metric"><span>Gross profit</span><strong>{{ user.business.currency }} {{ gross_profit|floatformat:0 }}</strong><small>{{ gross_margin|floatformat:1 }}% gross margin</small><i class="fas fa-chart-line metric-green" aria-hidden="true"></i></article>
+        <article class="retail-metric"><span>Customers served</span><strong>{{ customers_served }}</strong><small>{{ new_customers }} new today</small><i class="fas fa-users metric-lavender" aria-hidden="true"></i></article>
+    </section>
+    <section class="retail-metric-grid retail-stock-metrics" aria-label="Current stock health">
+        <article class="retail-metric compact"><span>Active products</span><strong>{{ total_products }}</strong><a href="{% url 'products:list' %}">Browse catalog</a></article>
+        <article class="retail-metric compact stock-warning"><span>Low stock</span><strong>{{ low_stock_count }}</strong><small>At or below reorder level</small></article>
+        <article class="retail-metric compact stock-danger"><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong><small>Restock to resume sales</small></article>
+        <article class="retail-metric compact"><span>Stock value</span><strong>{{ user.business.currency }} {{ stock_value|floatformat:0 }}</strong><small>At purchase cost</small></article>
+    </section>
+    <section class="retail-tool-panel">
+        <div class="retail-section-heading"><div><h2><i class="fas fa-store" aria-hidden="true"></i> Retail sales desk</h2><p>Fast checkout, stock replenishment, till reconciliation, and customer follow-up.</p></div><a href="{% url 'businesses:settings' %}">Manage settings <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+        <div class="retail-tool-grid">
+            <a href="{% url 'inventory:dashboard' %}"><i class="fas fa-boxes-stacked" aria-hidden="true"></i><span><strong>Inventory &amp; stock</strong><small>Products, stock levels, and movements</small></span></a>
+            <a href="{% url 'retail:credit' %}"><i class="fas fa-credit-card" aria-hidden="true"></i><span><strong>Debts &amp; credit</strong><small>{{ user.business.currency }} {{ open_credit_total|floatformat:0 }} outstanding across {{ customers_with_credit }} customers</small></span></a>
+            <a href="{% url 'retail:cash_drawer' %}"><i class="fas fa-cash-register" aria-hidden="true"></i><span><strong>Cash drawer</strong><small>{% if drawer %}Open · expected {{ user.business.currency }} {{ drawer_expected|floatformat:0 }}{% else %}Review and reconcile today's till{% endif %}</small></span></a>
+            <a href="{% url 'inventory:stock_counts' %}"><i class="fas fa-clipboard-check" aria-hidden="true"></i><span><strong>Stock take</strong><small>Physical counts and recorded variances</small></span></a>
+            <a href="{% url 'retail:suppliers' %}"><i class="fas fa-truck" aria-hidden="true"></i><span><strong>Suppliers &amp; orders</strong><small>Vendors, purchase orders, and received stock</small></span></a>
+        </div>
+    </section>
+    <div class="retail-dashboard-columns">
+        <section class="retail-panel"><div class="retail-section-heading"><div><h2><i class="fas fa-fire" aria-hidden="true"></i> Top sellers today</h2><p>Ranked by units sold in completed sales</p></div><a href="{% url 'sales:list' %}">Sales history <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+            {% for item in top_sellers %}<div class="retail-top-seller"><span class="retail-rank">{{ forloop.counter }}</span><span class="retail-seller-name"><strong>{{ item.product__name }}</strong><small>{{ item.product__current_stock }} in stock</small></span><span class="retail-seller-bar"><i style="width:{% widthratio item.units_sold top_sellers.0.units_sold 100 %}%"></i></span><b>{{ item.units_sold }} units</b></div>
+            {% empty %}<p class="retail-empty">No completed product sales have been recorded today.</p>{% endfor %}
+        </section>
+        <section class="retail-panel"><div class="retail-section-heading"><div><h2>Store activity</h2><p>Current month costs and till status</p></div></div>
+            <div class="retail-activity-stat"><span>Expenses this month</span><strong>{{ user.business.currency }} {{ month_expenses|floatformat:0 }}</strong><a href="{% url 'expenses:list' %}">Review expenses</a></div>
+            <div class="retail-activity-stat"><span>Cash drawer</span><strong>{% if drawer %}Open{% else %}Closed{% endif %}</strong><small>{% if drawer %}Expected {{ user.business.currency }} {{ drawer_expected|floatformat:0 }}{% else %}No open session{% endif %}</small><a href="{% url 'retail:cash_drawer' %}">Open drawer</a></div>
+        </section>
+    </div>
+    <section class="retail-insight-section"><div class="retail-section-heading"><div><h2>Business insights</h2><p>Saved insights generated from this business's data</p></div><a href="{% url 'ai_engine:home' %}#insights">Open AI insights <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+        <div class="retail-insight-grid">{% for insight in insights %}<article class="retail-insight"><i class="fas fa-lightbulb" aria-hidden="true"></i><div><span>{{ insight.get_severity_display }} · {{ insight.generated_at|timesince }} ago</span><strong>{{ insight.title }}</strong><p>{{ insight.recommendation|default:insight.description }}</p></div></article>{% empty %}<p class="retail-empty">No saved insights yet. Generate insights from your recorded business activity to see them here.</p>{% endfor %}</div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'salon/page_base.html' %}
+{% block title %}Appointments | {{ user.business.name }}{% endblock %}
+{% block salon_page %}
+<section class="salon-page-heading">
+    <div>
+        <p class="salon-eyebrow">{{ user.business.name }} · Appointments</p>
+        <h1>Appointments</h1>
+        <p class="salon-subtitle">Manage this salon’s saved bookings by date and status.</p>
+    </div>
+    <a class="salon-primary-action" href="#newAppointment"><i class="fas fa-plus" aria-hidden="true"></i> New booking</a>
+</section>
+<section class="salon-page-kpis" aria-label="Appointment summary">
+    <article><span>Booked today</span><strong>{{ booked_count }}</strong><small>Not cancelled or no-show</small></article>
+    <article><span>Completed</span><strong>{{ completed_count }}</strong><small>Marked complete</small></article>
+    <article><span>Checked in</span><strong>{{ waiting_count }}</strong><small>On the salon floor</small></article>
+    <article><span>Stylists scheduled</span><strong>{{ stylist_count }}</strong><small>With appointments today</small></article>
+</section>
+<section class="salon-page-panel">
+    <div class="salon-appointment-toolbar">
+        <form method="get" class="salon-appointment-filters">
+            <label>Date<input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}" class="salon-field"></label>
+            <label>Find booking<input type="search" name="search" value="{{ search }}" placeholder="Client, service or stylist" class="salon-field"></label>
+            <label>Status<select name="status" class="salon-field"><option value="">All statuses</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <button class="salon-secondary-action" type="submit"><i class="fas fa-filter" aria-hidden="true"></i> Filter</button>
+        </form>
+        <nav class="salon-date-nav" aria-label="Appointment date">
+            <a href="?date={{ previous_date|date:'Y-m-d' }}" aria-label="Previous day">‹</a>
+            <strong>{{ selected_date|date:'D, j M Y' }}</strong>
+            <a href="?date={{ next_date|date:'Y-m-d' }}" aria-label="Next day">›</a>
+            <a class="salon-today-link" href="?date={% now 'Y-m-d' %}">Today</a>
+        </nav>
+    </div>
+    <div class="salon-appointment-list">
+        {% for appointment in appointments %}
+        <article class="salon-appointment-row">
+            <div class="salon-appointment-time"><strong>{{ appointment.starts_at|date:'g:i A' }}</strong><small>{{ appointment.duration_min }} min</small></div>
+            <div class="salon-appointment-client"><strong>{{ appointment.display_client_name }}</strong><small>{{ appointment.display_client_phone|default:'No phone recorded' }}</small></div>
+            <div class="salon-appointment-service"><strong>{% for service in appointment.services.all %}{{ service.name }}{% if not forloop.last %}, {% endif %}{% empty %}Service removed{% endfor %}</strong><small>{{ appointment.stylist.get_full_name|default:'Stylist unassigned' }}</small></div>
+            <span class="salon-booking-status status-{{ appointment.status|lower|cut:'_' }}">{{ appointment.get_status_display }}</span>
+            {% if appointment.status != "COMPLETED" %}
+            <form method="post" class="salon-status-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="status">
+                <input type="hidden" name="appointment_id" value="{{ appointment.id }}">
+                <label class="salon-sr-only" for="status-{{ appointment.id }}">Update {{ appointment.display_client_name }} status</label>
+                <select id="status-{{ appointment.id }}" name="status" class="salon-field">
+                    {% for value,label in status_choices %}{% if value != "COMPLETED" %}<option value="{{ value }}" {% if appointment.status == value %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
+                </select>
+                <button type="submit" class="salon-status-save">Save</button>
+            </form>
+            {% endif %}
+            {% if appointment.status == "CHECKED_IN" or appointment.status == "IN_SERVICE" %}
+            <a class="salon-status-save" href="{% url 'sales:create' %}?appointment={{ appointment.id }}">Checkout</a>
+            {% endif %}
+        </article>
+        {% empty %}
+        <div class="salon-data-empty"><i class="fas fa-calendar-check" aria-hidden="true"></i><strong>No appointments saved for this date</strong><p>Choose another date or add a booking. This page only shows appointments recorded for your salon.</p></div>
+        {% endfor %}
+    </div>
+</section>
+<section class="salon-page-panel salon-new-booking" id="newAppointment">
+    <div class="salon-panel-heading"><div><p class="salon-eyebrow">Create from saved salon data</p><h2>New booking</h2></div></div>
+    <form method="post" class="salon-booking-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="salon-form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div><label for="{{ form.customer.id_for_label }}">Existing client (optional)</label>{{ form.customer }}{% for error in form.customer.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.client_name.id_for_label }}">Client name (if new/walk-in)</label>{{ form.client_name }}{% for error in form.client_name.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.client_phone.id_for_label }}">Phone</label>{{ form.client_phone }}{% for error in form.client_phone.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.services.id_for_label }}">Services (select one or more)</label>{{ form.services }}{% for error in form.services.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.stylist.id_for_label }}">Stylist</label>{{ form.stylist }}{% for error in form.stylist.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.starts_at.id_for_label }}">Date and start time</label>{{ form.starts_at }}{% for error in form.starts_at.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.source.id_for_label }}">Booking source</label>{{ form.source }}{% for error in form.source.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div><label for="{{ form.notes.id_for_label }}">Notes / preferences</label>{{ form.notes }}{% for error in form.notes.errors %}<small class="salon-field-error">{{ error }}</small>{% endfor %}</div>
+        <div class="salon-booking-actions"><button class="salon-primary-action" type="submit"><i class="fas fa-calendar-plus" aria-hidden="true"></i> Save booking</button><span>Duration is calculated from the selected active services.</span></div>
+    </form>
+</section>
+{% endblock %}

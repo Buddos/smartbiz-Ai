@@ -1,0 +1,27 @@
+{% extends 'barber/page_base.html' %}
+{% load static %}
+{% block page_content %}
+<section class="barber-page-heading">
+  <div><p class="salon-eyebrow">Client relationships</p><h1>Clients <span class="page-count" id="clientTotal">({{ summary.total }})</span></h1><p class="salon-subtitle">Visit history and client status, based on recorded appointments and sales.</p></div>
+  <div class="barber-page-actions"><a class="salon-primary-action" href="{% url 'customers:create' %}"><i class="fas fa-user-plus" aria-hidden="true"></i> Add client</a><span class="live-pill"><i></i> Live</span></div>
+</section>
+<section class="barber-client-summary" aria-label="Client status filters">
+  <a href="?status=regular" class="client-summary-card regular"><span>Regulars</span><strong data-client-count="regular">{{ summary.regular }}</strong><small>Visited in the last 30 days</small></a>
+  <a href="?status=due" class="client-summary-card due"><span>Due</span><strong data-client-count="due">{{ summary.due }}</strong><small>30–44 days since visit</small></a>
+  <a href="?status=at-risk" class="client-summary-card risk"><span>At-risk</span><strong data-client-count="at_risk">{{ summary.at_risk }}</strong><small>45+ days since visit</small></a>
+  <a href="?status=vip" class="client-summary-card vip"><span>VIP</span><strong data-client-count="vip">{{ summary.vip }}</strong><small>Top 10% lifetime spend</small></a>
+</section>
+<section class="barber-page-panel">
+  <form class="barber-client-toolbar" id="clientFilters" method="get">
+    <label class="barber-search"><i class="fas fa-search" aria-hidden="true"></i><span class="sr-only">Search clients by name, phone, or email</span><input id="clientSearch" type="search" name="search" value="{{ search }}" placeholder="Search name, phone or email"></label>
+    <label class="sr-only" for="clientStatus">Filter clients</label><select id="clientStatus" name="status"><option value="">All clients</option><option value="regular" {% if status == 'regular' %}selected{% endif %}>Regulars</option><option value="due" {% if status == 'due' %}selected{% endif %}>Due</option><option value="at-risk" {% if status == 'at-risk' %}selected{% endif %}>At-risk</option><option value="vip" {% if status == 'vip' %}selected{% endif %}>VIP</option><option value="new" {% if status == 'new' %}selected{% endif %}>New</option></select>
+  </form>
+  <div class="barber-table-wrap"><table class="barber-data-table">
+    <thead><tr><th>Name</th><th>Phone</th><th>Last visit</th><th>Visits</th><th>Total spent</th><th>Preferred barber</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody id="clientRows">{% for client in clients %}<tr class="client-row status-{{ client.status }}" data-client-row><td><a class="client-name" href="{{ client.url }}">{{ client.name }}</a></td><td>{% if client.phone %}<a href="tel:{{ client.phone }}">{{ client.phone }}</a>{% else %}—{% endif %}</td><td>{% if client.days_since != None %}{{ client.last_visit }} · {{ client.days_since }}d ago{% else %}{{ client.last_visit }}{% endif %}</td><td>{{ client.visits }}</td><td>KSh {{ client.spent|floatformat:0 }}</td><td>{{ client.barber }}</td><td><span class="client-status-chip {{ client.status }}">{{ client.status|title }}</span></td><td><a class="table-action" href="{{ client.url }}">Details</a>{% if client.phone %}<a class="table-action" href="tel:{{ client.phone }}">Call</a>{% endif %}<a class="table-action" href="{% url 'barber:board' %}">Book</a></td></tr>{% empty %}<tr><td colspan="8" class="table-empty">No clients match this search yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="live-note" id="clientLiveStatus" aria-live="polite">Client information refreshes automatically.</p>
+</section>
+<div id="clientPage" data-live-url="{% url 'barber:live_clients' %}" data-book-url="{% url 'barber:board' %}"></div>
+<script src="{% static 'js/barber-pages.js' %}" defer></script>
+{% endblock %}

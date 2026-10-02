@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Inventory | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Inventory</h1><p>Current stock health, reorder thresholds, and recorded movements.</p></div>
+        <div class="electronics-heading-actions">
+            <a class="electronics-button electronics-button-outline" href="{% url 'inventory:export' %}"><i class="fas fa-download"></i> Export CSV</a>
+            <a class="electronics-button electronics-button-outline" href="{% url 'inventory:transactions' %}"><i class="fas fa-clock-rotate-left"></i> Movement log</a>
+            <a class="electronics-button electronics-button-outline" href="{% url 'inventory:adjustment' %}"><i class="fas fa-sliders"></i> Adjust stock</a>
+            <a class="electronics-button electronics-button-accent" href="{% url 'inventory:transaction_create' %}"><i class="fas fa-plus"></i> Record stock</a>
+        </div>
+    </header>
+    <section class="electronics-kpis" aria-label="Inventory summary">
+        <article class="electronics-kpi"><div><span>Stock value</span><strong>{{ user.business.currency }} {{ stock_value|floatformat:0 }}</strong><small>At recorded purchase cost</small></div><i class="kpi-icon mint fas fa-sack-dollar"></i></article>
+        <article class="electronics-kpi"><div><span>Units in stock</span><strong>{{ total_units }}</strong><small>Across {{ total_products }} active products</small></div><i class="kpi-icon mint fas fa-boxes-stacked"></i></article>
+        <article class="electronics-kpi compact warning"><div><span>Low stock items</span><strong>{{ low_stock_count }}</strong><small>At or below reorder threshold</small></div><i class="kpi-icon lavender fas fa-triangle-exclamation"></i></article>
+        <article class="electronics-kpi compact danger"><div><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong><small>Require replenishment</small></div><i class="kpi-icon coral fas fa-circle-exclamation"></i></article>
+    </section>
+    {% if attention_products %}
+    <section class="electronics-panel electronics-attention-panel">
+        <div class="electronics-panel-heading"><div><h2><i class="fas fa-bell"></i> {{ low_stock_count|add:out_of_stock_count }} items need attention</h2><p>Showing products at or below their current reorder level.</p></div><a href="{% url 'electronics:suppliers' %}">Create purchase order <i class="fas fa-arrow-right"></i></a></div>
+        <div class="electronics-attention-list">{% for product in attention_products %}<a class="electronics-attention-item {% if product.current_stock == 0 %}out{% endif %}" href="{% url 'inventory:transaction_create' %}?product={{ product.id }}"><span><strong>{{ product.name }}</strong><small>{{ product.sku }} · Reorder at {{ product.reorder_level }}</small></span><b>{{ product.current_stock }} in stock</b></a>{% endfor %}</div>
+    </section>
+    {% endif %}
+    <nav class="electronics-filter-pills" aria-label="Inventory status">
+        <a class="{% if not status_filter %}active{% endif %}" href="{% url 'inventory:dashboard' %}">All ({{ total_products }})</a>
+        <a class="{% if status_filter == 'HEALTHY' %}active{% endif %}" href="?status=HEALTHY">Healthy ({{ healthy_count }})</a>
+        <a class="{% if status_filter == 'LOW' %}active{% endif %}" href="?status=LOW">Low ({{ low_stock_count }})</a>
+        <a class="{% if status_filter == 'OUT' %}active{% endif %}" href="?status=OUT">Out ({{ out_of_stock_count }})</a>
+        <a class="{% if status_filter == 'OVERSTOCKED' %}active{% endif %}" href="?status=OVERSTOCKED">Overstocked ({{ overstocked_count }})</a>
+    </nav>
+    <section class="electronics-panel">
+        <form method="get" class="electronics-filter-form">
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="q" value="{{ search }}" placeholder="Search product or SKU"></label>
+            <label><span>Category</span><select class="input-field" name="category"><option value="">All categories</option>{% for category in categories %}<option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></label>
+            <label><span>Supplier</span><select class="input-field" name="supplier"><option value="">All suppliers</option>{% for supplier in suppliers %}<option value="{{ supplier }}" {% if supplier_filter == supplier %}selected{% endif %}>{{ supplier }}</option>{% endfor %}</select></label>
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button>
+            <a class="electronics-clear-filters" href="{% url 'inventory:dashboard' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Product</th><th>Category</th><th>In stock</th><th>Reorder at</th><th>Supplier</th><th>Stock value</th><th>Last restock</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {% for product in stock_products %}<tr class="{% if product.current_stock == 0 %}row-danger{% elif product.current_stock <= product.reorder_level %}row-warning{% elif product.maximum_stock and product.current_stock > product.maximum_stock %}row-info{% endif %}">
+                <td><a class="electronics-table-link" href="{% url 'products:detail' product.id %}"><strong>{{ product.name }}</strong></a><br><small>{{ product.sku }}</small></td>
+                <td>{{ product.category.name|default:"Uncategorized" }}</td>
+                <td><strong>{{ product.current_stock }} {{ product.get_unit_display|lower }}</strong></td>
+                <td>{{ product.reorder_level }}</td>
+                <td>{{ product.supplier_name|default:"—" }}</td>
+                <td>{{ user.business.currency }} {{ product.electronics_stock_value|floatformat:2 }}</td>
+                <td>{% if product.last_restock %}{{ product.last_restock|date:"j M Y" }}{% else %}No restock recorded{% endif %}</td>
+                <td>{% if product.current_stock == 0 %}<span class="electronics-badge danger">Out</span>{% elif product.current_stock <= product.reorder_level %}<span class="electronics-badge warning">Low</span>{% elif product.maximum_stock and product.current_stock > product.maximum_stock %}<span class="electronics-badge info">Overstocked</span>{% else %}<span class="electronics-badge">Healthy</span>{% endif %}</td>
+                <td class="electronics-row-actions"><a href="{% url 'inventory:transaction_create' %}?product={{ product.id }}" aria-label="Restock {{ product.name }}" title="Record stock"><i class="fas fa-boxes-stacked"></i></a><a href="{% url 'inventory:adjustment' %}?product={{ product.id }}" aria-label="Adjust {{ product.name }}" title="Adjust"><i class="fas fa-sliders"></i></a></td>
+            </tr>{% empty %}<tr><td colspan="9"><div class="electronics-empty-state"><i class="fas fa-warehouse"></i><strong>No stock items match these filters</strong><span>Adjust the filters or add products to your catalog.</span><a class="electronics-button electronics-button-accent" href="{% url 'products:create' %}">Add product</a></div></td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if stock_products.has_other_pages %}<nav class="electronics-pagination" aria-label="Inventory pages">{% if stock_products.has_previous %}<a href="?page={{ stock_products.previous_page_number }}&status={{ status_filter }}&q={{ search|urlencode }}&category={{ category_filter|urlencode }}&supplier={{ supplier_filter|urlencode }}">Previous</a>{% endif %}<span>{{ stock_products.start_index }}–{{ stock_products.end_index }} of {{ stock_products.paginator.count }}</span>{% if stock_products.has_next %}<a href="?page={{ stock_products.next_page_number }}&status={{ status_filter }}&q={{ search|urlencode }}&category={{ category_filter|urlencode }}&supplier={{ supplier_filter|urlencode }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+    <section class="electronics-panel electronics-movement-panel">
+        <div class="electronics-panel-heading"><div><h2><i class="fas fa-clock-rotate-left"></i> Recent stock movements</h2><p>Most recent inventory transactions recorded for this business.</p></div><a href="{% url 'inventory:transactions' %}">View full log <i class="fas fa-arrow-right"></i></a></div>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Date</th><th>Type</th><th>Product</th><th>Quantity</th><th>Stock after</th><th>Recorded by</th><th>Reference</th></tr></thead><tbody>
+            {% for movement in recent_transactions %}<tr><td>{{ movement.transaction_date|date:"j M Y · g:i A" }}</td><td><span class="electronics-badge {% if movement.transaction_type == 'SALE' or movement.transaction_type == 'WASTE' %}danger{% elif movement.transaction_type == 'RETURN' %}info{% elif movement.transaction_type == 'ADJUSTMENT' %}warning{% endif %}">{{ movement.get_transaction_type_display }}</span></td><td>{{ movement.product.name }}</td><td>{% if movement.transaction_type == "SALE" or movement.transaction_type == "WASTE" or movement.transaction_type == "RETURNED_TO_SUPPLIER" %}−{% else %}+{% endif %}{{ movement.quantity }}</td><td>{{ movement.new_stock }}</td><td>{% if movement.created_by %}{{ movement.created_by.get_full_name|default:movement.created_by.email }}{% else %}—{% endif %}</td><td>{{ movement.reference_number|default:"—" }}</td></tr>{% empty %}<tr><td colspan="7">No inventory movements recorded yet.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div></div>
+{% endblock %}

@@ -67,17 +67,24 @@ class SaleTemplateResolverTests(TestCase):
 	def test_registered_business_type_gets_unique_dashboard_profile(self):
 		restaurant = SimpleNamespace(business_type='RESTAURANT', enabled_capabilities=['tables'])
 		electronics = SimpleNamespace(business_type='ELECTRONICS', enabled_capabilities=['inventory'])
+		salon = SimpleNamespace(business_type='SALON', enabled_capabilities=[])
+		barber = SimpleNamespace(business_type='BARBER', enabled_capabilities=[])
 
 		restaurant_profile = dashboard_profile_for_business(restaurant)
 		electronics_profile = dashboard_profile_for_business(electronics)
+		salon_profile = dashboard_profile_for_business(salon)
+		barber_profile = dashboard_profile_for_business(barber)
 
 		self.assertEqual(restaurant_profile['id'], 'restaurant')
 		self.assertEqual(electronics_profile['id'], 'electronics')
 		self.assertNotEqual(restaurant_profile['title'], electronics_profile['title'])
+		self.assertEqual(salon_profile['id'], 'salon')
+		self.assertEqual(barber_profile['id'], 'barber')
+		self.assertNotEqual(salon_profile['title'], barber_profile['title'])
 
 	def test_each_business_type_gets_a_unique_sale_entry_template(self):
 		business_types = [
-			'RETAIL', 'RESTAURANT', 'SALON', 'WHOLESALE', 'SERVICE',
+			'RETAIL', 'RESTAURANT', 'SALON', 'BARBER', 'WHOLESALE', 'SERVICE',
 			'ELECTRONICS', 'BOUTIQUE', 'HARDWARE', 'FREELANCE', 'OTHER',
 		]
 

@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Today | {{ user.business.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/salon.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/salon-pages.css' %}?v=2">
+{% endblock %}
+
+{% block content %}
+<div class="salon-shell" data-salon-live-refresh="60000">
+    {% include 'partials/_salon_sidebar.html' %}
+    <div class="salon-workspace">
+        {% include 'partials/_salon_topbar.html' %}
+        <main class="salon-content">
+            <section class="salon-page-heading">
+                <div>
+                    <p class="salon-eyebrow">{{ user.business.name }} <span>·</span> {{ today|date:'l, j F Y'|default:end_date|date:'l, j F Y' }}</p>
+                    <h1>Today at the salon</h1>
+                    <p class="salon-subtitle">A clear view of today’s sales, your clients, and what needs attention.</p>
+                </div>
+                <a class="salon-primary-action" href="{% url 'sales:create' %}"><i class="fas fa-plus" aria-hidden="true"></i><span>New sale</span></a>
+            </section>
+
+            <section class="salon-metrics" aria-label="Salon performance">
+                <article class="salon-metric salon-metric-featured">
+                    <div class="salon-metric-label"><span>Revenue today</span><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></div>
+                    <strong>{{ user.business.currency }} {{ today_revenue|floatformat:0 }}</strong>
+                    <small>{{ today_sales_count }} sale{{ today_sales_count|pluralize }} recorded</small>
+                </article>
+                <article class="salon-metric">
+                    <div class="salon-metric-label"><span>Revenue, last 30 days</span><i class="fas fa-chart-line" aria-hidden="true"></i></div>
+                    <strong>{{ user.business.currency }} {{ total_revenue|floatformat:0 }}</strong>
+                    <small class="{% if revenue_growth >= 0 %}salon-positive{% else %}salon-negative{% endif %}">{{ revenue_growth|floatformat:1 }}% vs previous period</small>
+                </article>
+                <article class="salon-metric">
+                    <div class="salon-metric-label"><span>Average sale</span><i class="fas fa-receipt" aria-hidden="true"></i></div>
+                    <strong>{{ user.business.currency }} {{ average_order_value|floatformat:0 }}</strong>
+                    <small>{{ total_sales }} sale{{ total_sales|pluralize }} this month</small>
+                </article>
+                <article class="salon-metric">
+                    <div class="salon-metric-label"><span>Active clients</span><i class="fas fa-user-group" aria-hidden="true"></i></div>
+                    <strong>{{ total_customers }}</strong>
+                    <small>{{ new_customers }} added in the last 30 days</small>
+                </article>
+            </section>
+
+            <section class="salon-panel salon-today-appointments" aria-label="Today's appointments">
+                <div class="salon-panel-heading">
+                    <div><p class="salon-eyebrow">Live schedule</p><h2>Today’s appointments <span class="salon-count-chip">{{ appointments_today }}</span></h2><p class="salon-subtitle">{{ completed_appointments_today }} completed so far</p></div>
+                    <a href="{% url 'salon:appointments' %}" class="salon-text-link">Open appointments <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+                {% if today_appointments %}
+                <div class="salon-today-appointment-list">
+                    {% for appointment in today_appointments %}
+                    <a class="salon-today-appointment-row" href="{% url 'salon:appointments' %}?date={{ today|date:'Y-m-d' }}">
+                        <span class="salon-today-appointment-time">{{ appointment.starts_at|date:'g:i A' }}</span>
+                        <span class="salon-today-appointment-client"><strong>{{ appointment.display_client_name }}</strong><small>{% for service in appointment.services.all %}{{ service.name }}{% if not forloop.last %}, {% endif %}{% empty %}Service unavailable{% endfor %}</small></span>
+                        <span class="salon-today-appointment-stylist">{{ appointment.stylist.get_full_name|default:'Stylist unassigned' }}</span>
+                        <span class="salon-booking-status status-{{ appointment.status|lower|cut:'_' }}">{{ appointment.get_status_display }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="salon-data-empty salon-inline-empty"><i class="fas fa-calendar-check" aria-hidden="true"></i><strong>No appointments recorded for today</strong><p>When your team saves bookings, they will appear here.</p><a class="salon-text-link" href="{% url 'salon:appointments' %}">Add an appointment <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+                {% endif %}
+            </section>
+
+            <section class="salon-main-grid salon-dashboard-main-grid">
+                <article class="salon-panel salon-sales-panel">
+                    <div class="salon-panel-heading">
+                        <div><p class="salon-eyebrow">The latest</p><h2>Recent sales</h2></div>
+                        <a href="{% url 'sales:list' %}" class="salon-text-link">All sales <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    {% if recent_sales %}
+                    <div class="salon-sales-list">
+                        {% for sale in recent_sales %}
+                        <a class="salon-sale-row" href="{% url 'sales:detail' sale.id %}">
+                            <span class="salon-sale-avatar">{% if sale.customer_name %}{{ sale.customer_name|first|upper }}{% elif sale.customer %}{{ sale.customer.name|first|upper }}{% else %}<i class="fas fa-user" aria-hidden="true"></i>{% endif %}</span>
+                            <span class="salon-sale-person"><strong>{% if sale.customer_name %}{{ sale.customer_name }}{% elif sale.customer %}{{ sale.customer }}{% else %}Walk-in client{% endif %}</strong><small>{{ sale.sale_number }} · {{ sale.sale_date|date:'g:i A' }}</small></span>
+                            <span class="salon-sale-total">{{ user.business.currency }} {{ sale.total|floatformat:0 }}<small class="salon-status salon-status-{{ sale.payment_status|lower }}">{{ sale.get_payment_status_display }}</small></span>
+                            <i class="fas fa-chevron-right salon-row-arrow" aria-hidden="true"></i>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="salon-empty-state"><span class="salon-empty-icon"><i class="fas fa-sparkles" aria-hidden="true"></i></span><strong>Your first sale is one step away</strong><p>Record a service sale to start building today’s picture.</p><a href="{% url 'sales:create' %}" class="salon-text-link">Create a sale <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+                    {% endif %}
+                </article>
+            </section>
+
+            <section class="salon-lower-grid">
+                <article class="salon-panel salon-mix-panel">
+                    <div class="salon-panel-heading">
+                        <div><p class="salon-eyebrow">Last 30 days</p><h2>Sales by category</h2></div>
+                        <a href="{% url 'analytics:sales' %}" class="salon-text-link">Analytics <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    {% for category in sales_by_category|slice:':5' %}
+                    <div class="salon-mix-row">
+                        <span>{{ category.product__category__name|default:'Uncategorized' }}</span>
+                        <div class="salon-mix-track"><span style="width: {% widthratio category.total_sales total_revenue 100 %}%"></span></div>
+                        <strong>{{ user.business.currency }} {{ category.total_sales|floatformat:0 }}</strong>
+                    </div>
+                    {% empty %}
+                    <p class="salon-muted-copy">Sales categories will appear once sales have been recorded.</p>
+                    {% endfor %}
+                </article>
+
+                <article class="salon-panel salon-stock-panel">
+                    <div class="salon-panel-heading">
+                        <div><p class="salon-eyebrow">Retail shelf</p><h2>Product stock</h2></div>
+                        <a href="{% url 'products:list' %}" class="salon-icon-link" aria-label="Manage products" title="Manage products"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+                    </div>
+                    <div class="salon-stock-stat"><span class="salon-stock-dot"></span><span>Products in catalog</span><strong>{{ total_products }}</strong></div>
+                    <div class="salon-stock-stat {% if low_stock_count %}salon-stock-alert{% endif %}"><span class="salon-stock-dot"></span><span>Running low</span><strong>{{ low_stock_count }}</strong></div>
+                    <div class="salon-stock-stat {% if out_of_stock_count %}salon-stock-alert{% endif %}"><span class="salon-stock-dot"></span><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong></div>
+                    <a class="salon-stock-link" href="{% url 'products:list' %}">Open retail products <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </article>
+            </section>
+
+            <footer class="salon-dashboard-footer"><span>Numbers reflect recorded sales and clients.</span><a href="{% url 'expenses:list' %}">Expenses <i class="fas fa-arrow-right" aria-hidden="true"></i></a></footer>
+        </main>
+    </div>
+</div>
+<div class="salon-sidebar-scrim" data-salon-close></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/salon.js' %}" defer></script>
+{% endblock %}

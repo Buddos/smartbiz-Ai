@@ -105,7 +105,7 @@ class InventoryTransaction(models.Model):
         self.total_cost = self.unit_cost * self.quantity
         
         # Update product stock if completed
-        if self.status == 'COMPLETED' and not self.pk:
+        if self.status == 'COMPLETED' and self._state.adding:
             # Get current stock before update
             self.previous_stock = self.product.current_stock
             

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dashboard_notifications %}
+{% block title %}Dashboard | {{ user.business.name }}{% endblock %}
+
+{% block content %}
+<header class="electronics-topbar">
+    <div>
+        <span class="electronics-topbar-title">Dashboard</span>
+        <p>Welcome back, {{ user.first_name|default:user.email }}. Here's your business overview.</p>
+    </div>
+    <div class="electronics-topbar-actions">
+        <form class="electronics-search" action="{% url 'products:list' %}" method="get">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input type="search" name="search" placeholder="Search products..." aria-label="Search products">
+        </form>
+        {% dashboard_notifications %}
+        <div class="electronics-account-menu" data-dashboard-account-menu>
+            <button class="electronics-avatar" type="button" aria-label="Open account menu" aria-expanded="false" data-dashboard-account-toggle>
+                {% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}
+            </button>
+            <div class="electronics-account-popover" data-dashboard-account-popover hidden>
+                <div class="electronics-account-summary">
+                    <strong>{{ user.get_full_name|default:user.email }}</strong>
+                    <small>{{ user.get_role_display }}</small>
+                </div>
+                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield" aria-hidden="true"></i>Business admin</a>{% endif %}
+                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>{% else %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>{% endif %}
+                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user" aria-hidden="true"></i>Profile</a>
+                <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Log out</a>
+            </div>
+        </div>
+    </div>
+</header>
+<div class="electronics-content">
+    <section class="electronics-page-heading">
+        <div>
+            <h1><i class="fas fa-chart-pie" aria-hidden="true"></i> Dashboard</h1>
+            <p>Welcome back, {{ user.first_name|default:user.email }}. Here's your business overview.</p>
+        </div>
+        <div class="electronics-heading-actions">
+            <form action="{% url 'analytics:generate_insights' %}" method="post">{% csrf_token %}<button class="electronics-button electronics-button-accent" type="submit"><i class="fas fa-lightbulb"></i> Generate insights</button></form>
+            <a class="electronics-button electronics-button-outline" href="{% url 'reports:list' %}"><i class="fas fa-file-lines"></i> View reports</a>
+        </div>
+    </section>
+
+    <section class="electronics-kpis" aria-label="Business performance">
+        <article class="electronics-kpi"><div><span>Total revenue</span><strong>{{ user.business.currency }} {{ total_revenue|floatformat:0 }}</strong><small class="{% if revenue_growth >= 0 %}positive{% else %}negative{% endif %}"><i class="fas {% if revenue_growth >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i> {{ revenue_growth|floatformat:1 }}% vs previous period</small></div><i class="kpi-icon mint fas fa-chart-line"></i></article>
+        <article class="electronics-kpi"><div><span>Total sales</span><strong>{{ total_sales }}</strong><small>{{ user.business.currency }} {{ average_order_value|floatformat:0 }} average sale</small></div><i class="kpi-icon coral fas fa-receipt"></i></article>
+        <article class="electronics-kpi"><div><span>Net profit</span><strong>{{ user.business.currency }} {{ total_profit|floatformat:0 }}</strong><small>Revenue: {{ user.business.currency }} {{ total_revenue|floatformat:0 }}</small></div><i class="kpi-icon green fas fa-arrow-trend-up"></i></article>
+        <article class="electronics-kpi"><div><span>Customers</span><strong>{{ total_customers }}</strong><small>{{ new_customers }} new in the last 30 days</small></div><i class="kpi-icon lavender fas fa-users"></i></article>
+    </section>
+
+    <section class="electronics-kpis electronics-kpis-secondary" aria-label="Inventory health">
+        <article class="electronics-kpi compact"><div><span>Products</span><strong>{{ total_products }}</strong></div></article>
+        <article class="electronics-kpi compact warning"><div><span>Low stock</span><strong>{{ low_stock_count }}</strong><small>Review reorder levels</small></div></article>
+        <article class="electronics-kpi compact danger"><div><span>Out of stock</span><strong>{{ out_of_stock_count }}</strong><small>Restock to resume sales</small></div></article>
+        <article class="electronics-kpi compact"><div><span>Expenses this month</span><strong>{{ user.business.currency }} {{ month_expenses|floatformat:0 }}</strong></div></article>
+    </section>
+
+    <div class="electronics-dashboard-grid">
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2>Recent sales</h2><p>Latest recorded transactions</p></div><a href="{% url 'sales:list' %}">View sales <i class="fas fa-arrow-right"></i></a></div>
+            {% for sale in recent_sales %}
+            <a class="electronics-record-row" href="{% url 'sales:detail' sale.id %}">
+                <span class="electronics-record-icon"><i class="fas fa-bag-shopping"></i></span>
+                <span class="record-copy"><strong>{% if sale.customer_name %}{{ sale.customer_name }}{% elif sale.customer %}{{ sale.customer.name }}{% else %}Walk-in customer{% endif %}</strong><small>{{ sale.sale_number }} · {{ sale.sale_date|date:"j M, g:i A" }}</small></span>
+                <span class="record-total">{{ user.business.currency }} {{ sale.total|floatformat:0 }}<small>{{ sale.get_payment_status_display }}</small></span>
+            </a>
+            {% empty %}<div class="electronics-empty">No sales have been recorded yet. <a href="{% url 'sales:create' %}">Create your first sale</a>.</div>{% endfor %}
+        </section>
+        <section class="electronics-panel">
+            <div class="electronics-panel-heading"><div><h2>Stock to review</h2><p>Products at or below their reorder level</p></div><a href="{% url 'inventory:dashboard' %}">Inventory <i class="fas fa-arrow-right"></i></a></div>
+            {% for product in low_stock_products %}
+            <a class="electronics-stock-row" href="{% url 'products:detail' product.id %}"><span><strong>{{ product.name }}</strong><small>{{ product.sku }}</small></span><b>{{ product.current_stock }} / {{ product.reorder_level }}</b></a>
+            {% empty %}<div class="electronics-empty">No active products are currently below their reorder level.</div>{% endfor %}
+        </section>
+    </div>
+
+    <section class="electronics-insights-section">
+        <div class="electronics-panel-heading"><div><h2>Business insights</h2><p>Saved insights and recommendations based on your business data</p></div><a href="{% url 'ai_engine:home' %}">Open AI insights <i class="fas fa-arrow-right"></i></a></div>
+        <div class="electronics-insight-grid">
+            {% for insight in electronics_insights %}
+            <article class="electronics-insight"><i class="fas fa-lightbulb"></i><div><span>{{ insight.get_severity_display }} · {{ insight.generated_at|timesince }} ago</span><strong>{{ insight.title }}</strong><p>{{ insight.recommendation|default:insight.description }}</p></div></article>
+            {% empty %}
+            {% if top_product %}<article class="electronics-insight"><i class="fas fa-lightbulb"></i><div><span>Stock · last 7 days</span><strong>{{ top_product.product__name }} sold {{ top_product.units_sold }} unit{{ top_product.units_sold|pluralize }} this week</strong><p>Current recorded stock: {{ top_product.product__current_stock }}.</p></div><a href="{% url 'products:detail' top_product.product_id %}">View product</a></article>{% else %}<div class="electronics-empty">Insights appear here once business data is available. <a href="{% url 'ai_engine:home' %}">Open AI Insights</a>.</div>{% endif %}
+            {% endfor %}
+            {% if overdue_credit_amount %}<article class="electronics-insight"><i class="fas fa-credit-card"></i><div><span>Customer credit</span><strong>{{ user.business.currency }} {{ overdue_credit_amount|floatformat:0 }} overdue</strong><p>{{ overdue_credit_customers }} customers have payment plans past their next due date.</p></div><a href="{% url 'electronics:customer_credit' %}">Review balances</a></article>{% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

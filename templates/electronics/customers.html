@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Customers | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="electronics-page"><div class="electronics-page-container">
+    <header class="electronics-toolbar">
+        <div><h1>Customers <span class="electronics-count">({{ customer_count }})</span></h1><p>Customer relationships, purchase activity, and outstanding credit.</p></div>
+        <div class="electronics-heading-actions"><a class="electronics-button electronics-button-outline" href="{% url 'customers:export' %}"><i class="fas fa-download"></i> Export CSV</a><a class="electronics-button electronics-button-accent" href="{% url 'customers:create' %}"><i class="fas fa-user-plus"></i> Add customer</a></div>
+    </header>
+    <section class="electronics-kpis" aria-label="Customer summary">
+        <article class="electronics-kpi"><div><span>Active customers</span><strong>{{ customer_count }}</strong><small>Live business customer records</small></div><i class="kpi-icon lavender fas fa-users"></i></article>
+        <article class="electronics-kpi"><div><span>New this month</span><strong>{{ new_this_month }}</strong><small>Customer records created this month</small></div><i class="kpi-icon mint fas fa-user-plus"></i></article>
+        <article class="electronics-kpi"><div><span>Repeat rate</span><strong>{{ repeat_rate }}%</strong><small>{{ repeat_customers }} customers with 2+ sales</small></div><i class="kpi-icon mint fas fa-repeat"></i></article>
+        <article class="electronics-kpi"><div><span>Outstanding credit</span><strong>{{ user.business.currency }} {{ credit_total|floatformat:0 }}</strong><small>{{ credit_customers }} customers with a balance</small></div><i class="kpi-icon coral fas fa-credit-card"></i></article>
+    </section>
+    <nav class="electronics-filter-pills" aria-label="Customer segments">
+        <a class="{% if not activity_filter and not credit_filter %}active{% endif %}" href="{% url 'customers:list' %}">All ({{ customer_count }})</a>
+        <a class="{% if activity_filter == 'repeat' %}active{% endif %}" href="?activity=repeat">Repeat customers ({{ repeat_customers }})</a>
+        <a class="{% if credit_filter == 'yes' %}active{% endif %}" href="?credit=yes">Has credit ({{ credit_customers }})</a>
+        <a class="{% if activity_filter == 'new' %}active{% endif %}" href="?activity=new">New this month ({{ new_this_month }})</a>
+        <a class="{% if activity_filter == 'inactive' %}active{% endif %}" href="?activity=inactive">No purchase in 90+ days ({{ inactive_customers }})</a>
+    </nav>
+    <section class="electronics-panel">
+        <form method="get" class="electronics-filter-form">
+            <label class="electronics-search"><i class="fas fa-search"></i><input type="search" name="search" value="{{ search }}" placeholder="Search name, phone, email"></label>
+            <label><span>Credit balance</span><select class="input-field" name="credit"><option value="">Any</option><option value="yes" {% if credit_filter == "yes" %}selected{% endif %}>Has credit</option><option value="no" {% if credit_filter == "no" %}selected{% endif %}>No balance</option></select></label>
+            <label><span>Purchase activity</span><select class="input-field" name="activity"><option value="">Any activity</option><option value="new" {% if activity_filter == "new" %}selected{% endif %}>New this month</option><option value="repeat" {% if activity_filter == "repeat" %}selected{% endif %}>Repeat purchasers</option><option value="inactive" {% if activity_filter == "inactive" %}selected{% endif %}>No purchase in 90+ days</option></select></label>
+            <button class="electronics-button electronics-button-outline" type="submit">Filter</button><a class="electronics-clear-filters" href="{% url 'customers:list' %}">Clear</a>
+        </form>
+        <div class="electronics-table-wrap"><table class="electronics-table"><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Last purchase</th><th>Purchases</th><th>Lifetime spend</th><th>Outstanding</th><th>Activity</th><th>Actions</th></tr></thead><tbody>
+            {% for customer in page_obj %}<tr class="{% if customer.outstanding_credit %}row-info{% endif %}">
+                <td><a class="electronics-table-link" href="{% url 'customers:detail' customer.id %}"><strong>{{ customer.name }}</strong></a></td>
+                <td>{% if customer.phone %}<a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>{% else %}—{% endif %}</td>
+                <td>{{ customer.email|default:"—" }}</td>
+                <td>{% if customer.last_purchase %}{{ customer.last_purchase|date:"j M Y" }}{% else %}No purchase yet{% endif %}</td>
+                <td>{{ customer.order_count }}</td>
+                <td>{{ user.business.currency }} {{ customer.total_spent|default:0|floatformat:2 }}</td>
+                <td>{% if customer.outstanding_credit %}<strong class="metric-negative">{{ user.business.currency }} {{ customer.outstanding_credit|floatformat:2 }}</strong>{% else %}—{% endif %}</td>
+                <td>{% if customer.outstanding_credit %}<span class="electronics-badge info">Has credit</span>{% elif customer.order_count > 1 %}<span class="electronics-badge">Repeat</span>{% elif customer.order_count %}<span class="electronics-badge warning">1 purchase</span>{% elif customer.created_at|date:"Y-m" == current_month %}<span class="electronics-badge">New</span>{% else %}<span class="electronics-badge warning">No purchases</span>{% endif %}</td>
+                <td class="electronics-row-actions">{% if customer.phone %}<a href="tel:{{ customer.phone }}" aria-label="Call {{ customer.name }}"><i class="fas fa-phone"></i></a><a href="sms:{{ customer.phone }}" aria-label="Text {{ customer.name }}"><i class="fas fa-comment-sms"></i></a>{% endif %}<a href="{% url 'customers:detail' customer.id %}" aria-label="View {{ customer.name }}"><i class="fas fa-eye"></i></a></td>
+            </tr>{% empty %}<tr><td colspan="9"><div class="electronics-empty-state"><i class="fas fa-users"></i><strong>No customers match these filters</strong><span>Add a customer or change your search and filters.</span><a class="electronics-button electronics-button-accent" href="{% url 'customers:create' %}">Add customer</a></div></td></tr>{% endfor %}
+        </tbody></table></div>
+        {% if page_obj.has_other_pages %}<nav class="electronics-pagination" aria-label="Customer pages">{% if page_obj.has_previous %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<span>{{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</span>{% if page_obj.has_next %}<a href="?{{ request.GET.urlencode }}&page={{ page_obj.next_page_number }}">Next</a>{% endif %}</nav>{% endif %}
+    </section>
+</div></div>
+{% endblock %}
