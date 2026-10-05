@@ -1,14 +1,14 @@
 {% extends 'layouts/app.html' %}
 {% load static %}
-{% block title %}AI Assistant & Insights | SmartBiz AI{% endblock %}
+{% block title %}AI Insights | SmartBiz{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/ai-assistant.css' %}">{% endblock %}
 {% block page %}
 <div class="ai-workspace">
   <header class="ai-page-heading">
     <div>
       <p class="ai-eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> SmartBiz intelligence</p>
-      <h1>Your AI business assistant</h1>
-      <p>Ask questions about your latest business performance and get answers grounded in your data.</p>
+      <h1>AI business insights</h1>
+      <p>Review trends, recommendations, and forecasts based on your recorded business activity.</p>
     </div>
     <div class="ai-page-actions">
       <form method="post" action="{% url 'ai_engine:generate' %}">
@@ -22,97 +22,17 @@
     </div>
   </header>
 
-  <section class="ai-assistant-card" id="assistant" aria-labelledby="assistant-title">
-    <div class="ai-assistant-top">
-      <div class="ai-assistant-identity">
-        <span class="ai-assistant-mark"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i></span>
-        <div>
-          <div class="ai-assistant-title-line"><h2 id="assistant-title">Ask SmartBiz AI</h2><span class="ai-live-pill"><i aria-hidden="true"></i> {% if gemini_configured %}Gemini enabled{% else %}Setup needed{% endif %}</span></div>
-          <p>Your business data, translated into clear next steps</p>
-        </div>
-      </div>
-      <span class="ai-model-label"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Private business context</span>
-    </div>
-
-    <div class="ai-chat-body">
-      {% if not has_business %}
-      <div class="ai-setup-notice">
-        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
-        <div><strong>Connect your business to get started</strong><p>The assistant needs business data to answer questions.</p><a href="{% url 'businesses:setup' %}">Set up your business <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
-      </div>
-      {% elif not gemini_configured %}
-      <div class="ai-setup-notice">
-        <i class="fa-solid fa-key" aria-hidden="true"></i>
-        <div><strong>Gemini key is not visible to this server process</strong><p>Set <code>GEMINI_API_KEY</code> or <code>GOOGLE_API_KEY</code> in the environment used to start Django, then restart the app. The key’s value is never shown here.</p></div>
-      </div>
-      {% elif not queries %}
-      <div class="ai-welcome">
-        <span class="ai-welcome-icon"><i class="fa-solid fa-comments" aria-hidden="true"></i></span>
-        <h3>What would you like to understand?</h3>
-        <p>Ask about sales, inventory, expenses, or your next business move.</p>
-      </div>
-      {% endif %}
-
-      {% if queries %}
-      <div class="ai-conversation" aria-label="Recent conversation" aria-live="polite">
-        {% for query in queries %}
-        <article class="ai-message ai-message-user">
-          <span class="ai-message-avatar ai-user-avatar" aria-hidden="true">{{ user.first_name|default:user.email|first|upper }}</span>
-          <div class="ai-message-content"><span class="ai-message-author">You <time datetime="{{ query.created_at|date:'c' }}">{{ query.created_at|date:"j M · g:i A" }}</time></span><p>{{ query.question }}</p></div>
-        </article>
-        <article class="ai-message ai-message-assistant">
-          <span class="ai-message-avatar ai-gemini-avatar" aria-hidden="true"><i class="fa-solid fa-sparkles"></i></span>
-          <div class="ai-message-content"><span class="ai-message-author">SmartBiz AI <span class="ai-answer-source"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Gemini · live data</span></span><p class="ai-answer-text">{{ query.answer }}</p></div>
-        </article>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      {% if gemini_configured and has_business %}
-      <div class="ai-prompt-area">
-        <p class="ai-prompt-label">Try asking</p>
-        <div class="ai-prompt-list" aria-label="Suggested questions">
-          <button type="button" class="ai-prompt-chip" data-ai-prompt="How are my sales performing compared with the previous 30 days?"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i> Compare my sales</button>
-          <button type="button" class="ai-prompt-chip" data-ai-prompt="Which products need stock attention and what should I review?"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i> Check stock risks</button>
-          <button type="button" class="ai-prompt-chip" data-ai-prompt="What are my largest expense categories, and how have expenses changed?"><i class="fa-solid fa-receipt" aria-hidden="true"></i> Review expenses</button>
-          <button type="button" class="ai-prompt-chip" data-ai-prompt="Give me a concise overview of my business performance and practical next steps."><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Suggest next steps</button>
-        </div>
-      </div>
-
-      <form method="post" action="{% url 'ai_engine:assistant' %}" class="ai-composer" data-ai-composer>
-        {% csrf_token %}
-        <label class="sr-only" for="{{ form.question.id_for_label }}">Ask a question about your business</label>
-        {{ form.question }}
-        {% for error in form.question.errors %}<small class="ai-form-error">{{ error }}</small>{% endfor %}
-        <div class="ai-composer-footer">
-          <span><i class="fa-solid fa-lock" aria-hidden="true"></i> Summarized metrics only · Enter to send · Shift+Enter for a new line</span>
-          <button class="ai-send-button" type="submit" aria-label="Send question"><span>Ask AI</span><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-        </div>
-        <p class="ai-thinking-status" role="status" aria-live="polite" data-ai-status></p>
-      </form>
-      {% endif %}
-    </div>
-    <p class="ai-privacy-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Answers are based on current business summaries and may not include context that hasn’t been recorded.</p>
-  </section>
-
-  <section class="ai-engine-status">
-    <div class="ai-status-mark"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></div>
-    <div class="ai-status-copy"><strong>AI engine status</strong><span>Analysis for {{ user.business.name|default:"your business" }} · model {{ gemini_model }}</span></div>
-    <span class="ai-status-connection {% if gemini_configured %}is-connected{% endif %}"><i aria-hidden="true"></i>{% if gemini_configured %}Ready to send{% else %}Gemini not configured{% endif %}</span>
-  </section>
-
   <section class="ai-results-section" id="insights">
     <div class="ai-section-heading">
-      <div><p class="ai-eyebrow">Business intelligence</p><h2>Recent insights &amp; recommendations</h2><p>Signals from recorded business activity, with Gemini's latest overall review at the top.</p></div>
-      <a href="#assistant" class="ai-text-link">Ask a follow-up <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+      <div><p class="ai-eyebrow">Business intelligence</p><h2>Recent insights &amp; recommendations</h2><p>Signals from recorded business activity and practical next steps.</p></div>
     </div>
     <div class="ai-results-grid">
       <section class="ai-result-panel">
-        <div class="ai-panel-heading"><span class="ai-panel-icon ai-insight-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><div><h3>Insights</h3><p>Observed trends and AI analysis</p></div><span class="ai-panel-count">{{ insights|length }}</span></div>
+        <div class="ai-panel-heading"><span class="ai-panel-icon ai-insight-icon"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i></span><div><h3>Insights</h3><p>Observed trends and analysis</p></div><span class="ai-panel-count">{{ insights|length }}</span></div>
         <div class="ai-result-list">
           {% for insight in insights %}
           <article class="ai-insight-item">
-            <div class="ai-item-topline"><span class="ai-source-tag {% if insight.source == 'AI' %}is-gemini{% endif %}">{{ insight.get_source_display }}</span><span class="ai-score">Score {{ insight.score|floatformat:2 }}</span></div>
+            <div class="ai-item-topline"><span class="ai-source-tag">{{ insight.get_source_display }}</span><span class="ai-score">Score {{ insight.score|floatformat:2 }}</span></div>
             <h4>{{ insight.title }}</h4>
             <p class="ai-observation">{{ insight.observation }}</p>
             {% if insight.interpretation %}<p class="ai-interpretation">{{ insight.interpretation }}</p>{% endif %}
@@ -149,4 +69,3 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block extra_js %}<script src="{% static 'js/ai-assistant.js' %}" defer></script>{% endblock %}

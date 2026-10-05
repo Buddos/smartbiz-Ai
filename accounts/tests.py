@@ -34,6 +34,29 @@ class RegistrationTests(TestCase):
 		self.assertEqual(login_response.status_code, 302)
 		self.assertNotEqual(login_response.url, "/accounts/login/")
 
+	def test_login_email_is_case_insensitive_after_registration(self):
+		self.client.post(
+			"/accounts/register/",
+			{
+				"first_name": "Case",
+				"last_name": "Sensitive",
+				"email": "case@example.com",
+				"password1": "StrongPass1@",
+				"password2": "StrongPass1@",
+			},
+		)
+
+		login_response = self.client.post(
+			"/accounts/login/",
+			{
+				"email": "Case@Example.com",
+				"password": "StrongPass1@",
+			},
+		)
+
+		self.assertEqual(login_response.status_code, 302)
+		self.assertNotEqual(login_response.url, "/accounts/login/")
+
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class PasswordResetTests(TestCase):

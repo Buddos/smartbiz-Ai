@@ -20,7 +20,7 @@
         <article class="retail-metric compact"><span>Stock value</span><strong>{{ user.business.currency }} {{ stock_value|floatformat:0 }}</strong><small>At purchase cost</small></article>
     </section>
     <section class="retail-tool-panel">
-        <div class="retail-section-heading"><div><h2><i class="fas fa-store" aria-hidden="true"></i> Retail sales desk</h2><p>Fast checkout, stock replenishment, till reconciliation, and customer follow-up.</p></div><a href="{% url 'businesses:settings' %}">Manage settings <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
+        <div class="retail-section-heading"><div><h2><i class="fas fa-store" aria-hidden="true"></i> Retail sales desk</h2><p>Fast checkout, stock replenishment, till reconciliation, and customer follow-up.</p></div>{% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'businesses:settings' %}?from=admin">Manage business settings <i class="fas fa-arrow-right" aria-hidden="true"></i></a>{% endif %}</div>
         <div class="retail-tool-grid">
             <a href="{% url 'inventory:dashboard' %}"><i class="fas fa-boxes-stacked" aria-hidden="true"></i><span><strong>Inventory &amp; stock</strong><small>Products, stock levels, and movements</small></span></a>
             <a href="{% url 'retail:credit' %}"><i class="fas fa-credit-card" aria-hidden="true"></i><span><strong>Debts &amp; credit</strong><small>{{ user.business.currency }} {{ open_credit_total|floatformat:0 }} outstanding across {{ customers_with_credit }} customers</small></span></a>

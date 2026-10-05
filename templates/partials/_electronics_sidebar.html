@@ -20,13 +20,13 @@
         <a class="electronics-nav-link {% if request.resolver_match.url_name == 'customer_credit' %}active{% endif %}" href="{% url 'electronics:customer_credit' %}"><i class="fas fa-credit-card"></i><span>Customer Credit</span></a>
 
         <p class="electronics-nav-label">SmartBiz AI</p>
-        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}?view=assistant#assistant"><i class="fas fa-robot"></i><span>AI Assistant</span></a>
-        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view != 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb"></i><span>AI Insights</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:assistant' %}"><i class="fas fa-robot"></i><span>AI Assistant</span></a>
+        <a class="electronics-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name != 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb"></i><span>AI Insights</span></a>
     </nav>
     <div class="electronics-sidebar-account">
         <span class="electronics-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</span>
         <span class="electronics-user-name"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></span>
-        <a href="{% url 'businesses:settings' %}" aria-label="Settings" title="Settings"><i class="fas fa-gear"></i></a>
+        {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}" aria-label="Business administration" title="Business administration"><i class="fas fa-user-shield"></i></a>{% else %}<a href="{% url 'accounts:settings' %}" aria-label="Personal settings" title="Personal settings"><i class="fas fa-gear"></i></a>{% endif %}
     </div>
 </aside>
 <button class="electronics-sidebar-scrim" type="button" data-electronics-close aria-label="Close navigation"></button>

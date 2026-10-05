@@ -21,4 +21,9 @@ urlpatterns = [
     
     # API Endpoints
     path('api/dashboard-data/', views.get_dashboard_data_api, name='api_dashboard'),
+    path(
+        'api/restaurant-dashboard/',
+        views.restaurant_dashboard_data_api,
+        name='restaurant_dashboard_data',
+    ),
 ]

@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -5,12 +7,25 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import Business, BusinessSettings, BusinessBranch
 from .forms import BusinessSetupForm, BusinessUpdateForm, BusinessSettingsForm, BusinessBranchForm
 from accounts.models import UserActivity
 from accounts.decorators import role_required, business_required
 from .capabilities import CAPABILITY_REGISTRY, CATEGORY_PRESETS, capabilities_for_business
+
+
+def _business_admin_redirect(request, route_name, **kwargs):
+    url = reverse(route_name, kwargs=kwargs or None)
+    query = {}
+    if request.GET.get("from") == "admin" or request.POST.get("from") == "admin":
+        query["from"] = "admin"
+    if request.GET.get("section"):
+        query["section"] = request.GET["section"]
+    if query:
+        url = f"{url}?{urlencode(query)}"
+    return redirect(url)
 
 
 def _dashboard_redirect_for(business):
@@ -77,6 +92,11 @@ def business_setup(request):
 def business_settings_view(request):
     """View and edit business settings."""
     business = request.user.business
+    if request.method == "GET" and request.GET.get("from") != "admin":
+        query = {"from": "admin"}
+        if request.GET.get("section"):
+            query["section"] = request.GET["section"]
+        return redirect(f"{reverse('businesses:settings')}?{urlencode(query)}")
     
     if request.method == 'POST':
         form = BusinessUpdateForm(request.POST, request.FILES, instance=business)
@@ -96,7 +116,7 @@ def business_settings_view(request):
             )
             
             messages.success(request, 'Business settings updated successfully!')
-            return redirect('businesses:settings')
+            return _business_admin_redirect(request, 'businesses:settings')
     else:
         form = BusinessUpdateForm(instance=business)
     
@@ -145,7 +165,7 @@ def capabilities_save(request):
     business.enabled_capabilities = [capability_id for capability_id in requested if capability_id in valid]
     business.save(update_fields=['enabled_capabilities', 'updated_at'])
     messages.success(request, 'Your business capabilities and navigation were updated.')
-    return redirect('businesses:settings')
+    return _business_admin_redirect(request, 'businesses:settings')
 
 @login_required
 @role_required(['SUPER_ADMIN', 'ADMIN'])
@@ -212,7 +232,9 @@ def branch_create_view(request):
             branch.save()
             
             messages.success(request, f'Branch "{branch.name}" created successfully!')
-            return redirect('businesses:branches')
+            return _business_admin_redirect(request, 'businesses:settings') if (
+                request.GET.get("from") == "admin" or request.POST.get("from") == "admin"
+            ) else redirect('businesses:branches')
     else:
         form = BusinessBranchForm()
     
@@ -232,7 +254,9 @@ def branch_update_view(request, branch_id):
         if form.is_valid():
             form.save()
             messages.success(request, f'Branch "{branch.name}" updated successfully!')
-            return redirect('businesses:branches')
+            return _business_admin_redirect(request, 'businesses:settings') if (
+                request.GET.get("from") == "admin" or request.POST.get("from") == "admin"
+            ) else redirect('businesses:branches')
     else:
         form = BusinessBranchForm(instance=branch)
     
@@ -251,9 +275,13 @@ def branch_delete_view(request, branch_id):
     
     if branch.is_main:
         messages.error(request, 'Cannot delete the main branch.')
-        return redirect('businesses:branches')
+        return _business_admin_redirect(request, 'businesses:settings') if (
+            request.GET.get("from") == "admin" or request.POST.get("from") == "admin"
+        ) else redirect('businesses:branches')
     
     branch_name = branch.name
     branch.delete()
     messages.success(request, f'Branch "{branch_name}" deleted successfully!')
-    return redirect('businesses:branches')
+    return _business_admin_redirect(request, 'businesses:settings') if (
+        request.GET.get("from") == "admin" or request.POST.get("from") == "admin"
+    ) else redirect('businesses:branches')

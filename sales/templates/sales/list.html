@@ -20,7 +20,7 @@
                     <i class="fas fa-download mr-2"></i>Export
                 </a>
                 <a href="{% url 'sales:create' %}" class="btn-primary inline-flex items-center">
-                    <i class="fas fa-plus mr-2"></i>New Sale
+                    <i class="fas fa-plus mr-2"></i>{% if request.user.business.business_type == 'RESTAURANT' %}Add new order{% else %}New Sale{% endif %}
                 </a>
             </div>
         </div>

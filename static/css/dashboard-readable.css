@@ -1,0 +1,202 @@
+.dashboard-readable {
+    font-size: 16px;
+}
+
+.dashboard-readable :is(p, span, small, a, button, label, th, td, li):not(
+    .text-xl,
+    .text-2xl,
+    .text-3xl,
+    .text-4xl
+) {
+    font-size: max(16px, 1em) !important;
+}
+
+.dashboard-readable :is(input, select, textarea) {
+    font-size: max(16px, 1em) !important;
+}
+
+.dashboard-readable :is(
+    .retail-seller-name strong,
+    .retail-insight strong,
+    .electronics-record-row strong,
+    .electronics-insight strong,
+    .salon-sale-person strong
+) {
+    font-size: max(16px, 1em) !important;
+}
+
+.dashboard-readable .electronics-sidebar,
+.dashboard-readable .salon-sidebar {
+    width: 254px !important;
+}
+
+.retail-readable .retail-sidebar {
+    width: 248px !important;
+    flex-basis: 248px !important;
+}
+
+.dashboard-readable .electronics-sidebar {
+    flex-basis: 254px !important;
+}
+
+.dashboard-readable .electronics-brand,
+.dashboard-readable .salon-brand-name {
+    font-size: 18px !important;
+}
+
+.dashboard-readable .electronics-nav-label,
+.dashboard-readable .salon-nav-label {
+    font-size: 14px !important;
+}
+
+.dashboard-readable .electronics-nav-link,
+.dashboard-readable .salon-nav-link {
+    min-height: 46px;
+    font-size: 16px !important;
+}
+
+.dashboard-readable .electronics-sidebar-account .electronics-user-name strong,
+.dashboard-readable .salon-user-details strong {
+    font-size: 16px !important;
+}
+
+.dashboard-readable .electronics-sidebar-account .electronics-user-name small,
+.dashboard-readable .salon-user-details small {
+    font-size: 16px !important;
+}
+
+.dashboard-readable .electronics-avatar,
+.dashboard-readable .salon-user-avatar,
+.dashboard-readable .salon-topbar-profile {
+    width: 40px !important;
+    height: 40px !important;
+    flex-basis: 40px !important;
+    border-radius: 50% !important;
+}
+
+.dashboard-readable .electronics-avatar img,
+.dashboard-readable .salon-user-avatar img,
+.dashboard-readable .salon-topbar-profile img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+@media (max-width: 760px) {
+    .dashboard-readable .electronics-sidebar,
+    .dashboard-readable .salon-sidebar {
+        width: min(290px, calc(100vw - 48px)) !important;
+    }
+
+    .dashboard-readable .electronics-sidebar {
+        flex-basis: min(290px, calc(100vw - 48px)) !important;
+    }
+}
+
+.dashboard-readable .restaurant-brand-copy strong {
+    font-size: 18px !important;
+}
+
+.dashboard-readable .restaurant-brand-copy small,
+.dashboard-readable .restaurant-topbar-heading span,
+.dashboard-readable .restaurant-topbar-heading strong {
+    font-size: 16px !important;
+}
+
+.dashboard-readable .restaurant-nav-label {
+    font-size: 14px !important;
+}
+
+.dashboard-readable .restaurant-nav-link {
+    min-height: 46px;
+    font-size: 16px !important;
+}
+
+.dashboard-readable .restaurant-nav-link > i {
+    font-size: 16px;
+}
+
+.dashboard-readable .restaurant-primary-action {
+    min-height: 46px;
+    font-size: 16px !important;
+}
+
+.dashboard-readable .restaurant-account-toggle {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+}
+
+.dashboard-readable .restaurant-panel-heading h2 {
+    font-size: 18px;
+}
+
+.retail-readable {
+    font-size: 16px;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.retail-readable :is(p, span, small, a, button, label, th, td, li) {
+    font-size: max(16px, 1em) !important;
+}
+
+.retail-readable .retail-nav-label,
+.retail-readable .retail-brand small {
+    font-size: 14px !important;
+}
+
+.retail-readable .retail-nav-link {
+    min-height: 46px;
+    font-size: 16px !important;
+}
+
+.retail-readable .retail-sidebar-account .retail-user-name strong {
+    font-size: 16px !important;
+}
+
+.retail-readable .retail-sidebar-account .retail-user-name small {
+    font-size: 16px !important;
+}
+
+.retail-readable .retail-brand {
+    font-size: 17px;
+}
+
+.retail-readable .retail-account-avatar,
+.retail-readable .retail-user-avatar {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #e6f4ea;
+    color: #1b7a4d;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.retail-readable .retail-account-avatar img,
+.retail-readable .retail-user-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.retail-readable .retail-account-avatar:focus-visible {
+    outline: 2px solid #1b7a4d;
+    outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+    .retail-readable .retail-sidebar {
+        width: min(290px, calc(100vw - 48px)) !important;
+        flex-basis: min(290px, calc(100vw - 48px)) !important;
+    }
+}

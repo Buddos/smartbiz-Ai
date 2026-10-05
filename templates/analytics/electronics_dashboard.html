@@ -25,7 +25,7 @@
                     <small>{{ user.get_role_display }}</small>
                 </div>
                 {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield" aria-hidden="true"></i>Business admin</a>{% endif %}
-                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'businesses:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>{% else %}<a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>{% endif %}
+                <a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Personal settings</a>
                 <a href="{% url 'accounts:profile' %}"><i class="fas fa-user" aria-hidden="true"></i>Profile</a>
                 <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Log out</a>
             </div>

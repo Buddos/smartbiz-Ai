@@ -90,6 +90,9 @@ class UserLoginForm(forms.Form):
     )
     remember = forms.BooleanField(required=False)
 
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
 class UserProfileForm(forms.ModelForm):
     """Form for updating user profile."""
     

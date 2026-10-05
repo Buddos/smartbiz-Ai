@@ -1,3 +1,349 @@
-{% extends 'sales/form.html' %}
-{% block sale_profile_kicker %}<p class="invoice-create-kicker">Restaurant service ticket</p>{% endblock %}
-{% block sale_profile_intro %}<div class="mt-4 rounded-lg border border-orange-100 bg-orange-50 p-4"><strong class="text-orange-900"><i class="fas fa-utensils mr-2"></i>Build this order for the floor</strong><p class="mt-1 text-sm text-orange-800">Choose the menu items, record the table or takeaway reference, then capture payment.</p></div>{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add new order - {{ request.user.business.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .restaurant-order-page { --order-green: #0f6e56; --order-deep: #0a4d3b; --order-muted: #6c7b73; color: #18251f; }
+    .restaurant-order-page * { box-sizing: border-box; }
+    .order-page-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; }
+    .order-page-heading h1 { margin:.15rem 0; color:var(--order-deep); font-size:clamp(1.65rem, 3vw, 2.2rem); font-weight:800; letter-spacing:-.04em; }
+    .order-page-heading p { margin:0; color:var(--order-muted); }
+    .order-page-kicker { color:var(--order-green)!important; font-size:.73rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .order-back-link { display:inline-flex; align-items:center; gap:.55rem; color:var(--order-green); font-size:.9rem; font-weight:700; text-decoration:none; }
+    .order-layout { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr) minmax(270px,.75fr); gap:1rem; align-items:start; }
+    .order-panel { min-width:0; overflow:hidden; border:1px solid #e0e8e3; border-radius:16px; background:#fff; box-shadow:0 5px 20px rgba(21,48,36,.045); }
+    .order-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:.7rem; padding:1.05rem 1.1rem; border-bottom:1px solid #edf1ee; }
+    .order-panel-heading h2 { margin:0; color:#183c2d; font-size:1.05rem; font-weight:800; }
+    .order-panel-heading p { margin:.2rem 0 0; color:var(--order-muted); font-size:.78rem; }
+    .order-panel-content { padding:1rem; }
+    .order-search-wrap { position:relative; margin-bottom:.9rem; }
+    .order-search-wrap i { position:absolute; top:50%; left:.85rem; color:#77877e; transform:translateY(-50%); }
+    .order-search { width:100%; min-height:43px; padding:.65rem .8rem .65rem 2.45rem; border:1px solid #dfe8e2; border-radius:10px; background:#fbfdfb; outline:none; }
+    .order-search:focus { border-color:#75b69d; box-shadow:0 0 0 3px rgba(15,110,86,.1); }
+    .order-menu-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.65rem; max-height:570px; overflow:auto; padding:.05rem .15rem .05rem 0; }
+    .order-menu-card { display:flex; min-height:102px; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:.45rem; padding:.8rem; border:1px solid #e4ebe6; border-radius:12px; background:#fff; color:inherit; text-align:left; cursor:pointer; transition:border-color .15s, background .15s, transform .15s; }
+    .order-menu-card:hover,.order-menu-card:focus-visible { border-color:#7fbaa3; background:#f4faf6; transform:translateY(-1px); outline:none; }
+    .order-menu-card strong { font-size:.89rem; line-height:1.3; }
+    .order-menu-card span { color:var(--order-green); font-size:.85rem; font-weight:800; }
+    .order-menu-empty { grid-column:1/-1; padding:1.3rem .7rem; color:var(--order-muted); font-size:.88rem; text-align:center; }
+    .order-setup { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; padding:1rem; border-bottom:1px solid #edf1ee; background:#fbfdfb; }
+    .order-setup label,.order-checkout label,.order-customer-fields label { display:grid; gap:.35rem; color:#43564b; font-size:.76rem; font-weight:750; }
+    .order-setup .order-setup-wide { grid-column:1/-1; }
+    .order-input { width:100%; min-height:40px; padding:.58rem .65rem; border:1px solid #dce6df; border-radius:9px; background:#fff; color:#1c2b23; font-size:.88rem; }
+    .order-input:focus { border-color:#75b69d; outline:3px solid rgba(15,110,86,.1); }
+    .order-cart-list { display:grid; gap:.7rem; }
+    .order-cart-row { position:relative; display:grid; grid-template-columns:minmax(0,1fr) 78px 92px; gap:.55rem; align-items:end; padding:.8rem; border:1px solid #e4ebe6; border-radius:11px; background:#fbfdfb; }
+    .order-cart-row label { display:grid; min-width:0; gap:.32rem; color:#617168; font-size:.7rem; font-weight:750; }
+    .order-cart-row .order-cart-product { grid-column:1/-1; }
+    .order-cart-row input { width:100%; min-width:0; min-height:37px; padding:.5rem; border:1px solid #dce6df; border-radius:8px; background:#fff; color:#1c2b23; font-size:.83rem; }
+    .order-cart-row input:focus { border-color:#75b69d; outline:2px solid rgba(15,110,86,.1); }
+    .order-cart-row .order-line-total { grid-column:1/3; align-self:center; color:var(--order-deep); font-size:.8rem; font-weight:800; }
+    .order-remove-row { justify-self:end; padding:.25rem .1rem; border:0; background:none; color:#a33c35; font-size:.75rem; font-weight:750; cursor:pointer; }
+    .order-row-errors { grid-column:1/-1; margin:0; color:#b42318; font-size:.73rem; }
+    .order-add-line { display:inline-flex; align-items:center; gap:.45rem; margin-top:.8rem; padding:.55rem .75rem; border:1px solid #b8d9ca; border-radius:9px; background:#fff; color:var(--order-green); font-size:.82rem; font-weight:800; cursor:pointer; }
+    .order-add-line:hover { background:#f2faf5; }
+    .order-checkout { position:sticky; top:1rem; }
+    .order-checkout-body { display:grid; gap:1rem; padding:1rem; }
+    .order-checkout-fields { display:grid; gap:.7rem; }
+    .order-customer-fields { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
+    .order-customer-fields .order-customer-wide { grid-column:1/-1; }
+    .order-customer-details { border:1px solid #e4ebe6; border-radius:10px; }
+    .order-customer-details summary { padding:.7rem .8rem; color:#3f594a; font-size:.8rem; font-weight:800; cursor:pointer; }
+    .order-customer-details[open] .order-customer-fields { padding:0 .8rem .8rem; }
+    .order-totals { display:grid; gap:.65rem; padding:1rem; border:1px solid #e3ebe5; border-radius:12px; background:#f7faf8; }
+    .order-total-row { display:flex; justify-content:space-between; gap:.7rem; color:#64736b; font-size:.84rem; }
+    .order-total-row strong { color:#23372b; }
+    .order-total-grand { margin-top:.2rem; padding-top:.7rem; border-top:1px solid #dbe5de; color:var(--order-deep); font-size:1rem; font-weight:850; }
+    .order-total-grand strong { color:var(--order-green); font-size:1.35rem; }
+    .order-submit { width:100%; min-height:48px; border:0; border-radius:10px; background:var(--order-green); color:white; font-weight:850; cursor:pointer; }
+    .order-submit:hover { background:#0b5d48; }
+    .order-submit:disabled { cursor:wait; opacity:.7; }
+    .order-cancel { display:block; color:#64736b; font-size:.82rem; font-weight:700; text-align:center; text-decoration:none; }
+    .order-cancel:hover { color:var(--order-green); }
+    .order-form-errors { margin-bottom:1rem; padding:.85rem 1rem; border:1px solid #f1c7c4; border-radius:10px; background:#fff6f5; color:#8f2620; font-size:.83rem; }
+    .order-form-errors p { margin:.2rem 0; }
+    .order-field-error { margin:0; color:#b42318; font-size:.73rem; }
+    @media (max-width:1050px) { .order-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .order-checkout { position:static; grid-column:1/-1; } .order-checkout-body { grid-template-columns:minmax(0,1fr) minmax(250px,.75fr); align-items:start; } }
+    @media (max-width:680px) { .restaurant-order-page { padding-top:1rem!important; } .order-page-heading { align-items:flex-start; flex-direction:column; } .order-layout { grid-template-columns:1fr; } .order-checkout { grid-column:auto; } .order-checkout-body { grid-template-columns:1fr; } .order-menu-grid { max-height:360px; } .order-cart-row { grid-template-columns:minmax(0,1fr) 68px 82px; padding:.65rem; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="restaurant-order-page min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8" data-restaurant-order>
+    <div class="mx-auto max-w-screen-2xl">
+        <header class="order-page-heading">
+            <div>
+                <a class="order-back-link" href="{% url 'sales:list' %}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to orders</a>
+                <p class="order-page-kicker mt-4">Restaurant service · {{ request.user.business.name }}</p>
+                <h1>Add new order</h1>
+                <p>Choose menu items, set the service details, and review the total before saving.</p>
+            </div>
+            <div class="hidden items-center gap-2 rounded-full border border-green-100 bg-green-50 px-3 py-2 text-xs font-bold text-green-800 sm:flex">
+                <i class="fas fa-circle-check" aria-hidden="true"></i> Live menu · saved catalog
+            </div>
+        </header>
+
+        <form method="post" id="saleForm" data-restaurant-order-form>
+            {% csrf_token %}
+            {% if form.non_field_errors or form.errors or formset.non_form_errors %}
+                <div class="order-form-errors" role="alert">
+                    <strong>Please correct the order details below.</strong>
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                    {% for field, errors in form.errors.items %}{% for error in errors %}<p>{{ error }}</p>{% endfor %}{% endfor %}
+                    {% for error in formset.non_form_errors %}<p>{{ error }}</p>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="order-layout">
+                <section class="order-panel" aria-labelledby="order-menu-heading">
+                    <div class="order-panel-heading">
+                        <div><h2 id="order-menu-heading">Menu</h2><p>Select an item to add it to this order.</p></div>
+                        <span class="rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-800">{{ quick_products|length }} items</span>
+                    </div>
+                    <div class="order-panel-content">
+                        <label class="order-search-wrap block">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                            <input class="order-search" type="search" data-menu-search placeholder="Search menu..." aria-label="Search menu items">
+                        </label>
+                        <div class="order-menu-grid" data-menu-grid>
+                            {% for product in quick_products %}
+                                <button type="button" class="order-menu-card" data-menu-item data-product-name="{{ product.name|escape }}" data-product-price="{{ product.selling_price }}">
+                                    <strong>{{ product.name }}</strong>
+                                    <span>{{ request.user.business.currency|default:"KES" }} {{ product.selling_price|floatformat:2 }}</span>
+                                </button>
+                            {% empty %}
+                                <p class="order-menu-empty">No active menu items are available yet. Add menu items in Products to start taking orders.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="order-panel" aria-labelledby="current-order-heading">
+                    <div class="order-panel-heading">
+                        <div><h2 id="current-order-heading">Current order</h2><p>Set the service details and adjust quantities.</p></div>
+                        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-700" data-order-item-count>0 items</span>
+                    </div>
+                    <div class="order-setup">
+                        <label>Order type {{ form.order_type }}{% for error in form.order_type.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                        <label>Table / reference {{ form.table_reference }}{% for error in form.table_reference.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                        <label class="order-setup-wide">Served by {{ form.served_by }}{% for error in form.served_by.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                    </div>
+                    {{ formset.management_form }}
+                    <div class="order-panel-content">
+                        <div class="order-cart-list" id="formsetContainer">
+                            {% for item_form in formset %}
+                                <article class="order-cart-row formset-item" data-cart-row>
+                                    {{ item_form.id }}
+                                    {{ item_form.DELETE.as_hidden }}
+                                    <label class="order-cart-product">Menu item
+                                        {{ item_form.product }}
+                                        {% for error in item_form.product.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}
+                                    </label>
+                                    <label>Qty
+                                        {{ item_form.quantity }}
+                                        {% for error in item_form.quantity.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}
+                                    </label>
+                                    <label>Unit price
+                                        {{ item_form.unit_price }}
+                                        {% for error in item_form.unit_price.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}
+                                    </label>
+                                    <strong class="order-line-total" data-line-total>{{ request.user.business.currency|default:"KES" }} 0.00</strong>
+                                    <button type="button" class="order-remove-row" data-remove-row>Remove</button>
+                                </article>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="order-add-line" id="addItem"><i class="fas fa-plus" aria-hidden="true"></i> Add custom item</button>
+                    </div>
+                </section>
+
+                <aside class="order-panel order-checkout" aria-labelledby="checkout-heading">
+                    <div class="order-panel-heading">
+                        <div><h2 id="checkout-heading">Checkout</h2><p>Payment and customer details.</p></div>
+                        <i class="fas fa-receipt text-green-700" aria-hidden="true"></i>
+                    </div>
+                    <div class="order-checkout-body">
+                        <div class="order-checkout-fields">
+                            <label>Payment method
+                                <select name="payment_method" id="payment_method" class="order-input">
+                                    {% for value, label in form.fields.payment_method.choices %}
+                                        <option value="{{ value }}" {% if form.payment_method.value == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>Transaction reference {{ form.transaction_code }}{% for error in form.transaction_code.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                            <label>Discount {{ form.discount }}{% for error in form.discount.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                            <label>Order notes {{ form.notes }}{% for error in form.notes.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}</label>
+                            <details class="order-customer-details">
+                                <summary>Customer details (optional)</summary>
+                                <div class="order-customer-fields">
+                                    <label class="order-customer-wide">Saved customer
+                                        <select name="customer" id="customer" class="order-input" data-client-selector>
+                                            <option value="">Walk-in customer</option>
+                                            {% for customer in form.fields.customer.queryset %}
+                                                <option value="{{ customer.id }}" data-name="{{ customer.name|escape }}" data-phone="{{ customer.phone|escape }}" data-email="{{ customer.email|escape }}" {% if form.customer.value == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.name }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% for error in form.customer.errors %}<small class="order-field-error">{{ error }}</small>{% endfor %}
+                                    </label>
+                                    <label class="order-customer-wide">Customer name
+                                        <input class="order-input" type="text" name="customer_name" id="customer_name" value="{{ form.customer_name.value|default:'' }}" placeholder="Walk-in customer">
+                                    </label>
+                                    <label>Phone
+                                        <input class="order-input" type="text" name="customer_phone" id="customer_phone" value="{{ form.customer_phone.value|default:'' }}" placeholder="Phone number">
+                                    </label>
+                                    <label>Email
+                                        <input class="order-input" type="email" name="customer_email" id="customer_email" value="{{ form.customer_email.value|default:'' }}" placeholder="Email address">
+                                    </label>
+                                </div>
+                            </details>
+                        </div>
+                        <div class="order-totals" aria-live="polite">
+                            <div class="order-total-row"><span>Subtotal</span><strong data-order-subtotal>{{ request.user.business.currency|default:"KES" }} 0.00</strong></div>
+                            <div class="order-total-row"><span>Discount</span><strong data-order-discount>{{ request.user.business.currency|default:"KES" }} 0.00</strong></div>
+                            <div class="order-total-row order-total-grand"><span>Total</span><strong data-order-total>{{ request.user.business.currency|default:"KES" }} 0.00</strong></div>
+                        </div>
+                        <button type="submit" class="order-submit"><i class="fas fa-check mr-2" aria-hidden="true"></i>Save order</button>
+                        <a class="order-cancel" href="{% url 'sales:list' %}">Cancel and return to orders</a>
+                    </div>
+                </aside>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+(() => {
+    const form = document.querySelector('[data-restaurant-order-form]');
+    if (!form) return;
+
+    const container = document.getElementById('formsetContainer');
+    const totalForms = document.getElementById('id_sale_items-TOTAL_FORMS');
+    const currency = '{{ request.user.business.currency|default:"KES"|escapejs }}';
+    const money = (amount) => `${currency} ${amount.toFixed(2)}`;
+    const activeRows = () => Array.from(container.querySelectorAll('[data-cart-row]')).filter((row) => (
+        row.querySelector('input[name$="-DELETE"]')?.value !== 'on'
+        && row.querySelector('input[name$="-DELETE"]')?.value !== 'true'
+        && !row.hidden
+    ));
+    const rowHasItem = (row) => Boolean(row.querySelector('input[name$="-product"]')?.value.trim());
+
+    function updateTotals() {
+        let subtotal = 0;
+        let itemCount = 0;
+        activeRows().forEach((row) => {
+            const quantityInput = row.querySelector('input[name$="-quantity"]');
+            const priceInput = row.querySelector('input[name$="-unit_price"]');
+            const quantity = Math.max(0, Number.parseFloat(quantityInput?.value) || 0);
+            const price = Math.max(0, Number.parseFloat(priceInput?.value) || 0);
+            const lineTotal = quantity * price;
+            subtotal += lineTotal;
+            itemCount += rowHasItem(row) ? quantity : 0;
+            const lineDisplay = row.querySelector('[data-line-total]');
+            if (lineDisplay) lineDisplay.textContent = money(lineTotal);
+        });
+        const discountInput = document.getElementById('id_discount');
+        const discount = Math.min(subtotal, Math.max(0, Number.parseFloat(discountInput?.value) || 0));
+        form.querySelector('[data-order-subtotal]').textContent = money(subtotal);
+        form.querySelector('[data-order-discount]').textContent = money(discount);
+        form.querySelector('[data-order-total]').textContent = money(Math.max(0, subtotal - discount));
+        form.querySelector('[data-order-item-count]').textContent = `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`;
+    }
+
+    function bindRow(row) {
+        row.querySelectorAll('input[name$="-quantity"], input[name$="-unit_price"], input[name$="-product"]').forEach((input) => {
+            input.addEventListener('input', updateTotals);
+            input.addEventListener('change', updateTotals);
+        });
+        row.querySelector('[data-remove-row]')?.addEventListener('click', () => {
+            const rows = activeRows();
+            if (rows.length === 1) {
+                row.querySelectorAll('input').forEach((input) => {
+                    if (input.name?.endsWith('-product')) input.value = '';
+                    if (input.name?.endsWith('-quantity')) input.value = '1';
+                    if (input.name?.endsWith('-unit_price')) input.value = '';
+                });
+            } else {
+                const deleteInput = row.querySelector('input[name$="-DELETE"]');
+                if (deleteInput) deleteInput.value = 'on';
+                row.hidden = true;
+            }
+            updateTotals();
+        });
+    }
+
+    function addRow(productName = '', productPrice = '') {
+        const rows = Array.from(container.querySelectorAll('[data-cart-row]'));
+        const templateRow = rows[rows.length - 1];
+        if (!templateRow) return null;
+
+        const index = Number.parseInt(totalForms.value, 10);
+        const row = templateRow.cloneNode(true);
+        row.innerHTML = row.innerHTML.replaceAll(`-${index - 1}-`, `-${index}-`);
+        row.hidden = false;
+        row.querySelectorAll('input').forEach((input) => {
+            if (input.name?.endsWith('-DELETE')) input.value = '';
+            else if (input.name?.endsWith('-quantity')) input.value = '1';
+            else if (!input.name?.endsWith('-id')) input.value = '';
+        });
+        row.querySelector('input[name$="-product"]').value = productName;
+        row.querySelector('input[name$="-unit_price"]').value = productPrice;
+        container.appendChild(row);
+        totalForms.value = String(index + 1);
+        bindRow(row);
+        updateTotals();
+        return row;
+    }
+
+    document.getElementById('addItem')?.addEventListener('click', () => {
+        const row = addRow();
+        row?.querySelector('input[name$="-product"]')?.focus();
+    });
+
+    document.querySelectorAll('[data-menu-item]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const name = button.dataset.productName || '';
+            const price = button.dataset.productPrice || '';
+            const existing = activeRows().find((row) => (
+                row.querySelector('input[name$="-product"]')?.value.trim().toLowerCase() === name.toLowerCase()
+            ));
+            if (existing) {
+                const quantity = existing.querySelector('input[name$="-quantity"]');
+                quantity.value = String((Number.parseInt(quantity.value, 10) || 0) + 1);
+            } else {
+                const emptyRow = activeRows().find((row) => !rowHasItem(row));
+                if (emptyRow) {
+                    emptyRow.querySelector('input[name$="-product"]').value = name;
+                    emptyRow.querySelector('input[name$="-unit_price"]').value = price;
+                    emptyRow.querySelector('input[name$="-quantity"]').value = '1';
+                } else {
+                    addRow(name, price);
+                }
+            }
+            updateTotals();
+        });
+    });
+
+    document.querySelector('[data-menu-search]')?.addEventListener('input', (event) => {
+        const query = event.target.value.trim().toLowerCase();
+        document.querySelectorAll('[data-menu-item]').forEach((item) => {
+            item.hidden = !item.textContent.toLowerCase().includes(query);
+        });
+    });
+
+    document.querySelector('[data-client-selector]')?.addEventListener('change', (event) => {
+        const option = event.target.selectedOptions[0];
+        if (!option?.value) return;
+        document.getElementById('customer_name').value = option.dataset.name || '';
+        document.getElementById('customer_phone').value = option.dataset.phone || '';
+        document.getElementById('customer_email').value = option.dataset.email || '';
+    });
+
+    document.querySelectorAll('[data-cart-row]').forEach(bindRow);
+    document.getElementById('id_discount')?.addEventListener('input', updateTotals);
+    document.getElementById('id_discount')?.addEventListener('change', updateTotals);
+    updateTotals();
+})();
+</script>
+{% endblock %}

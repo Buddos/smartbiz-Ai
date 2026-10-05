@@ -12,7 +12,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-in-production")
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "t")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -46,9 +46,11 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "daphne",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "rest_framework",
+    "channels",
     "accounts.apps.AccountsConfig",
     "businesses.apps.BusinessesConfig",
     "products.apps.ProductsConfig",
@@ -63,6 +65,8 @@ INSTALLED_APPS = [
     "reports.apps.ReportsConfig",
     "electronics.apps.ElectronicsConfig",
     "retail.apps.RetailConfig",
+    "restaurant.apps.RestaurantConfig",
+    "realtime.apps.RealtimeConfig",
 ]
 
 MIDDLEWARE = [
@@ -86,6 +90,7 @@ TEMPLATES = [
         "OPTIONS": {
             "libraries": {
                 "dashboard_notifications": "analytics.templatetags.dashboard_notifications",
+                "business_layout": "analytics.templatetags.business_layout",
             },
             "context_processors": [
                 "django.template.context_processors.request",
@@ -99,6 +104,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "smartbiz.wsgi.application"
 ASGI_APPLICATION = "smartbiz.asgi.application"
+
+redis_url = os.environ.get("REDIS_URL", "").strip()
+if redis_url:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {"hosts": [redis_url]},
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
+
+WEBSOCKET_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("WEBSOCKET_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 
 database_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
 

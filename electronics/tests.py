@@ -48,6 +48,7 @@ class ElectronicsWorkspaceTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "dashboard-readable")
         self.assertNotContains(response, "Electronics sales desk")
         self.assertContains(response, "Current handset")
         self.assertContains(response, reverse("electronics:repairs"))

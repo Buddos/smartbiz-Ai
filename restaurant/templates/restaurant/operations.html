@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ page|title }} | {{ user.business.name }}{% endblock %}
+
+{% block content %}
+<div class="restaurant-operations" data-restaurant-refresh="{% if page == 'kitchen' %}5000{% else %}30000{% endif %}">
+    <header class="restaurant-page-heading">
+        <div>
+            <p class="restaurant-eyebrow"><span class="restaurant-live-dot"></span> Live restaurant operations</p>
+            <h1>
+                {% if page == "tables" %}Tables &amp; floor plan
+                {% elif page == "reservations" %}Reservations
+                {% elif page == "kitchen" %}Kitchen display
+                {% elif page == "menu" %}Menu
+                {% elif page == "ingredients" %}Ingredients
+                {% elif page == "recipes" %}Recipes
+                {% elif page == "suppliers" %}Suppliers
+                {% elif page == "supplier_orders" %}Purchase orders · {{ supplier.name }}
+                {% elif page == "cash_drawer" %}Cash drawer
+                {% elif page == "food_cost" %}Food cost
+                {% endif %}
+            </h1>
+            <p>Showing saved records for {{ user.business.name }}. This page refreshes automatically while it is open.</p>
+        </div>
+        {% if page == "menu" %}
+            <a class="restaurant-primary-action" href="{% url 'products:create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> Add menu item</a>
+        {% elif page == "tables" and can_manage_restaurant %}
+            <div class="restaurant-heading-actions">
+                <a class="restaurant-secondary-action" href="#edit-layout">Edit layout</a>
+                <a class="restaurant-primary-action" href="#add-table"><i class="fa-solid fa-plus" aria-hidden="true"></i> Add table</a>
+            </div>
+        {% elif page == "recipes" and can_manage_restaurant %}
+            <a class="restaurant-primary-action" href="#recipe-form"><i class="fa-solid fa-plus" aria-hidden="true"></i> New recipe</a>
+        {% elif page == "reservations" %}
+            <a class="restaurant-primary-action" href="#reservation-form"><i class="fa-solid fa-plus" aria-hidden="true"></i> New reservation</a>
+        {% elif page == "supplier_orders" and can_manage_restaurant %}
+            <a class="restaurant-primary-action" href="#purchase-order-form"><i class="fa-solid fa-plus" aria-hidden="true"></i> New purchase order</a>
+        {% endif %}
+    </header>
+
+    {% if page == "tables" %}
+        <section class="restaurant-operations-metrics" aria-label="Table status">
+            <article><span>Tables</span><strong>{{ total_tables }}</strong></article>
+            <article><span>Occupied</span><strong>{{ occupied }}</strong></article>
+            <article><span>Available</span><strong>{{ counts.AVAILABLE }}</strong></article>
+            <article><span>Reserved</span><strong>{{ counts.RESERVED }}</strong></article>
+        </section>
+        {% regroup tables by zone as table_zones %}
+        {% for zone in table_zones %}
+            <section class="restaurant-operation-panel">
+                <h2>{{ zone.grouper }}</h2>
+                <div class="restaurant-floor-plan-scroll"><div class="restaurant-table-grid is-floor-plan">
+                    {% for table in zone.list %}
+                        <article class="restaurant-floor-table is-{{ table.status|lower }}" style="grid-column: {{ table.position_x|add:"1" }}; grid-row: {{ table.position_y|add:"1" }};">
+                            <div class="restaurant-floor-table-heading"><strong>Table {{ table.number }}</strong><span>{{ table.seats }} seats</span></div>
+                            <p class="restaurant-floor-position">Position {{ table.position_x }}, {{ table.position_y }}</p>
+                            <p class="restaurant-operation-status">{{ table.get_status_display }}</p>
+                            {% if table.seated_at %}<p>Seated {{ table.seated_at|timesince }} ago</p>{% endif %}
+                            <div class="restaurant-operation-actions">
+                                {% if table.status == "AVAILABLE" or table.status == "RESERVED" %}
+                                    <form method="post" action="{% url 'restaurant:table_action' table.id 'seat' %}">{% csrf_token %}<button type="submit">Seat guests</button></form>
+                                {% endif %}
+                                {% if table.status == "OCCUPIED" %}
+                                    <form method="post" action="{% url 'restaurant:table_action' table.id 'bill' %}">{% csrf_token %}<button type="submit">Request bill</button></form>
+                                {% endif %}
+                                {% if table.status == "OCCUPIED" or table.status == "BILL_REQUESTED" or table.status == "NEEDS_ATTENTION" %}
+                                    <form method="post" action="{% url 'restaurant:table_action' table.id 'clear' %}">{% csrf_token %}<button type="submit">Clear table</button></form>
+                                {% endif %}
+                                {% if table.status == "BLOCKED" %}
+                                    <form method="post" action="{% url 'restaurant:table_action' table.id 'unblock' %}">{% csrf_token %}<button type="submit">Reopen</button></form>
+                                {% elif table.status == "AVAILABLE" %}
+                                    <form method="post" action="{% url 'restaurant:table_action' table.id 'block' %}">{% csrf_token %}<button type="submit">Block</button></form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div></div>
+            </section>
+        {% empty %}
+            <section class="restaurant-operation-panel restaurant-operation-empty">No tables have been added. Add your real floor tables below.</section>
+        {% endfor %}
+        {% if can_manage_restaurant %}
+            <section class="restaurant-operation-panel" id="edit-layout">
+                <h2>Edit floor layout</h2>
+                <p>Set each table's column (0-7) and row (starting at 0) in its zone.</p>
+                <form method="post" action="{% url 'restaurant:table_layout_save' %}" class="restaurant-layout-form">
+                    {% csrf_token %}
+                    <div class="restaurant-layout-rows">
+                        {% for table in tables %}
+                            <div class="restaurant-layout-row">
+                                <input type="hidden" name="table_id" value="{{ table.id }}">
+                                <strong>{{ table.zone }} · Table {{ table.number }}</strong>
+                                <label>Column<input class="input-field" type="number" name="position_x" min="0" max="7" value="{{ table.position_x }}" required></label>
+                                <label>Row<input class="input-field" type="number" name="position_y" min="0" max="65535" value="{{ table.position_y }}" required></label>
+                            </div>
+                        {% empty %}
+                            <p>No tables to position yet.</p>
+                        {% endfor %}
+                    </div>
+                    {% if tables %}<button class="restaurant-primary-action" type="submit">Save layout</button>{% endif %}
+                </form>
+            </section>
+            <section class="restaurant-operation-panel" id="add-table">
+                <h2>Add a table</h2>
+                <form method="post" class="restaurant-operation-form">{% csrf_token %}
+                    {% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                    <button class="restaurant-primary-action" type="submit">Save table</button>
+                </form>
+            </section>
+        {% endif %}
+    {% elif page == "reservations" %}
+        <section class="restaurant-operations-metrics" aria-label="Reservation summary">
+            <article><span>Today</span><strong>{{ today_count }}</strong></article>
+            <article><span>Upcoming</span><strong>{{ upcoming_count }}</strong></article>
+            <article><span>No-shows today</span><strong>{{ no_show_count }}</strong></article>
+        </section>
+        <section class="restaurant-operation-panel">
+            <h2>Upcoming bookings</h2>
+            <div class="restaurant-operation-scroll"><table class="restaurant-operation-table">
+                <thead><tr><th>Time</th><th>Guest</th><th>Party</th><th>Table</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>{% for reservation in reservations %}
+                    <tr><td>{{ reservation.starts_at|date:"D j M, H:i" }}<small>{{ reservation.code }}</small></td><td>{{ reservation.customer_name }}{% if reservation.phone %}<small>{{ reservation.phone }}</small>{% endif %}</td><td>{{ reservation.party_size }}</td><td>{{ reservation.table|default:"Not assigned" }}</td><td>{{ reservation.get_status_display }}</td><td><div class="restaurant-operation-actions">
+                        {% if reservation.status == "PENDING" %}<form method="post" action="{% url 'restaurant:reservation_action' reservation.id 'confirm' %}">{% csrf_token %}<button type="submit">Confirm</button></form>{% endif %}
+                        {% if reservation.status == "PENDING" or reservation.status == "CONFIRMED" %}<form method="post" action="{% url 'restaurant:reservation_action' reservation.id 'seat' %}">{% csrf_token %}<button type="submit">Seat</button></form><form method="post" action="{% url 'restaurant:reservation_action' reservation.id 'no-show' %}">{% csrf_token %}<button type="submit">No-show</button></form><form method="post" action="{% url 'restaurant:reservation_action' reservation.id 'cancel' %}">{% csrf_token %}<button type="submit">Cancel</button></form>{% endif %}
+                    </div></td></tr>
+                {% empty %}<tr><td colspan="6" class="restaurant-operation-empty">No upcoming reservations have been recorded.</td></tr>{% endfor %}</tbody>
+            </table></div>
+        </section>
+        <section class="restaurant-operation-panel" id="reservation-form">
+            <h2>New reservation</h2>
+            <form method="post" class="restaurant-operation-form">{% csrf_token %}
+                {% for error in form.non_field_errors %}<p class="restaurant-form-error">{{ error }}</p>{% endfor %}
+                {% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
+                <button class="restaurant-primary-action" type="submit">Save reservation</button>
+            </form>
+        </section>
+    {% elif page == "kitchen" %}
+        <section class="restaurant-operations-metrics restaurant-kitchen-metrics">
+            <article><span>New</span><strong>{{ counts.NEW }}</strong></article><article><span>Cooking</span><strong>{{ counts.COOKING }}</strong></article><article><span>Ready</span><strong>{{ counts.READY }}</strong></article>
+        </section>
+        <nav class="restaurant-station-tabs" aria-label="Kitchen stations">
+            <a class="{% if station == 'ALL' %}active{% endif %}" href="{% url 'restaurant:kitchen' %}">All stations</a>
+            {% for station_name in stations %}<a class="{% if station == station_name %}active{% endif %}" href="{% url 'restaurant:kitchen' %}?station={{ station_name }}">{{ station_name|title }}</a>{% endfor %}
+        </nav>
+        <section class="restaurant-kitchen-grid">
+            {% for ticket in tickets %}
+                <article class="restaurant-kitchen-ticket is-{{ ticket.status|lower }}">
+                    <header><strong>#{{ ticket.sale.sale_number }}</strong><span>{{ ticket.get_status_display }}</span></header>
+                    <p>{{ ticket.sale.metadata.table_reference|default:ticket.sale.customer_name|default:"Takeaway" }}</p>
+                    <p class="restaurant-kitchen-timer">Received {{ ticket.received_at|timesince }} ago</p>
+                    <ul>{% for item in ticket.kitchen_items %}<li>{{ item.quantity }} × {{ item.product_name }}{% if item.metadata.notes %}<small>{{ item.metadata.notes }}</small>{% endif %}</li>{% endfor %}</ul>
+                    {% if ticket.status == "NEW" %}<form method="post" action="{% url 'restaurant:kitchen_action' ticket.id 'start' %}">{% csrf_token %}<button type="submit">Start cooking</button></form>
+                    {% elif ticket.status == "COOKING" %}<form method="post" action="{% url 'restaurant:kitchen_action' ticket.id 'ready' %}">{% csrf_token %}<button type="submit">Mark ready</button></form>
+                    {% elif ticket.status == "READY" %}<form method="post" action="{% url 'restaurant:kitchen_action' ticket.id 'collect' %}">{% csrf_token %}<button type="submit">Mark collected</button></form>{% endif %}
+                </article>
+            {% empty %}<p class="restaurant-operation-empty">No active kitchen orders. New saved restaurant sale items will appear here.</p>{% endfor %}
+        </section>
+    {% elif page == "menu" %}
+        <section class="restaurant-operations-metrics"><article><span>Menu items</span><strong>{{ product_count }}</strong></article><article><span>Active</span><strong>{{ active_count }}</strong></article></section>
+        <section class="restaurant-operation-panel"><h2>Saved menu items</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table">
+            <thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Cost</th><th>Sold (30d)</th><th>Availability / station</th><th>Actions</th></tr></thead>
+            <tbody>{% for product in products %}<tr><td>{{ product.name }}<small>{{ product.sku }}</small></td><td>{{ product.category|default:"Uncategorized" }}</td><td>{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</td><td>{% if product.restaurant_recipe %}{% if product.restaurant_recipe.portion_cost != None %}{{ user.business.currency }} {{ product.restaurant_recipe.portion_cost|floatformat:2 }}{% else %}Recipe cost missing{% endif %}{% else %}{{ user.business.currency }} {{ product.purchase_price|floatformat:2 }}{% endif %}</td><td>{{ product.units_sold|default:0 }}</td><td>{% if can_manage_restaurant %}<form method="post" class="restaurant-menu-settings">{% csrf_token %}<input type="hidden" name="product_id" value="{{ product.id }}"><label class="restaurant-availability-toggle"><input type="checkbox" name="is_active" {% if product.is_active %}checked{% endif %}> Available</label><select class="input-field" name="station" aria-label="Kitchen station for {{ product.name }}"><option value="">No station</option>{% for station_name in stations %}<option value="{{ station_name }}" {% if product.metadata.restaurant_station == station_name %}selected{% endif %}>{{ station_name|title }}</option>{% endfor %}</select><button class="restaurant-secondary-action" type="submit">Save</button></form>{% else %}{% if product.is_active %}Available{% else %}Hidden{% endif %}{% endif %}</td><td><a href="{% url 'products:update' product.id %}">Edit</a> · <a href="{% url 'products:detail' product.id %}">Details</a></td></tr>
+            {% empty %}<tr><td colspan="6" class="restaurant-operation-empty">No menu items are saved yet. Add your first item to the product catalog.</td></tr>{% endfor %}</tbody>
+        </table></div><p class="restaurant-operation-note">Menu items use your saved product catalog and prices. <a href="{% url 'products:create' %}">Add an item</a> · <a href="{% url 'products:categories' %}">Manage categories</a></p></section>
+    {% elif page == "ingredients" %}
+        <section class="restaurant-operations-metrics"><article><span>Saved stock items</span><strong>{{ ingredient_count }}</strong></article><article><span>At reorder point</span><strong>{{ low_stock.count }}</strong></article></section>
+        <section class="restaurant-operation-panel"><h2>Ingredient and stock records</h2><p>These are existing business products and inventory balances, not sample ingredient data.</p><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Ingredient / stock item</th><th>Category</th><th>On hand</th><th>Reorder at</th><th>Unit cost</th><th>Actions</th></tr></thead><tbody>
+            {% for ingredient in ingredients %}<tr><td>{{ ingredient.name }}<small>{{ ingredient.sku }}</small></td><td>{{ ingredient.category|default:"Uncategorized" }}</td><td>{{ ingredient.current_stock }} {{ ingredient.get_unit_display }}</td><td>{{ ingredient.reorder_level }}</td><td>{{ user.business.currency }} {{ ingredient.purchase_price|floatformat:2 }}</td><td><a href="{% url 'products:update' ingredient.id %}">Edit item</a></td></tr>{% empty %}<tr><td colspan="6" class="restaurant-operation-empty">No ingredient or stock records have been saved.</td></tr>{% endfor %}
+        </tbody></table></div><p class="restaurant-operation-note"><a href="{% url 'products:create' %}">Add a stock item</a> · <a href="{% url 'inventory:dashboard' %}">View inventory movements</a></p></section>
+    {% elif page == "recipes" %}
+        <section class="restaurant-operations-metrics"><article><span>Recipes</span><strong>{{ recipe_count }}</strong></article><article><span>Without ingredients</span><strong>{{ missing_cost_count }}</strong></article></section>
+        <section class="restaurant-operation-panel"><h2>Saved recipes and portion costs</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table">
+            <thead><tr><th>Menu item</th><th>Ingredients</th><th>Portion cost</th><th>Price</th><th>Margin</th><th>Prep</th><th>Actions</th></tr></thead>
+            <tbody>{% for row in recipes %}<tr><td>{{ row.menu_item.name }}</td><td>{{ row.ingredients.count }}</td><td>{% if row.portion_cost != None %}{{ user.business.currency }} {{ row.portion_cost|floatformat:2 }}{% else %}No cost{% endif %}</td><td>{{ user.business.currency }} {{ row.menu_item.selling_price|floatformat:2 }}</td><td>{% if row.margin_percent != None %}{{ row.margin_percent|floatformat:1 }}%{% else %}—{% endif %}</td><td>{{ row.preparation_minutes }} min</td><td><a href="{% url 'restaurant:recipe_edit' row.id %}">Edit</a> <form class="restaurant-inline-form" method="post" action="{% url 'restaurant:recipe_delete' row.id %}">{% csrf_token %}<button type="submit">Delete</button></form></td></tr>
+            {% empty %}<tr><td colspan="7" class="restaurant-operation-empty">No recipes have been saved yet.</td></tr>{% endfor %}</tbody>
+        </table></div></section>
+        {% if can_manage_restaurant %}
+        <section class="restaurant-operation-panel" id="recipe-form"><h2>{% if recipe %}Edit {{ recipe.menu_item.name }} recipe{% else %}Add recipe{% endif %}</h2>
+            <form method="post" class="restaurant-operation-form" action="{% if recipe %}{% url 'restaurant:recipe_edit' recipe.id %}{% else %}{% url 'restaurant:recipes' %}{% endif %}">{% csrf_token %}
+                <label>Menu item<select class="input-field" name="menu_item" required>{% for product in products %}<option value="{{ product.id }}" {% if recipe.menu_item_id == product.id %}selected{% endif %}>{{ product.name }}</option>{% endfor %}</select></label>
+                <label>Preparation minutes<input class="input-field" name="preparation_minutes" type="number" min="0" value="{{ recipe.preparation_minutes|default:0 }}" required></label>
+                <label>Yield %<input class="input-field" name="yield_percent" type="number" min="0.01" max="100" step="0.01" value="{{ recipe.yield_percent|default:100 }}" required></label>
+                <label>Waste %<input class="input-field" name="waste_percent" type="number" min="0" max="99.99" step="0.01" value="{{ recipe.waste_percent|default:0 }}" required></label>
+                <label class="restaurant-form-wide">Method<textarea class="input-field" name="method" rows="3">{{ recipe.method }}</textarea></label>
+                <div class="restaurant-form-wide"><strong>Ingredients</strong><div data-recipe-lines>
+                    {% if recipe %}{% for line in recipe.ingredients.all %}<div class="restaurant-recipe-line"><select name="ingredient" class="input-field"><option value="">Choose saved ingredient</option>{% for product in products %}<option value="{{ product.id }}" {% if product.id == line.ingredient_id %}selected{% endif %}>{{ product.name }} ({{ product.get_unit_display }})</option>{% endfor %}</select><input class="input-field" name="quantity" type="number" min="0.001" step="0.001" value="{{ line.quantity }}" placeholder="Quantity"></div>{% endfor %}
+                    {% else %}<div class="restaurant-recipe-line"><select name="ingredient" class="input-field"><option value="">Choose saved ingredient</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.get_unit_display }})</option>{% endfor %}</select><input class="input-field" name="quantity" type="number" min="0.001" step="0.001" placeholder="Quantity"></div>{% endif %}
+                </div><button class="restaurant-secondary-action" type="button" data-add-recipe-line>Add ingredient</button></div>
+                <button class="restaurant-primary-action" type="submit">Save recipe</button>
+            </form>
+        </section>
+        {% endif %}
+    {% elif page == "suppliers" %}
+        <section class="restaurant-operation-panel"><h2>Saved suppliers</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th>Notes</th><th>Orders</th></tr></thead><tbody>
+            {% for supplier in suppliers %}<tr><td>{{ supplier.name }}</td><td>{{ supplier.contact_name|default:"—" }}</td><td>{{ supplier.phone|default:"—" }}</td><td>{{ supplier.email|default:"—" }}</td><td>{{ supplier.notes|default:"—" }}</td><td><a href="{% url 'restaurant:supplier_orders' supplier.id %}">Purchase orders</a></td></tr>{% empty %}<tr><td colspan="6" class="restaurant-operation-empty">No suppliers have been recorded.</td></tr>{% endfor %}
+        </tbody></table></div></section>
+        {% if catalog_suppliers %}<section class="restaurant-operation-panel"><h2>Supplier names already on stock records</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Supplier name</th><th>Stock items</th></tr></thead><tbody>{% for row in catalog_suppliers %}<tr><td>{{ row.supplier_name }}</td><td>{{ row.product_count }}</td></tr>{% endfor %}</tbody></table></div><p class="restaurant-operation-note">These supplier names come from saved product records. Add them above to manage contacts and purchase orders.</p></section>{% endif %}
+        {% if can_manage_restaurant %}<section class="restaurant-operation-panel"><h2>Add supplier</h2><form method="post" class="restaurant-operation-form">{% csrf_token %}{% for field in form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}<button class="restaurant-primary-action" type="submit">Save supplier</button></form></section>{% endif %}
+    {% elif page == "supplier_orders" %}
+        <section class="restaurant-operations-metrics"><article><span>Supplier</span><strong>{{ supplier.name }}</strong></article><article><span>Purchase orders</span><strong>{{ orders.count }}</strong></article></section>
+        <section class="restaurant-operation-panel"><h2>Purchase order history</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Order</th><th>Expected</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr></thead><tbody>{% for order in orders %}<tr><td>{{ order.order_number }}<small>{{ order.created_at|date:"j M Y, H:i" }}</small></td><td>{{ order.expected_at|default:"—" }}</td><td>{% for line in order.lines.all %}{{ line.quantity }} × {{ line.product.name }}{% if not forloop.last %}<br>{% endif %}{% empty %}No items{% endfor %}</td><td>{{ user.business.currency }} {{ order.total_cost|floatformat:2 }}</td><td>{{ order.get_status_display }}</td><td>{% if order.status == "ORDERED" and can_manage_restaurant %}<form method="post" action="{% url 'restaurant:purchase_order_receive' order.id %}">{% csrf_token %}<button class="restaurant-secondary-action" type="submit">Receive &amp; update stock</button></form>{% elif order.received_at %}Received {{ order.received_at|date:"j M, H:i" }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="6" class="restaurant-operation-empty">No purchase orders are recorded for this supplier.</td></tr>{% endfor %}</tbody></table></div></section>
+        {% if can_manage_restaurant %}<section class="restaurant-operation-panel" id="purchase-order-form"><h2>Create purchase order</h2><p>Receiving an order creates inventory transactions and updates the saved ingredient unit costs.</p><form method="post" class="restaurant-operation-form">{% csrf_token %}{% for error in form.non_field_errors %}<p class="restaurant-form-error restaurant-form-wide">{{ error }}</p>{% endfor %}
+            <label>Expected delivery{{ form.expected_at }}</label><label class="restaurant-form-wide">Notes{{ form.notes }}</label>
+            <div class="restaurant-form-wide"><strong>Stock items</strong><div data-purchase-lines><div class="restaurant-purchase-line"><select class="input-field" name="product"><option value="">Choose saved stock item</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.get_unit_display }})</option>{% endfor %}</select><input class="input-field" name="quantity" type="number" min="1" step="1" placeholder="Quantity"><input class="input-field" name="unit_cost" type="number" min="0.01" step="0.01" placeholder="Unit cost"></div></div><button class="restaurant-secondary-action" type="button" data-add-purchase-line>Add stock item</button></div>
+            <button class="restaurant-primary-action" type="submit">Save purchase order</button>
+        </form></section>{% endif %}
+    {% elif page == "cash_drawer" %}
+        {% if shift %}
+            <section class="restaurant-operations-metrics"><article><span>Shift opened</span><strong>{{ shift.opened_at|date:"H:i" }}</strong></article><article><span>Opening cash</span><strong>{{ user.business.currency }} {{ shift.opening_cash|floatformat:2 }}</strong></article><article><span>Expected cash</span><strong>{{ user.business.currency }} {{ shift.expected_cash|floatformat:2 }}</strong></article></section>
+            <section class="restaurant-operation-panel"><h2>Record cash movement</h2><form method="post" class="restaurant-operation-form">{% csrf_token %}<input type="hidden" name="action" value="movement">{% for field in movement_form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}<button class="restaurant-primary-action" type="submit">Record movement</button></form></section>
+            <section class="restaurant-operation-panel"><h2>Close and reconcile shift</h2><form method="post" class="restaurant-operation-form">{% csrf_token %}<input type="hidden" name="action" value="close"><label>Counted closing cash{{ close_form.closing_cash }}{% for error in close_form.closing_cash.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label><button class="restaurant-primary-action" type="submit">Close shift</button></form></section>
+            <section class="restaurant-operation-panel"><h2>Shift cash movements</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Time</th><th>Type</th><th>Amount</th><th>Reason</th><th>Staff</th></tr></thead><tbody>{% for movement in shift.movements.all %}<tr><td>{{ movement.created_at|date:"H:i" }}</td><td>{{ movement.get_movement_type_display }}</td><td>{{ user.business.currency }} {{ movement.amount|floatformat:2 }}</td><td>{{ movement.reason }}</td><td>{{ movement.created_by|default:"—" }}</td></tr>{% empty %}<tr><td colspan="5" class="restaurant-operation-empty">No cash movements recorded for this shift.</td></tr>{% endfor %}</tbody></table></div></section>
+        {% else %}
+            <section class="restaurant-operation-panel"><h2>Open a cash shift</h2><p>Opening cash and completed cash payments are used to calculate the expected drawer balance.</p><form method="post" class="restaurant-operation-form">{% csrf_token %}<input type="hidden" name="action" value="open"><label>Opening cash{{ open_form.opening_cash }}{% for error in open_form.opening_cash.errors %}<small class="restaurant-form-error">{{ error }}</small>{% endfor %}</label><button class="restaurant-primary-action" type="submit">Open shift</button></form></section>
+        {% endif %}
+        <section class="restaurant-operation-panel"><h2>Recent shifts</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Opened</th><th>Closed</th><th>Opening cash</th><th>Counted cash</th></tr></thead><tbody>{% for row in recent_shifts %}<tr><td>{{ row.opened_at|date:"j M, H:i" }}</td><td>{{ row.closed_at|date:"j M, H:i"|default:"Open" }}</td><td>{{ user.business.currency }} {{ row.opening_cash|floatformat:2 }}</td><td>{% if row.closing_cash != None %}{{ user.business.currency }} {{ row.closing_cash|floatformat:2 }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="restaurant-operation-empty">No cash shifts recorded.</td></tr>{% endfor %}</tbody></table></div></section>
+    {% elif page == "food_cost" %}
+        <section class="restaurant-operations-metrics"><article><span>Recipes costed</span><strong>{{ recipe_count }}</strong></article><article><span>Average recipe food cost</span><strong>{{ average_food_cost|floatformat:1 }}%</strong></article><article><span>Combined portion costs</span><strong>{{ user.business.currency }} {{ total_cost|floatformat:2 }}</strong></article></section>
+        <section class="restaurant-operation-panel"><h2>Food cost by menu item</h2><div class="restaurant-operation-scroll"><table class="restaurant-operation-table"><thead><tr><th>Menu item</th><th>Portion cost</th><th>Selling price</th><th>Food cost %</th><th>Margin</th></tr></thead><tbody>{% for recipe in recipes %}<tr><td>{{ recipe.menu_item.name }}</td><td>{% if recipe.portion_cost != None %}{{ user.business.currency }} {{ recipe.portion_cost|floatformat:2 }}{% else %}No ingredient costs{% endif %}</td><td>{{ user.business.currency }} {{ recipe.menu_item.selling_price|floatformat:2 }}</td><td>{% if recipe.food_cost_percent != None %}{{ recipe.food_cost_percent|floatformat:1 }}%{% else %}—{% endif %}</td><td>{% if recipe.margin_percent != None %}{{ recipe.margin_percent|floatformat:1 }}%{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="restaurant-operation-empty">Add recipes with ingredient costs to calculate food cost. No example costs are shown.</td></tr>{% endfor %}</tbody></table></div><p class="restaurant-operation-note"><a href="{% url 'restaurant:recipes' %}">Manage recipes</a> · Costs use current saved ingredient purchase prices and recipe quantities.</p></section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector("[data-recipe-lines]");
+    const add = document.querySelector("[data-add-recipe-line]");
+    if (form && add) {
+        add.addEventListener("click", () => {
+            const row = form.querySelector(".restaurant-recipe-line");
+            if (row) form.append(row.cloneNode(true));
+        });
+    }
+    const purchaseLines = document.querySelector("[data-purchase-lines]");
+    const addPurchaseLine = document.querySelector("[data-add-purchase-line]");
+    if (purchaseLines && addPurchaseLine) {
+        addPurchaseLine.addEventListener("click", () => {
+            const row = purchaseLines.querySelector(".restaurant-purchase-line");
+            if (row) purchaseLines.append(row.cloneNode(true));
+        });
+    }
+});
+</script>
+{% endblock %}

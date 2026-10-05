@@ -1,0 +1,40 @@
+{% load static %}
+<aside class="restaurant-sidebar" id="restaurantSidebar" aria-label="Restaurant navigation">
+    <a class="restaurant-brand" href="{% url 'dashboard' %}">
+        <span class="restaurant-brand-mark"><img src="{% static 'images/logo.png' %}" alt=""></span>
+        <span class="restaurant-brand-copy"><strong>SmartBiz</strong><small>{{ user.business.name }}</small></span>
+    </a>
+
+    <nav class="restaurant-nav">
+        <p class="restaurant-nav-label">Main</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Live Service</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'sales' %}active{% endif %}" href="{% url 'sales:list' %}"><i class="fa-solid fa-receipt" aria-hidden="true"></i><span>Orders</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'tables' or request.resolver_match.url_name == 'table_action' %}active{% endif %}" href="{% url 'restaurant:tables' %}"><i class="fa-solid fa-chair" aria-hidden="true"></i><span>Tables</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'reservations' or request.resolver_match.url_name == 'reservation_action' %}active{% endif %}" href="{% url 'restaurant:reservations' %}"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span>Reservations</span></a>
+
+        <p class="restaurant-nav-label">Kitchen</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'kitchen' or request.resolver_match.url_name == 'kitchen_action' %}active{% endif %}" href="{% url 'restaurant:kitchen' %}"><i class="fa-solid fa-fire-burner" aria-hidden="true"></i><span>Kitchen Display</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'menu' or request.resolver_match.app_name == 'products' %}active{% endif %}" href="{% url 'restaurant:menu' %}"><i class="fa-solid fa-utensils" aria-hidden="true"></i><span>Menu</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'ingredients' %}active{% endif %}" href="{% url 'restaurant:ingredients' %}"><i class="fa-solid fa-carrot" aria-hidden="true"></i><span>Ingredients</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'recipes' or request.resolver_match.url_name == 'recipe_edit' %}active{% endif %}" href="{% url 'restaurant:recipes' %}"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>Recipes</span></a>
+
+        <p class="restaurant-nav-label">Inventory</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'inventory' %}active{% endif %}" href="{% url 'inventory:dashboard' %}"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Inventory</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'suppliers' or request.resolver_match.url_name == 'supplier_orders' %}active{% endif %}" href="{% url 'restaurant:suppliers' %}"><i class="fa-solid fa-truck" aria-hidden="true"></i><span>Suppliers</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'transaction_create' %}active{% endif %}" href="{% url 'inventory:transaction_create' %}"><i class="fa-solid fa-trash-can" aria-hidden="true"></i><span>Wastage</span></a>
+
+        <p class="restaurant-nav-label">Customers</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'customers' %}active{% endif %}" href="{% url 'customers:list' %}"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Customers</span></a>
+
+        <p class="restaurant-nav-label">Money</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'analytics' and request.resolver_match.url_name == 'sales' %}active{% endif %}" href="{% url 'analytics:sales' %}"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i><span>Sales</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'expenses' %}active{% endif %}" href="{% url 'expenses:list' %}"><i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Expenses</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'cash_drawer' %}active{% endif %}" href="{% url 'restaurant:cash_drawer' %}"><i class="fa-solid fa-cash-register" aria-hidden="true"></i><span>Cash Drawer</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.url_name == 'food_cost' %}active{% endif %}" href="{% url 'restaurant:food_cost' %}"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span>Food Cost</span></a>
+
+        <p class="restaurant-nav-label">SmartBiz AI</p>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'ai_engine:home' %}"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i><span>AI Insights</span></a>
+        <a class="restaurant-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:assistant' %}"><i class="fa-solid fa-comments" aria-hidden="true"></i><span>AI Assistant</span></a>
+    </nav>
+</aside>
+<button class="restaurant-nav-backdrop" type="button" data-restaurant-close aria-label="Close navigation"></button>

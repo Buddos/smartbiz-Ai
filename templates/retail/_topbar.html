@@ -14,11 +14,11 @@
         </form>
         {% dashboard_notifications %}
         <div class="electronics-account-menu" data-dashboard-account-menu>
-            <button class="electronics-avatar" type="button" aria-label="Open account menu" aria-expanded="false" data-dashboard-account-toggle>{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button>
+            <button class="retail-account-avatar" type="button" aria-label="Open account menu" aria-expanded="false" data-dashboard-account-toggle>{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</button>
             <div class="electronics-account-popover" data-dashboard-account-popover hidden>
                 <div class="electronics-account-summary"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></div>
                 {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield" aria-hidden="true"></i>Business admin</a>{% endif %}
-                <a href="{% url 'businesses:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>
+                <a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Personal settings</a>
                 <a href="{% url 'accounts:profile' %}"><i class="fas fa-user" aria-hidden="true"></i>Profile</a>
                 <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Log out</a>
             </div>

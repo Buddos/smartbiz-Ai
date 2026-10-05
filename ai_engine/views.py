@@ -4,12 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import business_required, role_required
-from .models import AIInsight, AIInsightFeedback, AIQuery, AIRecommendation, ForecastResult
+from .models import AIInsight, AIInsightFeedback, AIRecommendation, ForecastResult
 from .services import run_sales_forecast
 from .gemini import (
     GeminiError,
@@ -42,19 +42,11 @@ def intelligence_home(request):
     ).order_by("-score", "-created_at")[:12] if business else []
     recs = AIRecommendation.objects.filter(business=business, status="OPEN").order_by("-created_at")[:12] if business else []
     forecast = ForecastResult.objects.filter(business=business).first() if business else None
-    queries = list(AIQuery.objects.filter(business=business)[:8]) if business else []
-    queries.reverse()
-    form = AssistantForm()
     return render(request, "ai_engine/home.html", {
         "insights": insights,
         "recommendations": recs,
         "forecast": forecast,
-        "queries": queries,
-        "form": form,
-        "has_business": bool(business),
-        "gemini_configured": bool(getattr(settings, "GEMINI_API_KEY", "").strip()),
-        "gemini_model": getattr(settings, "GEMINI_MODEL", "gemini-3.8-flash"),
-        "title": "AI Decision Support",
+        "title": "AI Insights",
     })
 
 
@@ -71,12 +63,12 @@ def generate_view(request):
     except GeminiError as exc:
         messages.error(
             request,
-            f"Gemini insight generation failed: {exc}",
+            f"Business insight generation failed: {exc}",
         )
     else:
         messages.success(
             request,
-            f"Generated {len(created)} data-based alerts and refreshed the Gemini business review: {review.title}",
+            f"Generated {len(created)} data-based alerts and refreshed the business review: {review.title}",
         )
     return redirect("ai_engine:home")
 
@@ -97,29 +89,38 @@ def forecast_view(request):
 @login_required
 @business_required
 @role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
+@never_cache
 def assistant_view(request):
+    assistant_ready = bool(getattr(settings, "GEMINI_API_KEY", "").strip())
+    form = AssistantForm(request.POST if request.method == "POST" else None)
+    context = {
+        "form": form,
+        "has_business": bool(request.user.business),
+        "assistant_ready": assistant_ready,
+        "title": "AI Assistant",
+    }
     if request.method != "POST":
-        return redirect(f"{reverse('ai_engine:home')}#assistant")
-    form = AssistantForm(request.POST)
-    if form.is_valid():
-        question = form.cleaned_data["question"]
-        if not request.user.business:
-            messages.info(request, "The assistant uses live data from your business. Set up a business first, then ask your question again.")
-            return redirect("ai_engine:home")
-        try:
-            answer = answer_business_question(request.user.business, question)
-        except GeminiError as exc:
-            messages.error(request, f"The Gemini assistant could not answer: {exc}")
-            return redirect(f"{reverse('ai_engine:home')}#assistant")
-        AIQuery.objects.create(
-            business=request.user.business,
-            user=request.user,
-            question=question,
-            answer=answer,
-        )
-    else:
-        messages.error(request, "Enter a question of up to 1,000 characters.")
-    return redirect(f"{reverse('ai_engine:home')}#assistant")
+        return render(request, "ai_engine/assistant.html", context)
+
+    if not form.is_valid():
+        context["error"] = "Enter a question of up to 1,000 characters."
+        return render(request, "ai_engine/assistant.html", context)
+    if not request.user.business:
+        context["error"] = "Set up your business before asking a question."
+        return render(request, "ai_engine/assistant.html", context)
+    if not assistant_ready:
+        context["error"] = "The assistant is not configured yet. Please contact your administrator."
+        return render(request, "ai_engine/assistant.html", context)
+
+    question = form.cleaned_data["question"]
+    try:
+        answer = answer_business_question(request.user.business, question)
+    except GeminiError as exc:
+        context["error"] = str(exc)
+        return render(request, "ai_engine/assistant.html", context)
+
+    context.update({"question": question, "answer": answer})
+    return render(request, "ai_engine/assistant.html", context)
 
 
 @login_required

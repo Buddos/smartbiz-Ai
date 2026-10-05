@@ -9,8 +9,6 @@
         <a class="retail-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}"><i class="fas fa-house" aria-hidden="true"></i><span>Dashboard</span></a>
         <a class="retail-nav-link {% if request.resolver_match.app_name == 'sales' %}active{% endif %}" href="{% url 'sales:list' %}"><i class="fas fa-cash-register" aria-hidden="true"></i><span>Sales</span></a>
         <a class="retail-nav-link {% if request.resolver_match.app_name == 'expenses' %}active{% endif %}" href="{% url 'expenses:list' %}"><i class="fas fa-receipt" aria-hidden="true"></i><span>Expenses</span></a>
-        <a class="retail-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view != 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>AI Insights</span></a>
-
         <p class="retail-nav-label">Inventory</p>
         <a class="retail-nav-link {% if request.resolver_match.app_name == 'products' %}active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-box" aria-hidden="true"></i><span>Products</span></a>
         <a class="retail-nav-link {% if request.resolver_match.app_name == 'inventory' and request.resolver_match.url_name != 'stock_counts' and request.resolver_match.url_name != 'stock_count_create' and request.resolver_match.url_name != 'stock_count_detail' %}active{% endif %}" href="{% url 'inventory:dashboard' %}"><i class="fas fa-warehouse" aria-hidden="true"></i><span>Inventory</span></a>
@@ -24,11 +22,12 @@
         <a class="retail-nav-link {% if request.resolver_match.app_name == 'retail' and request.resolver_match.url_name == 'credit' %}active{% endif %}" href="{% url 'retail:credit' %}"><i class="fas fa-credit-card" aria-hidden="true"></i><span>Debts &amp; Credit</span></a>
 
         <p class="retail-nav-label">SmartBiz AI</p>
-        <a class="retail-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.GET.view == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}?view=assistant#assistant"><i class="fas fa-robot" aria-hidden="true"></i><span>AI Assistant</span></a>
+        <a class="retail-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'assistant' %}active{% endif %}" href="{% url 'ai_engine:assistant' %}"><i class="fas fa-robot" aria-hidden="true"></i><span>AI Assistant</span></a>
+        <a class="retail-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name != 'assistant' %}active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>AI Insights</span></a>
     </nav>
     <div class="retail-sidebar-account">
         <span class="retail-user-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</span>
         <span class="retail-user-name"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></span>
-        <a href="{% url 'businesses:settings' %}" aria-label="Settings"><i class="fas fa-gear" aria-hidden="true"></i></a>
+        {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}" aria-label="Business administration"><i class="fas fa-user-shield" aria-hidden="true"></i></a>{% else %}<a href="{% url 'accounts:settings' %}" aria-label="Personal settings"><i class="fas fa-gear" aria-hidden="true"></i></a>{% endif %}
     </div>
 </aside>

@@ -4,7 +4,9 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
 from django.db.models import Q, Sum, Count, Avg, F, Max, Min
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from datetime import datetime, timedelta, date
 import json
@@ -46,6 +48,13 @@ def dashboard_view(request):
     ):
         messages.error(request, "You do not have permission to access this page.")
         return redirect("accounts:profile")
+
+    if business.business_type == "RESTAURANT":
+        return render(request, "analytics/restaurant_dashboard.html", {
+            "title": "Restaurant Live Service",
+            "today": timezone.localdate(),
+            "restaurant_dashboard": get_restaurant_dashboard_data(business),
+        })
     
     # Date range (last 30 days)
     end_date = timezone.now().date()
@@ -91,6 +100,90 @@ def dashboard_view(request):
         return render(request, "salon/dashboard.html", context)
     
     return render(request, 'analytics/dashboard.html', context)
+
+
+def get_restaurant_dashboard_data(business):
+    """Build a restaurant overview exclusively from this business's saved records."""
+    today = timezone.localdate()
+    today_orders = Sale.objects.filter(
+        business=business,
+        sale_date__date=today,
+    ).exclude(order_status="CANCELLED")
+    completed_orders = today_orders.filter(order_status="COMPLETED")
+    completed_summary = completed_orders.aggregate(
+        revenue=Sum("total"),
+        count=Count("id"),
+    )
+    revenue = completed_summary["revenue"] or 0
+    completed_count = completed_summary["count"] or 0
+
+    low_stock_items = list(
+        Product.objects.filter(
+            business=business,
+            is_active=True,
+            current_stock__lte=F("reorder_level"),
+        ).order_by("current_stock", "name").values(
+            "name", "current_stock", "reorder_level",
+        )[:6]
+    )
+    top_items = list(
+        SaleItem.objects.filter(
+            sale__business=business,
+            sale__sale_date__date=today,
+            sale__order_status="COMPLETED",
+            product__business=business,
+        ).values("product_name").annotate(
+            units=Sum("quantity"),
+            revenue=Sum("total"),
+        ).order_by("-units", "-revenue")[:5]
+    )
+    recent_orders = []
+    for sale in today_orders.select_related("customer").order_by("-sale_date")[:8]:
+        metadata = sale.metadata if isinstance(sale.metadata, dict) else {}
+        recent_orders.append({
+            "number": sale.sale_number,
+            "table_reference": metadata.get("table_reference", ""),
+            "customer": sale.customer_name or (
+                sale.customer.name if sale.customer_id else "Walk-in"
+            ),
+            "time": timezone.localtime(sale.sale_date).strftime("%H:%M"),
+            "total": sale.total,
+            "status": sale.get_order_status_display(),
+            "url": reverse("sales:detail", args=[sale.id]),
+        })
+
+    return {
+        "currency": business.currency,
+        "today_revenue": revenue,
+        "completed_orders": completed_count,
+        "open_orders": today_orders.filter(
+            order_status__in=["PENDING", "PROCESSING"],
+        ).count(),
+        "average_order": revenue / completed_count if completed_count else 0,
+        "menu_item_count": Product.objects.filter(
+            business=business, is_active=True,
+        ).count(),
+        "low_stock_count": Product.objects.filter(
+            business=business,
+            is_active=True,
+            current_stock__lte=F("reorder_level"),
+        ).count(),
+        "top_items": top_items,
+        "low_stock_items": low_stock_items,
+        "recent_orders": recent_orders,
+        "last_updated": timezone.localtime(),
+    }
+
+
+@login_required
+@business_required
+@never_cache
+def restaurant_dashboard_data_api(request):
+    """Return current restaurant dashboard data for the live refresh."""
+    business = request.user.business
+    if business.business_type != "RESTAURANT":
+        return JsonResponse({"error": "Restaurant dashboard data is unavailable."}, status=404)
+    return JsonResponse(get_restaurant_dashboard_data(business))
 
 
 @login_required

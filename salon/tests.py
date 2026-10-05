@@ -52,6 +52,16 @@ class SalonWorkspaceTests(TestCase):
         )
         self.client.force_login(self.owner)
 
+    def test_shared_customer_and_expense_pages_use_the_dashboard_sidebar(self):
+        for route_name in ("customers:list", "expenses:list"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content.count(b'id="salonSidebar"'), 1)
+                self.assertContains(response, "dashboard-readable.css")
+                self.assertContains(response, 'aria-current="page"')
+
     def test_appointment_booking_saves_selected_business_records(self):
         starts_at = timezone.localtime() + timedelta(days=1)
         response = self.client.post(reverse("salon:appointments"), {
@@ -151,6 +161,7 @@ class SalonWorkspaceTests(TestCase):
         stylists = self.client.get(reverse("salon:stylists"))
 
         self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "dashboard-readable")
         self.assertEqual(dashboard.context["appointments_today"], 1)
         self.assertContains(dashboard, "Amina Client")
         self.assertEqual(stylists.status_code, 200)

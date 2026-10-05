@@ -28,6 +28,7 @@ urlpatterns = [
     path("reports/", include("reports.urls")),
     path("electronics/", include("electronics.urls")),
     path("retail/", include("retail.urls")),
+    path("restaurant/", include("restaurant.urls")),
     path("api/", include("api.urls")),
 ]
 

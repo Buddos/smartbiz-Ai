@@ -10,7 +10,7 @@
         <a class="salon-nav-link {% if page == 'dashboard' %}active{% endif %}" href="{% url 'barber:dashboard' %}"><i class="fas fa-house" aria-hidden="true"></i><span>Dashboard <small class="barber-nav-context">(Chair View)</small></span></a>
         <a class="salon-nav-link {% if page == 'board' %}active{% endif %}" href="{% url 'barber:board' %}"><i class="fas fa-chair" aria-hidden="true"></i><span>Chair Board</span></a>
         <a class="salon-nav-link" href="{% url 'sales:create' %}"><i class="fas fa-bolt" aria-hidden="true"></i><span>Quick Sale</span></a>
-        <a class="salon-nav-link {% if page == 'clients' %}active{% endif %}" href="{% url 'barber:clients' %}"><i class="fas fa-users" aria-hidden="true"></i><span>Clients</span></a>
+        <a class="salon-nav-link {% if page == 'clients' or request.resolver_match.app_name == 'customers' %}active{% endif %}" href="{% url 'barber:clients' %}"><i class="fas fa-users" aria-hidden="true"></i><span>Clients</span></a>
         <a class="salon-nav-link {% if page == 'schedule' %}active{% endif %}" href="{% url 'barber:schedule' %}"><i class="fas fa-calendar-days" aria-hidden="true"></i><span>Schedule</span></a>
         <a class="salon-nav-link {% if page == 'goals' %}active{% endif %}" href="{% url 'barber:goals' %}"><i class="fas fa-bullseye" aria-hidden="true"></i><span>Goals</span></a>
         {% if user.role == 'OWNER' or user.role == 'MANAGER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' or user.role == 'ACCOUNTANT' %}<a class="salon-nav-link {% if page == 'money' %}active{% endif %}" href="{% url 'barber:money' %}"><i class="fas fa-money-bill-wave" aria-hidden="true"></i><span>Money</span></a>{% endif %}
@@ -19,12 +19,12 @@
 
         <p class="salon-nav-label salon-nav-spaced">Business</p>
         <a class="salon-nav-link" href="{% url 'products:list' %}"><i class="fas fa-box" aria-hidden="true"></i><span>Products</span></a>
-        <a class="salon-nav-link" href="{% url 'expenses:list' %}"><i class="fas fa-receipt" aria-hidden="true"></i><span>Expenses</span></a>
+        <a class="salon-nav-link {% if request.resolver_match.app_name == 'expenses' %}active{% endif %}" href="{% url 'expenses:list' %}"><i class="fas fa-receipt" aria-hidden="true"></i><span>Expenses</span></a>
         <a class="salon-nav-link" href="{% url 'analytics:sales' %}"><i class="fas fa-chart-simple" aria-hidden="true"></i><span>Analytics</span></a>
 
         <p class="salon-nav-label salon-nav-spaced">SmartBiz AI</p>
+        <a class="salon-nav-link" href="{% url 'ai_engine:assistant' %}"><i class="fas fa-comment-dots" aria-hidden="true"></i><span>AI assistant</span></a>
         <a class="salon-nav-link" href="{% url 'ai_engine:home' %}"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>AI insights</span></a>
-        <a class="salon-nav-link" href="{% url 'ai_engine:home' %}#assistant"><i class="fas fa-comment-dots" aria-hidden="true"></i><span>AI assistant</span></a>
     </nav>
 
     <div class="salon-sidebar-bottom">

@@ -1,10 +1,12 @@
 from datetime import timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import ANY, MagicMock, patch
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from google.genai.errors import APIError
 
 from accounts.models import User
 from businesses.models import Business
@@ -14,13 +16,13 @@ from sales.models import Sale, SaleItem
 
 from .gemini import (
     GeminiNotConfiguredError,
+    GeminiRequestError,
     _business_summary,
     _gemini_text,
     answer_business_question,
     generate_business_review,
 )
 from .models import AIRecommendation
-from .models import AIQuery
 
 
 class GeminiBusinessReviewTests(TestCase):
@@ -130,6 +132,96 @@ class GeminiBusinessReviewTests(TestCase):
         )
         mocked_client.return_value.close.assert_called_once_with()
 
+    @override_settings(GEMINI_API_KEY="configured-on-server", GEMINI_MODEL="gemini-test")
+    @patch("ai_engine.gemini.time.sleep")
+    @patch("google.genai.Client")
+    def test_temporary_service_unavailable_is_retried(self, mocked_client, mocked_sleep):
+        mocked_client.return_value.models.generate_content.side_effect = [
+            APIError(503, {"error": {"message": "Service unavailable"}}),
+            MagicMock(text="Recovered response"),
+        ]
+
+        answer = _gemini_text("test prompt")
+
+        self.assertEqual(answer, "Recovered response")
+        self.assertEqual(
+            mocked_client.return_value.models.generate_content.call_count,
+            2,
+        )
+        mocked_sleep.assert_called_once_with(0.5)
+        mocked_client.return_value.close.assert_called_once_with()
+
+    @override_settings(GEMINI_API_KEY="configured-on-server")
+    @patch("ai_engine.gemini.time.sleep")
+    @patch("google.genai.Client")
+    def test_persistent_service_unavailable_returns_clear_error(
+        self, mocked_client, mocked_sleep
+    ):
+        mocked_client.return_value.models.generate_content.side_effect = APIError(
+            503, {"error": {"message": "Service unavailable"}}
+        )
+
+        with self.assertRaisesRegex(GeminiRequestError, "temporarily unavailable \\(HTTP 503\\)"):
+            _gemini_text("test prompt")
+
+        self.assertEqual(
+            mocked_client.return_value.models.generate_content.call_count,
+            3,
+        )
+        self.assertEqual(mocked_sleep.call_count, 2)
+        mocked_client.return_value.close.assert_called_once_with()
+
+    @override_settings(GEMINI_API_KEY="configured-on-server", GEMINI_MODEL="retired-model")
+    @patch("google.genai.Client")
+    def test_unavailable_model_falls_back_to_an_accessible_text_model(self, mocked_client):
+        mocked_client.return_value.models.generate_content.side_effect = [
+            APIError(404, {"error": {"message": "Model not found"}}),
+            MagicMock(text="Review your sales and inventory trends."),
+        ]
+        mocked_client.return_value.models.list.return_value = [
+            SimpleNamespace(
+                name="models/gemini-2.5-flash",
+                supported_actions=["generateContent"],
+            ),
+            SimpleNamespace(
+                name="models/gemini-2.5-flash-image",
+                supported_actions=["generateContent"],
+            ),
+        ]
+
+        answer = _gemini_text("test prompt")
+
+        self.assertEqual(answer, "Review your sales and inventory trends.")
+        calls = mocked_client.return_value.models.generate_content.call_args_list
+        self.assertEqual(calls[0].kwargs["model"], "retired-model")
+        self.assertEqual(calls[1].kwargs["model"], "gemini-2.5-flash")
+        mocked_client.return_value.models.list.assert_called_once_with(
+            config={"page_size": 100}
+        )
+        mocked_client.return_value.close.assert_called_once_with()
+
+    @override_settings(GEMINI_API_KEY="configured-on-server", GEMINI_MODEL="retired-model")
+    @patch("google.genai.Client")
+    def test_unavailable_model_without_accessible_fallback_has_setup_guidance(
+        self, mocked_client
+    ):
+        mocked_client.return_value.models.generate_content.side_effect = APIError(
+            404, {"error": {"message": "Model not found"}}
+        )
+        mocked_client.return_value.models.list.return_value = [
+            SimpleNamespace(
+                name="models/gemini-2.5-flash-image",
+                supported_actions=["generateContent"],
+            )
+        ]
+
+        with self.assertRaisesRegex(
+            GeminiRequestError, "no accessible text-generation model was found"
+        ):
+            _gemini_text("test prompt")
+
+        mocked_client.return_value.close.assert_called_once_with()
+
     @override_settings(GEMINI_API_KEY="configured-on-server")
     @patch("ai_engine.gemini._json_response")
     def test_gemini_review_is_saved_as_an_ai_insight_and_recommendation(self, mocked_json):
@@ -160,6 +252,17 @@ class GeminiBusinessReviewTests(TestCase):
         self.assertIn("How were sales?", prompt)
         self.assertNotIn("Private Vendor", prompt)
 
+    @override_settings(GEMINI_API_KEY="configured-on-server")
+    @patch("ai_engine.gemini._gemini_text", return_value="Start with regular one-to-ones.")
+    def test_assistant_gives_general_management_advice_outside_app_metrics(self, mocked_gemini):
+        answer = answer_business_question(self.business, "How can I motivate my employees?")
+
+        self.assertEqual(answer, "Start with regular one-to-ones.")
+        prompt = mocked_gemini.call_args.args[0]
+        self.assertIn("even when the app's metrics do not cover the subject", prompt)
+        self.assertIn("still provide useful general steps", prompt)
+        self.assertIn("How can I motivate my employees?", prompt)
+
 
 class AssistantPageTests(TestCase):
     def setUp(self):
@@ -177,52 +280,62 @@ class AssistantPageTests(TestCase):
         self.client.force_login(self.user)
 
     @override_settings(GEMINI_API_KEY="configured-on-server")
-    def test_assistant_page_renders_prompt_chips_composer_and_assets(self):
-        response = self.client.get(reverse("ai_engine:home"))
+    def test_assistant_page_is_separate_and_does_not_expose_provider_names(self):
+        response = self.client.get(reverse("ai_engine:assistant"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Ask SmartBiz AI")
+        self.assertContains(response, "Ask your business assistant")
         self.assertContains(response, "Compare my sales")
         self.assertContains(response, "Check stock risks")
         self.assertContains(response, 'data-ai-composer')
         self.assertContains(response, "css/ai-assistant.css")
         self.assertContains(response, "js/ai-assistant.js")
+        self.assertNotContains(response, "Gemini")
+        self.assertNotContains(response, "gemini-")
 
-    def test_recent_assistant_messages_render_in_chronological_order(self):
-        first = AIQuery.objects.create(
-            business=self.business,
-            user=self.user,
-            question="First question",
-            answer="First answer",
-        )
-        second = AIQuery.objects.create(
-            business=self.business,
-            user=self.user,
-            question="Second question",
-            answer="Second answer",
-        )
-        AIQuery.objects.filter(pk=first.pk).update(
-            created_at=timezone.now() - timedelta(minutes=2)
-        )
-        AIQuery.objects.filter(pk=second.pk).update(
-            created_at=timezone.now() - timedelta(minutes=1)
-        )
-
+    def test_insights_page_does_not_contain_the_assistant(self):
         response = self.client.get(reverse("ai_engine:home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "First question")
-        self.assertContains(response, "Second answer")
-        self.assertLess(
-            response.content.index(b"First question"),
-            response.content.index(b"Second question"),
+        self.assertNotContains(response, "data-ai-composer")
+        self.assertNotContains(response, "Ask your business assistant")
+        self.assertNotContains(response, "Gemini")
+        self.assertNotContains(response, "gemini-")
+
+    @override_settings(GEMINI_API_KEY="configured-on-server")
+    @patch("ai_engine.views.answer_business_question", return_value="Sales are steady.")
+    def test_assistant_answer_is_only_in_the_current_uncached_response(self, mocked_answer):
+        response = self.client.post(
+            reverse("ai_engine:assistant"),
+            {"question": "How are my sales?"},
         )
 
-    def test_assistant_sidebar_route_redirects_to_assistant_section(self):
-        response = self.client.get(reverse("ai_engine:assistant"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "How are my sales?")
+        self.assertContains(response, "Sales are steady.")
+        self.assertIn("no-store", response["Cache-Control"])
+        mocked_answer.assert_called_once_with(self.business, "How are my sales?")
 
-        self.assertRedirects(
-            response,
-            f"{reverse('ai_engine:home')}#assistant",
-            fetch_redirect_response=False,
+        next_response = self.client.get(reverse("ai_engine:assistant"))
+
+        self.assertEqual(next_response.status_code, 200)
+        self.assertNotContains(next_response, "How are my sales?")
+        self.assertNotContains(next_response, "Sales are steady.")
+
+    @override_settings(GEMINI_API_KEY="configured-on-server")
+    @patch(
+        "ai_engine.views.answer_business_question",
+        side_effect=GeminiRequestError(
+            "The assistant is temporarily unavailable (HTTP 503). Please try again in a moment."
+        ),
+    )
+    def test_assistant_service_errors_are_vendor_neutral(self, mocked_answer):
+        response = self.client.post(
+            reverse("ai_engine:assistant"),
+            {"question": "How are my sales?"},
         )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "temporarily unavailable (HTTP 503)")
+        self.assertNotContains(response, "Gemini")
+        self.assertNotContains(response, "gemini-")

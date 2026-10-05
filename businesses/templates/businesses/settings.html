@@ -159,7 +159,7 @@
                         <p class="mt-1">Set the prefix, tax rate, payment terms, and footer used on new client invoices.</p>
                     </div>
                     
-                    <form method="POST" action="{% url 'businesses:settings_save' %}" 
+                    <form method="POST" action="{% url 'businesses:settings_save' %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}"
                           id="settingsForm" class="space-y-4">
                         {% csrf_token %}
                         
@@ -241,12 +241,12 @@
                 <div id="branches" data-settings-panel="branches" class="settings-panel card">
                     <div class="flex items-center justify-between gap-4 mb-4">
                         <h3 class="text-lg font-semibold text-primary-700"><i class="fas fa-store-alt text-primary-500 mr-2"></i>Branches</h3>
-                        <a href="{% url 'businesses:branch_create' %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Add branch</a>
+                        <a href="{% url 'businesses:branch_create' %}{% if request.GET.from == 'admin' %}?from=admin&amp;section=branches{% endif %}" class="btn-primary text-sm"><i class="fas fa-plus mr-2"></i>Add branch</a>
                     </div>
                     {% for branch in branches %}
                         <div class="flex items-center justify-between gap-4 py-3 border-b border-gray-100 last:border-0">
                             <div><p class="font-medium text-gray-800">{{ branch.name }}{% if branch.is_main %}<span class="ml-2 text-xs text-primary-600">Main</span>{% endif %}</p><p class="text-sm text-gray-500">{{ branch.get_full_address|default:branch.address|default:'No address provided' }}</p></div>
-                            <div class="flex items-center gap-3 text-sm"><a href="{% url 'businesses:branch_update' branch.id %}" class="text-primary-600 hover:text-primary-800">Edit</a>{% if not branch.is_main %}<form method="post" action="{% url 'businesses:branch_delete' branch.id %}">{% csrf_token %}<button type="submit" class="text-danger-600 hover:text-danger-800">Delete</button></form>{% endif %}</div>
+                            <div class="flex items-center gap-3 text-sm"><a href="{% url 'businesses:branch_update' branch.id %}{% if request.GET.from == 'admin' %}?from=admin&amp;section=branches{% endif %}" class="text-primary-600 hover:text-primary-800">Edit</a>{% if not branch.is_main %}<form method="post" action="{% url 'businesses:branch_delete' branch.id %}{% if request.GET.from == 'admin' %}?from=admin&amp;section=branches{% endif %}">{% csrf_token %}<button type="submit" class="text-danger-600 hover:text-danger-800">Delete</button></form>{% endif %}</div>
                         </div>
                     {% empty %}
                         <p class="text-gray-500">No branches have been added yet.</p>
@@ -256,7 +256,7 @@
                 <div id="capabilities" data-settings-panel="capabilities" class="settings-panel card">
                     <h3 class="text-lg font-semibold text-primary-700 mb-2"><i class="fas fa-puzzle-piece text-primary-500 mr-2"></i>Capabilities</h3>
                     <p class="text-sm text-gray-600 mb-5">Choose the tools this business needs. Navigation updates from these selections.</p>
-                    <form method="post" action="{% url 'businesses:capabilities_save' %}" class="space-y-4">
+                    <form method="post" action="{% url 'businesses:capabilities_save' %}{% if request.GET.from == 'admin' %}?from=admin{% endif %}" class="space-y-4">
                         {% csrf_token %}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {% for capability_id, capability in capability_registry.items %}

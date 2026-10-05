@@ -40,8 +40,8 @@
                     <i class="fas fa-arrow-left text-xl"></i>
                 </a>
                 <div>
-                    {% if invoice_mode %}<p class="invoice-create-kicker">Client billing document</p>{% else %}{% block sale_profile_kicker %}<p class="invoice-create-kicker">{{ sale_template.label }}</p>{% endblock %}{% endif %}
-                    <h1 class="{% if invoice_mode %}invoice-create-title{% else %}text-2xl font-bold text-primary-700{% endif %}">{{ title }}</h1>
+                    {% if invoice_mode %}<p class="invoice-create-kicker">Client billing document</p>{% else %}{% block sale_profile_kicker %}<p class="invoice-create-kicker">{% if sale_template.business_type == 'RESTAURANT' %}Restaurant order{% else %}{{ sale_template.label }}{% endif %}</p>{% endblock %}{% endif %}
+                    <h1 class="{% if invoice_mode %}invoice-create-title{% else %}text-2xl font-bold text-primary-700{% endif %}">{% if sale_template.business_type == 'RESTAURANT' %}Add new order{% else %}{{ title }}{% endif %}</h1>
                     <p class="text-gray-600">{% if invoice_mode %}Prepare a professional invoice for your client{% else %}{{ sale_template.description|default:'Enter sale details below' }}{% endif %}</p>
                 </div>
             </div>
@@ -143,7 +143,7 @@
                 <!-- Sale Items -->
                 <div>
                     <h3 class="text-lg font-semibold text-primary-700 mb-4">
-                        <i class="fas fa-list text-primary-500 mr-2"></i>{% if invoice_mode %}Invoice Items{% else %}{{ sale_template.item_label }}{% endif %}
+                        <i class="fas fa-list text-primary-500 mr-2"></i>{% if invoice_mode %}Invoice Items{% elif sale_template.business_type == 'RESTAURANT' %}Order items{% else %}{{ sale_template.item_label }}{% endif %}
                     </h3>
                     
                     {{ formset.management_form }}
@@ -188,7 +188,7 @@
                     </div>
                     
                     <button type="button" id="addItem" class="btn-outline text-sm mt-2">
-                        <i class="fas fa-plus mr-2"></i>Add Item
+                        <i class="fas fa-plus mr-2"></i>{% if sale_template.business_type == 'RESTAURANT' %}Add menu item{% else %}Add Item{% endif %}
                     </button>
                 </div>
 
@@ -286,7 +286,7 @@
                     <a href="{% if invoice_mode %}{% url 'businesses:settings' %}?section=preferences&amp;from=admin{% else %}{% url 'dashboard' %}{% endif %}" class="btn-outline">{% if invoice_mode %}Back to Invoice Administration{% else %}Back to Dashboard{% endif %}</a>
                     <button type="submit" class="btn-primary">
                         <i class="fas fa-save mr-2"></i>
-                        {% if sale %}{% if invoice_mode %}Update Invoice{% else %}Update Sale{% endif %}{% else %}{% if invoice_mode %}Create Invoice{% else %}Create Sale{% endif %}{% endif %}
+                        {% if sale %}{% if invoice_mode %}Update Invoice{% elif sale_template.business_type == 'RESTAURANT' %}Update Order{% else %}Update Sale{% endif %}{% else %}{% if invoice_mode %}Create Invoice{% elif sale_template.business_type == 'RESTAURANT' %}Save Order{% else %}Create Sale{% endif %}{% endif %}
                     </button>
                 </div>
             </form>

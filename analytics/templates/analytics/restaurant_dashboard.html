@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Live Service | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="restaurant-dashboard" data-restaurant-live data-api-url="{% url 'analytics:restaurant_dashboard_data' %}">
+    <section class="restaurant-welcome">
+        <div>
+            <p class="restaurant-eyebrow"><span class="restaurant-live-dot"></span> Live Service <span>·</span> {{ today|date:"l, j F Y" }}</p>
+            <h1>Welcome back, {{ user.first_name|default:"there" }}.</h1>
+            <p>Today’s service at {{ user.business.name }}, based on recorded orders and stock.</p>
+        </div>
+        <a class="restaurant-primary-action" href="{% url 'sales:create' %}"><i class="fa-solid fa-plus" aria-hidden="true"></i> New order</a>
+    </section>
+
+    <div class="restaurant-live-bar" role="status" aria-live="polite">
+        <span><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Live data refreshes every 30 seconds</span>
+        <span data-last-updated>Updated {{ restaurant_dashboard.last_updated|date:"H:i:s" }}</span>
+    </div>
+
+    <section class="restaurant-metrics" aria-label="Today's service metrics">
+        <article class="restaurant-metric restaurant-metric-primary">
+            <span class="restaurant-metric-icon"><i class="fa-solid fa-coins" aria-hidden="true"></i></span>
+            <p>Today’s completed sales</p>
+            <strong>{{ restaurant_dashboard.currency }} <span data-metric="today_revenue">{{ restaurant_dashboard.today_revenue|floatformat:2 }}</span></strong>
+            <small>Recorded completed orders only</small>
+        </article>
+        <article class="restaurant-metric">
+            <span class="restaurant-metric-icon"><i class="fa-solid fa-receipt" aria-hidden="true"></i></span>
+            <p>Completed orders</p>
+            <strong data-metric="completed_orders">{{ restaurant_dashboard.completed_orders }}</strong>
+            <small>Today</small>
+        </article>
+        <article class="restaurant-metric">
+            <span class="restaurant-metric-icon"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></span>
+            <p>In progress</p>
+            <strong data-metric="open_orders">{{ restaurant_dashboard.open_orders }}</strong>
+            <small>Pending or processing today</small>
+        </article>
+        <article class="restaurant-metric">
+            <span class="restaurant-metric-icon"><i class="fa-solid fa-basket-shopping" aria-hidden="true"></i></span>
+            <p>Average completed order</p>
+            <strong>{{ restaurant_dashboard.currency }} <span data-metric="average_order">{{ restaurant_dashboard.average_order|floatformat:2 }}</span></strong>
+            <small>Based on completed orders today</small>
+        </article>
+        <article class="restaurant-metric">
+            <span class="restaurant-metric-icon"><i class="fa-solid fa-utensils" aria-hidden="true"></i></span>
+            <p>Active menu items</p>
+            <strong data-metric="menu_item_count">{{ restaurant_dashboard.menu_item_count }}</strong>
+            <small>Saved active products</small>
+        </article>
+    </section>
+
+    <section class="restaurant-work-grid">
+        <article class="restaurant-panel restaurant-orders-panel">
+            <div class="restaurant-panel-heading">
+                <div><p class="restaurant-panel-kicker">Floor activity</p><h2>Recent orders</h2></div>
+                <a href="{% url 'sales:list' %}">All orders <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+            <div class="restaurant-table-scroll">
+                <table class="restaurant-table">
+                    <thead><tr><th>Order</th><th>Table / reference</th><th>Time</th><th>Status</th><th class="restaurant-number">Total</th></tr></thead>
+                    <tbody data-recent-orders>
+                    {% for order in restaurant_dashboard.recent_orders %}
+                        <tr>
+                            <td><a href="{{ order.url }}">{{ order.number }}</a><small>{{ order.customer }}</small></td>
+                            <td>{{ order.table_reference|default:"—" }}</td>
+                            <td>{{ order.time }}</td>
+                            <td><span class="restaurant-status">{{ order.status }}</span></td>
+                            <td class="restaurant-number">{{ restaurant_dashboard.currency }} {{ order.total|floatformat:2 }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td class="restaurant-empty" colspan="5">No orders have been recorded today.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="restaurant-panel">
+            <div class="restaurant-panel-heading">
+                <div><p class="restaurant-panel-kicker">Menu performance</p><h2>Top items today</h2></div>
+                <a href="{% url 'products:list' %}">Menu <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+            <div class="restaurant-ranked-list" data-top-items>
+                {% for item in restaurant_dashboard.top_items %}
+                    <div class="restaurant-ranked-item"><span class="restaurant-rank">{{ forloop.counter }}</span><div><strong>{{ item.product_name }}</strong><small>{{ item.units }} sold</small></div><b>{{ restaurant_dashboard.currency }} {{ item.revenue|floatformat:2 }}</b></div>
+                {% empty %}
+                    <p class="restaurant-empty">No completed menu sales recorded today.</p>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <section class="restaurant-bottom-grid">
+        <article class="restaurant-panel">
+            <div class="restaurant-panel-heading">
+                <div><p class="restaurant-panel-kicker">Stock watch</p><h2>Items to check <span class="restaurant-count" data-metric="low_stock_count">{{ restaurant_dashboard.low_stock_count }}</span></h2></div>
+                <a href="{% url 'inventory:dashboard' %}">Inventory <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+            <div class="restaurant-stock-list" data-low-stock-items>
+                {% for item in restaurant_dashboard.low_stock_items %}
+                    <div class="restaurant-stock-item"><span class="restaurant-stock-warning"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span><strong>{{ item.name }}</strong><span>{{ item.current_stock }} left <small>· reorder at {{ item.reorder_level }}</small></span></div>
+                {% empty %}
+                    <p class="restaurant-empty">No active menu or stock items are at or below their reorder level.</p>
+                {% endfor %}
+            </div>
+        </article>
+        <article class="restaurant-panel restaurant-quick-panel">
+            <div class="restaurant-panel-heading"><div><p class="restaurant-panel-kicker">Shortcuts</p><h2>Service tools</h2></div></div>
+            <a class="restaurant-shortcut" href="{% url 'sales:create' %}"><span><i class="fa-solid fa-plus" aria-hidden="true"></i></span><div><strong>Start a restaurant order</strong><small>Record menu items and a table or takeaway reference</small></div><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="restaurant-shortcut" href="{% url 'inventory:transaction_create' %}"><span><i class="fa-solid fa-trash-can" aria-hidden="true"></i></span><div><strong>Record stock wastage</strong><small>Log a waste transaction against a tracked item</small></div><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="restaurant-shortcut" href="{% url 'customers:list' %}"><span><i class="fa-solid fa-user-group" aria-hidden="true"></i></span><div><strong>Customer records</strong><small>Review saved customer history</small></div><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        </article>
+    </section>
+
+    <p class="restaurant-data-note">Dashboard figures come from this business’s saved sales, menu, and inventory records. Table reservations, kitchen tickets, recipes, and ingredient-based food cost are not currently tracked by this workspace.</p>
+</div>
+{% endblock %}

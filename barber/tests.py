@@ -41,6 +41,15 @@ class LiveChairBoardTests(TestCase):
         )
         self.client.force_login(self.owner)
 
+    def test_shared_customer_and_expense_pages_use_the_dashboard_sidebar(self):
+        for route_name in ("customers:list", "expenses:list"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content.count(b'id="barberSidebar"'), 1)
+                self.assertContains(response, "dashboard-readable.css")
+
     def test_board_page_and_live_endpoint_show_persisted_chairs_and_appointments(self):
         appointment = Appointment.objects.create(
             business=self.business,

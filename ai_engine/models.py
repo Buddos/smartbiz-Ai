@@ -88,22 +88,6 @@ class AIRecommendation(models.Model):
         return self.title
 
 
-class AIQuery(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="ai_queries")
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="ai_queries")
-    question = models.TextField()
-    answer = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "ai_queries"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return self.question[:80]
-
-
 class ForecastResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="forecast_results")

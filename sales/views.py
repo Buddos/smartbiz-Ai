@@ -528,13 +528,19 @@ def sale_create_view(request):
             .filter(recent_units_sold__gt=0)
             .order_by("-recent_units_sold", "name")[:4]
         )
+    quick_products = Product.objects.filter(
+        business=business,
+        is_active=True,
+    ).order_by("name")
+    if business.business_type != "RESTAURANT":
+        quick_products = quick_products[:24]
     return render(request, sale_template['entry_template'], {
         'form': form,
         'formset': formset,
         'title': 'Create Invoice' if invoice_mode else sale_template['title'],
         'invoice_mode': invoice_mode,
         'sale_template': sale_template,
-        'quick_products': Product.objects.filter(business=business, is_active=True).order_by('name')[:24],
+        'quick_products': quick_products,
         'electronics_products': electronics_products,
         'recent_electronics_products': recent_electronics_products,
         'frequent_electronics_products': frequent_electronics_products,

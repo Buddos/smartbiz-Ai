@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     form.addEventListener("submit", () => {
         if (!textarea.value.trim()) return;
-        if (status) status.textContent = "Gemini is reviewing your business summary…";
+        if (status) status.textContent = "Preparing your answer…";
         if (submit) {
             submit.disabled = true;
             submit.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span class="sr-only">Sending question</span>';

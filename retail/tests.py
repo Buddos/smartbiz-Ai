@@ -49,6 +49,13 @@ class RetailWorkspaceTests(TestCase):
         self.assertContains(response, "No completed product sales have been recorded today.")
         self.assertContains(response, "Corner Shop")
         self.assertContains(response, 'class="retail-sidebar"')
+        self.assertContains(response, "dashboard-readable")
+        self.assertLess(
+            response.content.index(b"AI Assistant"),
+            response.content.index(b"AI Insights"),
+        )
+        self.assertContains(response, 'class="retail-app-shell retail-readable"')
+        self.assertContains(response, 'class="retail-account-avatar"')
 
     def test_retail_operation_pages_render_in_retail_shell(self):
         for route_name in ("retail:suppliers", "retail:cash_drawer", "retail:credit"):
@@ -56,6 +63,7 @@ class RetailWorkspaceTests(TestCase):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'class="retail-sidebar"')
+                self.assertContains(response, 'class="retail-app-shell retail-readable"')
 
     def test_existing_business_pages_render_in_retail_shell(self):
         route_names = (
@@ -71,6 +79,7 @@ class RetailWorkspaceTests(TestCase):
                 response = self.client.get(reverse(route_name))
                 self.assertEqual(response.status_code, 200)
                 self.assertContains(response, 'class="retail-sidebar"')
+                self.assertContains(response, 'class="retail-app-shell retail-readable"')
 
     def test_supplier_purchase_order_receives_stock_once(self):
         supplier = RetailSupplier.objects.create(

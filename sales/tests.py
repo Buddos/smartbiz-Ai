@@ -68,6 +68,87 @@ class SaleCreateFlowTests(TestCase):
 		self.assertEqual(product.__class__.objects.get(pk=product.pk).current_stock, 9)
 
 
+class RestaurantOrderFlowTests(TestCase):
+	def setUp(self):
+		self.business = Business.objects.create(
+			name='Live Restaurant',
+			business_type='RESTAURANT',
+			email='restaurant@example.com',
+			phone_number='0700000000',
+		)
+		self.user = User.objects.create_user(
+			email='restaurant-owner@example.com',
+			password='test-password',
+			first_name='Restaurant',
+			last_name='Owner',
+			role='OWNER',
+			business=self.business,
+		)
+		self.product = Product.objects.create(
+			business=self.business,
+			name='House Burger',
+			sku='BURGER-001',
+			selling_price=850,
+			current_stock=10,
+			created_by=self.user,
+		)
+		self.client.force_login(self.user)
+
+	def test_order_entry_renders_restaurant_menu_and_three_column_workflow(self):
+		for index in range(25):
+			Product.objects.create(
+				business=self.business,
+				name=f'Menu item {index:02d}',
+				sku=f'MENU-{index:02d}',
+				selling_price=100 + index,
+				current_stock=10,
+				created_by=self.user,
+			)
+
+		response = self.client.get(reverse('sales:create'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, 'sales/entries/restaurant.html')
+		self.assertContains(response, 'Menu')
+		self.assertContains(response, 'Current order')
+		self.assertContains(response, 'Checkout')
+		self.assertContains(response, 'Menu item 24')
+
+	def test_restaurant_order_saves_order_and_table_metadata(self):
+		response = self.client.post(reverse('sales:create'), {
+			'customer': '',
+			'customer_name': 'Walk-in customer',
+			'customer_phone': '',
+			'customer_email': '',
+			'payment_method': 'CASH',
+			'discount': '0',
+			'transaction_code': '',
+			'served_by': str(self.user.id),
+			'order_type': 'DINE_IN',
+			'table_reference': 'Table 4',
+			'notes': 'No onions',
+			'delivery_address': '',
+			'delivery_date': '',
+			'sale_items-TOTAL_FORMS': '1',
+			'sale_items-INITIAL_FORMS': '0',
+			'sale_items-MIN_NUM_FORMS': '1',
+			'sale_items-MAX_NUM_FORMS': '1000',
+			'sale_items-0-product': self.product.name,
+			'sale_items-0-quantity': '2',
+			'sale_items-0-unit_price': '850',
+			'sale_items-0-DELETE': '',
+		})
+
+		sale = Sale.objects.get(business=self.business)
+
+		self.assertRedirects(response, reverse('sales:detail', kwargs={'sale_id': sale.id}))
+		self.assertEqual(sale.metadata['order_type'], 'DINE_IN')
+		self.assertEqual(sale.metadata['table_reference'], 'Table 4')
+		self.assertEqual(sale.metadata['served_by']['id'], str(self.user.id))
+		self.assertEqual(sale.sale_items.get().quantity, 2)
+		self.assertEqual(sale.total, Decimal('1700'))
+
+
 class ElectronicsSaleCheckoutTests(TestCase):
 	def setUp(self):
 		self.business = Business.objects.create(
