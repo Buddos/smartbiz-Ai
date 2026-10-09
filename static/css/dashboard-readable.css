@@ -1,5 +1,5 @@
 .dashboard-readable {
-    font-size: 16px;
+    font-size: 15px; /* reduced slightly for denser dashboards */
 }
 
 .dashboard-readable :is(p, span, small, a, button, label, th, td, li):not(

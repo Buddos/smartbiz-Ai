@@ -12,7 +12,7 @@
     .order-page-heading p { margin:0; color:var(--order-muted); }
     .order-page-kicker { color:var(--order-green)!important; font-size:.73rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
     .order-back-link { display:inline-flex; align-items:center; gap:.55rem; color:var(--order-green); font-size:.9rem; font-weight:700; text-decoration:none; }
-    .order-layout { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr) minmax(270px,.75fr); gap:1rem; align-items:start; }
+    .order-layout { display:grid; grid-template-columns: 1fr; gap:1rem; align-items:start; }
     .order-panel { min-width:0; overflow:hidden; border:1px solid #e0e8e3; border-radius:16px; background:#fff; box-shadow:0 5px 20px rgba(21,48,36,.045); }
     .order-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:.7rem; padding:1.05rem 1.1rem; border-bottom:1px solid #edf1ee; }
     .order-panel-heading h2 { margin:0; color:#183c2d; font-size:1.05rem; font-weight:800; }
@@ -44,7 +44,7 @@
     .order-row-errors { grid-column:1/-1; margin:0; color:#b42318; font-size:.73rem; }
     .order-add-line { display:inline-flex; align-items:center; gap:.45rem; margin-top:.8rem; padding:.55rem .75rem; border:1px solid #b8d9ca; border-radius:9px; background:#fff; color:var(--order-green); font-size:.82rem; font-weight:800; cursor:pointer; }
     .order-add-line:hover { background:#f2faf5; }
-    .order-checkout { position:sticky; top:1rem; }
+    .order-checkout { position:static; /* Checkout placed last in single-column layout */ }
     .order-checkout-body { display:grid; gap:1rem; padding:1rem; }
     .order-checkout-fields { display:grid; gap:.7rem; }
     .order-customer-fields { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
@@ -72,6 +72,7 @@
 
 {% block content %}
 <main class="restaurant-order-page min-h-screen bg-gray-50 px-4 py-6 sm:px-6 lg:px-8" data-restaurant-order>
+    <!-- Layout changed: menu appears first full-width, then current order (cart), then checkout last -->
     <div class="mx-auto max-w-screen-2xl">
         <header class="order-page-heading">
             <div>
