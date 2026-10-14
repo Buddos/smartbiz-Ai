@@ -65,6 +65,24 @@ class RetailWorkspaceTests(TestCase):
                 self.assertContains(response, 'class="retail-sidebar"')
                 self.assertContains(response, 'class="retail-app-shell retail-readable"')
 
+    def test_wholesale_businesses_can_use_shared_supplier_and_receivables_workflows(self):
+        self.business.business_type = "WHOLESALE"
+        self.business.save(update_fields=["business_type"])
+
+        for route_name in ("retail:suppliers", "retail:credit"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+
+    def test_hardware_businesses_can_use_shared_supplier_and_receivables_workflows(self):
+        self.business.business_type = "HARDWARE"
+        self.business.save(update_fields=["business_type"])
+
+        for route_name in ("retail:suppliers", "retail:credit"):
+            with self.subTest(route_name=route_name):
+                response = self.client.get(reverse(route_name))
+                self.assertEqual(response.status_code, 200)
+
     def test_existing_business_pages_render_in_retail_shell(self):
         route_names = (
             "sales:list",

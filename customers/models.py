@@ -12,6 +12,7 @@ class Customer(models.Model):
     name = models.CharField(max_length=200)
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
+    customer_tier = models.CharField(max_length=80, blank=True)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)

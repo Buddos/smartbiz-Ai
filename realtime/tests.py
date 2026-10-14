@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 from asgiref.sync import async_to_sync
@@ -80,10 +79,10 @@ class BusinessRealtimeConsumerTests(SimpleTestCase):
         self.assertTrue(await communicator.receive_nothing(timeout=0.01))
         await communicator.disconnect()
 
-    def test_assistant_question_returns_correlated_answer(self):
-        async_to_sync(self._assert_assistant_answer)()
+    def test_websocket_only_advertises_business_events_and_rejects_chat(self):
+        async_to_sync(self._assert_chat_is_not_a_websocket_capability)()
 
-    async def _assert_assistant_answer(self):
+    async def _assert_chat_is_not_a_websocket_capability(self):
         communicator = WebsocketCommunicator(
             BusinessRealtimeConsumer.as_asgi(),
             "/ws/v1/business/",
@@ -91,23 +90,16 @@ class BusinessRealtimeConsumerTests(SimpleTestCase):
         communicator.scope["user"] = self.user
         connected, _ = await communicator.connect()
         self.assertTrue(connected)
-        await communicator.receive_json_from()
-
-        with patch(
-            "realtime.consumers._answer_business_question",
-            new_callable=AsyncMock,
-            return_value="Your recorded sales are steady.",
-        ):
-            await communicator.send_json_to({
-                "type": "assistant.ask",
-                "request_id": "lovable-42",
-                "question": "How are sales doing?",
-            })
-            answer = await communicator.receive_json_from()
-
-        self.assertEqual(answer["type"], "assistant.answer")
-        self.assertEqual(answer["request_id"], "lovable-42")
-        self.assertEqual(answer["answer"], "Your recorded sales are steady.")
+        ready = await communicator.receive_json_from()
+        self.assertFalse(ready["capabilities"]["assistant_chat"])
+        await communicator.send_json_to({
+            "type": "assistant.ask",
+            "request_id": "lovable-42",
+            "question": "How are sales doing?",
+        })
+        response = await communicator.receive_json_from()
+        self.assertEqual(response["type"], "error")
+        self.assertEqual(response["code"], "unsupported_message")
         await communicator.disconnect()
 
     def test_users_without_business_cannot_connect(self):
@@ -125,4 +117,4 @@ class BusinessRealtimeConsumerTests(SimpleTestCase):
         )
         connected, response = await communicator.connect()
         self.assertFalse(connected)
-        self.assertEqual(response["code"], 4403)
+        self.assertEqual(response, 4403)

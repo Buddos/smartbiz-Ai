@@ -1,8 +1,9 @@
 from django import forms
 from django.core.validators import MinValueValidator
-from django.forms import inlineformset_factory
+from django.forms import formset_factory, inlineformset_factory
 from django.db.models import Q
-from .models import Sale, SaleItem, Payment, Return
+from customers.models import Customer
+from .models import HardwareQuotation, Sale, SaleItem, Payment, Return
 from products.models import Product
 from accounts.models import User
 
@@ -76,6 +77,11 @@ class SaleForm(forms.ModelForm):
             self.fields['customer'].label_from_instance = lambda customer: (
                 f"{customer.name} - {customer.phone or 'No phone'}"
                 f" - {customer.email or 'No email'}"
+                + (
+                    f" - {customer.customer_tier or 'No tier'}"
+                    if self.business.business_type == 'WHOLESALE'
+                    else ""
+                )
             )
 
     def clean(self):
@@ -155,6 +161,84 @@ class BaseSaleItemFormSet(forms.BaseInlineFormSet):
         kwargs = super().get_form_kwargs(index)
         kwargs["business"] = self.business
         return kwargs
+
+
+class HardwareQuotationForm(forms.ModelForm):
+    class Meta:
+        model = HardwareQuotation
+        fields = [
+            "customer",
+            "customer_name",
+            "customer_phone",
+            "customer_email",
+            "valid_until",
+            "discount",
+            "notes",
+        ]
+        widgets = {
+            "customer": forms.Select(attrs={"class": "hardware-input"}),
+            "customer_name": forms.TextInput(attrs={"class": "hardware-input"}),
+            "customer_phone": forms.TextInput(attrs={"class": "hardware-input"}),
+            "customer_email": forms.EmailInput(attrs={"class": "hardware-input"}),
+            "valid_until": forms.DateInput(attrs={"class": "hardware-input", "type": "date"}),
+            "discount": forms.NumberInput(attrs={
+                "class": "hardware-input", "min": "0", "step": "0.01",
+            }),
+            "notes": forms.Textarea(attrs={
+                "class": "hardware-input", "rows": 2,
+                "placeholder": "Project scope, delivery notes, or terms",
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        business = kwargs.pop("business")
+        super().__init__(*args, **kwargs)
+        self.fields["customer"].queryset = Customer.objects.filter(
+            business=business, is_active=True
+        ).order_by("name")
+        self.fields["customer"].label_from_instance = lambda customer: (
+            f"{customer.name} - {customer.phone or 'No phone'}"
+            f" - {customer.email or 'No email'}"
+        )
+        self.fields["customer"].required = False
+
+
+class HardwareQuotationItemForm(forms.Form):
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.none(),
+        widget=forms.Select(attrs={"class": "hardware-input"}),
+    )
+    quantity = forms.IntegerField(
+        min_value=1,
+        initial=1,
+        widget=forms.NumberInput(attrs={"class": "hardware-input", "min": "1"}),
+    )
+    unit_price = forms.DecimalField(
+        min_value=0,
+        decimal_places=2,
+        max_digits=12,
+        widget=forms.NumberInput(attrs={
+            "class": "hardware-input", "min": "0", "step": "0.01",
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        business = kwargs.pop("business")
+        super().__init__(*args, **kwargs)
+        self.fields["product"].queryset = Product.objects.filter(
+            business=business, is_active=True
+        ).order_by("name")
+
+
+HardwareQuotationItemFormSet = formset_factory(
+    HardwareQuotationItemForm,
+    extra=1,
+    min_num=1,
+    validate_min=True,
+    max_num=100,
+    validate_max=True,
+    can_delete=True,
+)
 
 
 SaleItemFormSet = inlineformset_factory(

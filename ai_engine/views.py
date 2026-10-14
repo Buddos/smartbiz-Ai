@@ -1,33 +1,14 @@
-from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from accounts.decorators import business_required, role_required
 from .models import AIInsight, AIInsightFeedback, AIRecommendation, ForecastResult
-from .services import run_sales_forecast
-from .gemini import (
-    GeminiError,
-    answer_business_question,
-    generate_ai_engine_review,
-)
-
-
-class AssistantForm(forms.Form):
-    question = forms.CharField(
-        max_length=1000,
-        widget=forms.Textarea(attrs={
-            "class": "input-field",
-            "rows": 3,
-            "maxlength": 1000,
-            "placeholder": "e.g. Which products should I pay attention to?",
-        })
-    )
+from .services import run_intelligence_pipeline, run_sales_forecast
 
 
 @login_required
@@ -58,17 +39,13 @@ def generate_view(request):
     if not request.user.business:
         messages.warning(request, "Set up a business before generating insights.")
         return redirect("businesses:setup")
-    try:
-        created, review = generate_ai_engine_review(request.user.business)
-    except GeminiError as exc:
-        messages.error(
-            request,
-            f"Business insight generation failed: {exc}",
-        )
+    created = run_intelligence_pipeline(request.user.business)
+    if created:
+        messages.success(request, f"Generated {len(created)} new data-based business insights.")
     else:
-        messages.success(
+        messages.info(
             request,
-            f"Generated {len(created)} data-based alerts and refreshed the business review: {review.title}",
+            "Your AI insights are up to date. New insights appear when business data changes.",
         )
     return redirect("ai_engine:home")
 
@@ -90,37 +67,9 @@ def forecast_view(request):
 @business_required
 @role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 @never_cache
+@require_GET
 def assistant_view(request):
-    assistant_ready = bool(getattr(settings, "GEMINI_API_KEY", "").strip())
-    form = AssistantForm(request.POST if request.method == "POST" else None)
-    context = {
-        "form": form,
-        "has_business": bool(request.user.business),
-        "assistant_ready": assistant_ready,
-        "title": "AI Assistant",
-    }
-    if request.method != "POST":
-        return render(request, "ai_engine/assistant.html", context)
-
-    if not form.is_valid():
-        context["error"] = "Enter a question of up to 1,000 characters."
-        return render(request, "ai_engine/assistant.html", context)
-    if not request.user.business:
-        context["error"] = "Set up your business before asking a question."
-        return render(request, "ai_engine/assistant.html", context)
-    if not assistant_ready:
-        context["error"] = "The assistant is not configured yet. Please contact your administrator."
-        return render(request, "ai_engine/assistant.html", context)
-
-    question = form.cleaned_data["question"]
-    try:
-        answer = answer_business_question(request.user.business, question)
-    except GeminiError as exc:
-        context["error"] = str(exc)
-        return render(request, "ai_engine/assistant.html", context)
-
-    context.update({"question": question, "answer": answer})
-    return render(request, "ai_engine/assistant.html", context)
+    return render(request, "ai_engine/assistant.html", {"title": "AI Assistant"})
 
 
 @login_required

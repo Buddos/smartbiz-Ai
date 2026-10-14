@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Hardware quotations | {{ user.business.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/hardware-quotations.css' %}">{% endblock %}
+{% block content %}
+<div class="hardware-quotes-page">
+    <header class="hardware-quotes-header">
+        <div><p class="hardware-eyebrow">Sales · project quotes</p><h1>Quotations</h1><p>Prepare material estimates for contractors, projects, and walk-in customers.</p></div>
+        <a class="hardware-quote-primary-link" href="#new-quotation"><i class="fas fa-plus" aria-hidden="true"></i> New quotation</a>
+    </header>
+    <section class="hardware-quotes-stat-grid" aria-label="Quotation summary">
+        <article><span>All quotations</span><strong>{{ quotation_count }}</strong></article>
+        <article><span>Showing</span><strong>{{ quotations.paginator.count }}</strong></article>
+        <article><span>Page</span><strong>{{ quotations.number }} <small>of {{ quotations.paginator.num_pages|default:1 }}</small></strong></article>
+    </section>
+    <section class="hardware-quotes-layout">
+        <div class="hardware-quotes-list hardware-quote-card">
+            <header class="hardware-quote-section-heading"><div><p class="hardware-eyebrow">Project pipeline</p><h2>Saved quotations</h2></div>
+                <form method="get" class="hardware-quote-filter">
+                    <label class="sr-only" for="quotationStatusFilter">Filter by quotation status</label>
+                    <select id="quotationStatusFilter" name="status" onchange="this.form.submit()">
+                        <option value="">All statuses</option>
+                        {% for value,label in status_choices %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </form>
+            </header>
+            <div class="hardware-quote-table-wrap">
+                <table class="hardware-quote-table">
+                    <thead><tr><th>Quote</th><th>Customer / project</th><th>Valid until</th><th>Total</th><th>Status</th></tr></thead>
+                    <tbody>
+                    {% for quotation in quotations %}
+                        <tr>
+                            <td><a class="hardware-quote-number" href="{% url 'sales:quotation_detail' quotation.id %}">{{ quotation.quotation_number }}</a><small>{{ quotation.created_at|date:"j M Y" }}</small></td>
+                            <td><strong>{{ quotation.customer_name|default:"Walk-in customer" }}</strong><small>{{ quotation.customer_phone|default:quotation.customer_email|default:"No contact details" }}</small></td>
+                            <td>{% if quotation.valid_until %}{{ quotation.valid_until|date:"j M Y" }}{% else %}No expiry{% endif %}</td>
+                            <td class="hardware-quote-amount">{{ user.business.currency }} {{ quotation.total|floatformat:2 }}</td>
+                            <td><span class="hardware-quote-status status-{{ quotation.status|lower }}">{{ quotation.get_status_display }}</span></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="5" class="hardware-quotes-empty"><i class="fas fa-file-circle-question" aria-hidden="true"></i><strong>No quotations yet</strong><span>Create a material quote for a contractor or project to get started.</span></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if quotations.has_other_pages %}
+                <nav class="hardware-quote-pagination" aria-label="Quotation pages">
+                    {% if quotations.has_previous %}<a href="?{% if status_filter %}status={{ status_filter }}&amp;{% endif %}page={{ quotations.previous_page_number }}">Previous</a>{% endif %}
+                    <span>Page {{ quotations.number }} of {{ quotations.paginator.num_pages }}</span>
+                    {% if quotations.has_next %}<a href="?{% if status_filter %}status={{ status_filter }}&amp;{% endif %}page={{ quotations.next_page_number }}">Next</a>{% endif %}
+                </nav>
+            {% endif %}
+        </div>
+
+        <section class="hardware-quote-create hardware-quote-card" id="new-quotation">
+            <header class="hardware-quote-section-heading"><div><p class="hardware-eyebrow">Start a project estimate</p><h2>New quotation</h2></div><i class="fas fa-file-signature" aria-hidden="true"></i></header>
+            <form method="post" class="hardware-quotation-form" id="hardwareQuotationForm">
+                {% csrf_token %}
+                {% if form.non_field_errors or form.errors or item_formset.non_form_errors %}
+                    <div class="hardware-quotation-errors" role="alert">
+                        {% for errors in form.errors.values %}{% for error in errors %}<span>{{ error }}</span>{% endfor %}{% endfor %}
+                        {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+                        {% for error in item_formset.non_form_errors %}<span>{{ error }}</span>{% endfor %}
+                    </div>
+                {% endif %}
+                <div class="hardware-quote-form-grid">
+                    <label class="full-width">Saved customer{{ form.customer }}{% for error in form.customer.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label>Customer / project name{{ form.customer_name }}{% for error in form.customer_name.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label>Phone{{ form.customer_phone }}{% for error in form.customer_phone.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label>Email{{ form.customer_email }}{% for error in form.customer_email.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label>Valid until{{ form.valid_until }}{% for error in form.valid_until.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                </div>
+                <div class="hardware-quote-lines-heading"><strong>Materials</strong><small>Name, SKU, quantity, and quoted unit price</small></div>
+                {{ item_formset.management_form }}
+                <div class="hardware-quote-lines" id="hardwareQuoteLines">
+                    {% for item_form in item_formset %}
+                        <div class="hardware-quote-line" data-quote-line>
+                            {{ item_form.id }}{{ item_form.DELETE }}
+                            {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <label class="quote-product"><span>Product</span>{{ item_form.product }}{% for error in item_form.product.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                            <label class="quote-quantity"><span>Qty</span>{{ item_form.quantity }}{% for error in item_form.quantity.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                            <label class="quote-unit-price"><span>Unit price</span>{{ item_form.unit_price }}{% for error in item_form.unit_price.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                            <button type="button" data-remove-quote-line aria-label="Remove material row"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                        </div>
+                    {% endfor %}
+                </div>
+                <template id="hardwareQuoteEmptyLine">
+                    <div class="hardware-quote-line" data-quote-line>
+                        {% for hidden in item_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {{ item_formset.empty_form.DELETE }}
+                        <label class="quote-product"><span>Product</span>{{ item_formset.empty_form.product }}</label>
+                        <label class="quote-quantity"><span>Qty</span>{{ item_formset.empty_form.quantity }}</label>
+                        <label class="quote-unit-price"><span>Unit price</span>{{ item_formset.empty_form.unit_price }}</label>
+                        <button type="button" data-remove-quote-line aria-label="Remove material row"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                    </div>
+                </template>
+                <button class="hardware-quote-add-line" type="button" id="hardwareAddQuoteLine"><i class="fas fa-plus" aria-hidden="true"></i> Add another material</button>
+                <div class="hardware-quote-form-grid hardware-quote-form-bottom">
+                    <label>Discount{{ form.discount }}{% for error in form.discount.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label>Notes / terms{{ form.notes }}{% for error in form.notes.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                </div>
+                <div class="hardware-quote-create-footer"><p>Creating a quote does not reserve stock or change inventory.</p><button class="hardware-quote-primary-link" type="submit"><i class="fas fa-file-circle-plus" aria-hidden="true"></i> Save quotation</button></div>
+            </form>
+        </section>
+    </section>
+    {{ quotation_products|json_script:"hardwareQuotationProductPrices" }}
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'js/hardware-quotations.js' %}" defer></script>{% endblock %}

@@ -1,3 +1,167 @@
-{% extends 'sales/form.html' %}
-{% block sale_profile_kicker %}<p class="invoice-create-kicker">Hardware counter sale</p>{% endblock %}
-{% block sale_profile_intro %}<div class="mt-4 rounded-lg border border-stone-100 bg-stone-50 p-4"><strong class="text-stone-900"><i class="fas fa-tools mr-2"></i>Prepare the materials order</strong><p class="mt-1 text-sm text-stone-800">Record the materials, quantities, and customer buying them for a project or repair.</p></div>{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if invoice_mode %}New invoice{% else %}Hardware POS{% endif %} | {{ user.business.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/hardware-pos.css' %}">{% endblock %}
+
+{% block content %}
+<div class="hardware-pos-page" data-hardware-live="checkout" data-currency="{{ user.business.currency|escape }}">
+    <header class="hardware-pos-heading">
+        <div>
+            <p class="hardware-eyebrow"><a href="{% url 'dashboard' %}">Dashboard</a><i class="fas fa-chevron-right" aria-hidden="true"></i>{% if invoice_mode %}Invoices{% else %}Counter checkout{% endif %}</p>
+            <h1>{% if invoice_mode %}Create an invoice{% else %}Point of sale{% endif %}</h1>
+            <p>Find hardware by name, SKU, or barcode. Add it to the cart and finish checkout.</p>
+        </div>
+        <div class="hardware-pos-heading-right">
+            <span class="hardware-live-status" data-live-status aria-live="polite">Connecting to live updates…</span>
+            <a class="hardware-pos-order-link" href="{% url 'sales:list' %}"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Orders</a>
+        </div>
+    </header>
+
+    <form method="post" id="hardwareSaleForm" class="hardware-pos-layout">
+        {% csrf_token %}
+        {% if invoice_mode %}<input type="hidden" name="mode" value="invoice">{% endif %}
+        {% if quotation_id_value %}<input type="hidden" name="quotation_id" value="{{ quotation_id_value }}">{% endif %}
+        {% if appointment_id_value %}<input type="hidden" name="appointment_id" value="{{ appointment_id_value }}">{% endif %}
+        {% if form.non_field_errors or form.errors or formset.non_form_errors %}
+            <div class="hardware-form-errors" role="alert">
+                <strong><i class="fas fa-circle-exclamation" aria-hidden="true"></i> Review the checkout details.</strong>
+                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+                {% for errors in form.errors.values %}{% for error in errors %}<span>{{ error }}</span>{% endfor %}{% endfor %}
+                {% for error in formset.non_form_errors %}<span>{{ error }}</span>{% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="hardware-pos-catalog" aria-labelledby="hardwareCatalogTitle">
+            <div class="hardware-pos-section-heading">
+                <div><p class="hardware-eyebrow">Hardware catalog</p><h2 id="hardwareCatalogTitle">Pick products</h2></div>
+                <a href="{% url 'products:list' %}"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Manage catalog</a>
+            </div>
+            <label class="hardware-pos-search"><i class="fas fa-search" aria-hidden="true"></i><input id="hardwareProductSearch" type="search" placeholder="Search product, SKU, barcode…" autocomplete="off" aria-label="Search hardware products"><kbd>/</kbd></label>
+            <div class="hardware-category-filters" aria-label="Filter by category">
+                <button type="button" class="is-active" data-hardware-category="all">All products</button>
+                {% for category in hardware_categories %}<button type="button" data-hardware-category="{{ category.id }}">{{ category.name }}</button>{% endfor %}
+                <button type="button" data-hardware-category="uncategorized">Uncategorized</button>
+            </div>
+            <div class="hardware-product-grid" id="hardwareProductGrid">
+                {% for product in hardware_products %}
+                    <button class="hardware-product-card {% if product.current_stock <= product.reorder_level and product.current_stock > 0 %}is-low-stock{% elif product.current_stock == 0 %}is-out-of-stock{% endif %}" type="button"
+                        data-hardware-add-product
+                        data-product-name="{{ product.name|escape }}"
+                        data-product-sku="{{ product.sku|escape }}"
+                        data-product-barcode="{{ product.barcode|escape }}"
+                        data-product-category="{% if product.category_id %}{{ product.category_id }}{% else %}uncategorized{% endif %}"
+                        data-product-price="{{ product.selling_price }}"
+                        data-product-stock="{{ product.current_stock }}"
+                        {% if product.current_stock == 0 %}disabled{% endif %}>
+                        <span class="hardware-product-symbol"><i class="fas fa-toolbox" aria-hidden="true"></i></span>
+                        <span class="hardware-product-details"><strong>{{ product.name }}</strong><small>{{ product.sku }}{% if product.category %} · {{ product.category.name }}{% endif %}</small></span>
+                        <span class="hardware-product-price">{{ user.business.currency }} {{ product.selling_price|floatformat:2 }}</span>
+                        <span class="hardware-product-stock">{% if product.current_stock == 0 %}Out of stock{% else %}{{ product.current_stock }} available{% endif %}</span>
+                    </button>
+                {% empty %}
+                    <div class="hardware-catalog-empty"><i class="fas fa-box-open" aria-hidden="true"></i><strong>Your catalog is empty</strong><span>Add active products to start a hardware sale.</span><a href="{% url 'products:list' %}">Open products</a></div>
+                {% endfor %}
+                <div class="hardware-catalog-empty hardware-no-results" id="hardwareNoProducts" hidden><i class="fas fa-magnifying-glass" aria-hidden="true"></i><strong>No products found</strong><span>Try a different name, SKU, or barcode.</span></div>
+            </div>
+        </section>
+
+        <aside class="hardware-pos-checkout" aria-label="Cart and checkout">
+            <section class="hardware-cart-panel">
+                <header class="hardware-cart-heading">
+                    <div><p class="hardware-eyebrow">Current order</p><h2>Your cart <span id="hardwareCartCount">0</span></h2></div>
+                    <button type="button" id="hardwareClearCart">Clear</button>
+                </header>
+                {{ formset.management_form }}
+                <div class="hardware-cart-lines" id="hardwareCartLines">
+                    {% for item_form in formset %}
+                        <article class="hardware-cart-line" data-hardware-cart-line>
+                            {{ item_form.id }}{{ item_form.DELETE }}
+                            <div class="hardware-cart-line-fields">
+                                <label class="hardware-cart-product-field"><span>Product name or SKU</span>{{ item_form.product }}{% for error in item_form.product.errors %}<small class="hardware-field-error">{{ error }}</small>{% endfor %}</label>
+                                <label class="hardware-cart-quantity-field"><span>Qty</span>{{ item_form.quantity }}{% for error in item_form.quantity.errors %}<small class="hardware-field-error">{{ error }}</small>{% endfor %}</label>
+                                <label class="hardware-cart-price-field"><span>Unit price</span>{{ item_form.unit_price }}</label>
+                                <span class="hardware-cart-line-total"><small>Line total</small><strong data-hardware-line-total>{{ user.business.currency }} 0.00</strong></span>
+                                <button class="hardware-cart-remove" type="button" data-hardware-remove aria-label="Remove item"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+                <template id="hardwareCartLineTemplate">
+                    <article class="hardware-cart-line" data-hardware-cart-line>
+                        {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
+                        <div class="hardware-cart-line-fields">
+                            <label class="hardware-cart-product-field"><span>Product name or SKU</span>{{ formset.empty_form.product }}</label>
+                            <label class="hardware-cart-quantity-field"><span>Qty</span>{{ formset.empty_form.quantity }}</label>
+                            <label class="hardware-cart-price-field"><span>Unit price</span>{{ formset.empty_form.unit_price }}</label>
+                            <span class="hardware-cart-line-total"><small>Line total</small><strong data-hardware-line-total>{{ user.business.currency }} 0.00</strong></span>
+                            <button class="hardware-cart-remove" type="button" data-hardware-remove aria-label="Remove item"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                        </div>
+                    </article>
+                </template>
+                <button class="hardware-add-manual" type="button" id="hardwareAddManual"><i class="fas fa-plus" aria-hidden="true"></i> Add item manually</button>
+
+                <div class="hardware-cart-discount">
+                    <label for="{{ form.discount.id_for_label }}">Discount</label>
+                    <div><span>{{ user.business.currency }}</span>{{ form.discount }}</div>
+                    {% for error in form.discount.errors %}<small class="hardware-field-error">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="hardware-cart-totals" aria-live="polite">
+                    <div><span>Subtotal</span><strong id="hardwareSubtotal">{{ user.business.currency }} 0.00</strong></div>
+                    <div><span>Discount</span><strong id="hardwareDiscount">− {{ user.business.currency }} 0.00</strong></div>
+                    <div class="hardware-total-due"><span>Total due</span><strong id="hardwareTotal">{{ user.business.currency }} 0.00</strong></div>
+                    <small id="hardwareCartSummary">0 products · 0 units</small>
+                </div>
+
+                <section class="hardware-checkout-customer">
+                    <div class="hardware-pos-section-heading"><div><p class="hardware-eyebrow">Customer</p><h3>Who is buying?</h3></div><a href="{% url 'customers:list' %}">Browse customers</a></div>
+                    <label class="hardware-field-label" for="{{ form.customer.id_for_label }}">Saved customer <span>Optional for walk-ins</span></label>
+                    <select id="{{ form.customer.id_for_label }}" name="customer" class="hardware-input" data-hardware-customer>
+                        <option value="">Walk-in customer</option>
+                        {% for customer in form.fields.customer.queryset %}
+                            <option value="{{ customer.id }}" data-name="{{ customer.name|escape }}" data-phone="{{ customer.phone|escape }}" data-email="{{ customer.email|escape }}" {% if form.customer.value == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.name }}{% if customer.phone %} · {{ customer.phone }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    {% for error in form.customer.errors %}<small class="hardware-field-error">{{ error }}</small>{% endfor %}
+                    <div class="hardware-customer-fields">
+                        <label>Name<input class="hardware-input" type="text" name="customer_name" id="hardwareCustomerName" value="{{ form.customer_name.value|default:'' }}" placeholder="Walk-in customer"></label>
+                        <label>Phone<input class="hardware-input" type="tel" name="customer_phone" id="hardwareCustomerPhone" value="{{ form.customer_phone.value|default:'' }}" placeholder="Phone number"></label>
+                    </div>
+                </section>
+            </section>
+
+            <section class="hardware-payment-panel">
+                <div class="hardware-pos-section-heading"><div><p class="hardware-eyebrow">Payment</p><h2>Choose payment</h2></div></div>
+                {{ form.payment_method }}
+                <div class="hardware-payment-options" role="group" aria-label="Choose a payment method">
+                    {% for value,label in form.fields.payment_method.choices %}
+                        <button type="button" data-hardware-payment="{{ value }}" aria-pressed="{% if form.payment_method.value == value %}true{% else %}false{% endif %}"><i class="fas {% if value == 'CASH' %}fa-money-bill-wave{% elif value == 'M-PESA' %}fa-mobile-screen-button{% elif value == 'CARD' %}fa-credit-card{% elif value == 'CREDIT' %}fa-book-open{% else %}fa-building-columns{% endif %}" aria-hidden="true"></i>{{ label }}</button>
+                    {% endfor %}
+                </div>
+                <label class="hardware-field-label" for="{{ form.transaction_code.id_for_label }}">Payment reference <span>Optional</span></label>
+                {{ form.transaction_code }}
+                <div class="hardware-delivery-fields">
+                    <label class="hardware-field-label" for="{{ form.delivery_address.id_for_label }}">Delivery address <span>Optional</span></label>
+                    {{ form.delivery_address }}
+                    <label class="hardware-field-label" for="{{ form.delivery_date.id_for_label }}">Delivery date <span>Optional</span></label>
+                    {{ form.delivery_date }}
+                </div>
+                <label class="hardware-field-label" for="{{ form.notes.id_for_label }}">Sale notes <span>Optional</span></label>
+                {{ form.notes }}
+                {% for error in form.payment_method.errors %}<small class="hardware-field-error">{{ error }}</small>{% endfor %}
+                <button class="hardware-complete-sale" type="submit" id="hardwareCompleteSale">
+                    <span><i class="fas fa-circle-check" aria-hidden="true"></i> {% if invoice_mode %}Create invoice{% else %}Complete sale{% endif %}</span>
+                    <strong id="hardwareSubmitTotal">{{ user.business.currency }} 0.00</strong>
+                </button>
+                <p class="hardware-payment-footnote"><i class="fas fa-shield-halved" aria-hidden="true"></i> Stock and balances update when this sale is completed.</p>
+            </section>
+        </aside>
+    </form>
+    <div class="hardware-stock-update-note" data-stock-update-note hidden role="status">
+        <span><i class="fas fa-arrows-rotate" aria-hidden="true"></i> Stock changed in another session. Refresh to see current availability.</span>
+        <button type="button" data-refresh-stock>Refresh catalog</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/hardware-pos.js' %}" defer></script>{% endblock %}

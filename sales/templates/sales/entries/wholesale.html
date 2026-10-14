@@ -1,3 +1,15 @@
 {% extends 'sales/form.html' %}
 {% block sale_profile_kicker %}<p class="invoice-create-kicker">Wholesale order desk</p>{% endblock %}
 {% block sale_profile_intro %}<div class="mt-4 rounded-lg border border-amber-100 bg-amber-50 p-4"><strong class="text-amber-900"><i class="fas fa-truck-loading mr-2"></i>Prepare a bulk order</strong><p class="mt-1 text-sm text-amber-800">Capture the buyer, quantities, delivery details, and payment terms for this wholesale order.</p></div>{% endblock %}
+{% block wholesale_promotion_field %}
+    {% if active_promotions %}
+    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <label for="wholesale-promotion" class="mb-1 block text-sm font-semibold text-emerald-900">Apply a promotion</label>
+        <select id="wholesale-promotion" name="promotion_id" class="input-field">
+            <option value="">No promotion</option>
+            {% for promotion in active_promotions %}<option value="{{ promotion.pk }}" {% if selected_promotion_id == promotion.pk|stringformat:"s" %}selected{% endif %}>{{ promotion.name }} — {{ promotion.get_promotion_type_display }}</option>{% endfor %}
+        </select>
+        <p class="mt-1 text-xs text-emerald-800">Eligible discounts are checked against the current products and quantities before the sale is recorded.</p>
+    </div>
+    {% endif %}
+{% endblock %}

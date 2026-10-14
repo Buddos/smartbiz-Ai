@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{% if bill %}Edit {{ bill.invoice_number }}{% else %}Record supplier invoice{% endif %} | Accounts Payable{% endblock %}
+{% block content %}
+<div class="wholesale-content wholesale-module">
+    <header class="wholesale-page-heading"><div><p class="wholesale-eyebrow"><a href="{% url 'wholesale:payables' %}">Accounts Payable</a> · invoice</p><h1>{% if bill %}Edit supplier invoice{% else %}Record supplier invoice{% endif %}</h1><p>Enter invoice details and itemized supplier charges.</p></div></header>
+    <form method="post" enctype="multipart/form-data" class="wholesale-panel wholesale-form-panel">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="wholesale-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="wholesale-form-grid">
+            {% for field in form %}<div class="wholesale-form-field{% if field.name == 'notes' %} is-wide{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small class="wholesale-error">{{ error }}</small>{% endfor %}</div>{% endfor %}
+        </div>
+        {% if formset %}
+            <section class="wholesale-line-items"><div class="wholesale-panel-heading"><div><p>Invoice breakdown</p><h2>Line items</h2></div><button class="wholesale-button wholesale-button-secondary" type="button" data-add-line>Add item</button></div>
+                {{ formset.management_form }}
+                {% if formset.non_form_errors %}<div class="wholesale-form-errors">{{ formset.non_form_errors }}</div>{% endif %}
+                <div data-line-list>{% for line_form in formset %}<div class="wholesale-line-item" data-line-row>
+                    {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="wholesale-form-grid"><div class="wholesale-form-field"><label>{{ line_form.product.label }}</label>{{ line_form.product }}</div><div class="wholesale-form-field"><label>{{ line_form.description.label }}</label>{{ line_form.description }}</div><div class="wholesale-form-field"><label>{{ line_form.quantity.label }}</label>{{ line_form.quantity }}</div><div class="wholesale-form-field"><label>{{ line_form.unit_cost.label }}</label>{{ line_form.unit_cost }}</div></div>
+                    {% for error in line_form.errors.values %}<small class="wholesale-error">{{ error }}</small>{% endfor %}
+                    {% if line_form.DELETE %}<label class="wholesale-delete-line">{{ line_form.DELETE }} Remove line</label>{% endif %}
+                </div>{% endfor %}</div>
+                <template data-empty-line><div class="wholesale-line-item" data-line-row>
+                    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="wholesale-form-grid"><div class="wholesale-form-field"><label>{{ formset.empty_form.product.label }}</label>{{ formset.empty_form.product }}</div><div class="wholesale-form-field"><label>{{ formset.empty_form.description.label }}</label>{{ formset.empty_form.description }}</div><div class="wholesale-form-field"><label>{{ formset.empty_form.quantity.label }}</label>{{ formset.empty_form.quantity }}</div><div class="wholesale-form-field"><label>{{ formset.empty_form.unit_cost.label }}</label>{{ formset.empty_form.unit_cost }}</div></div>
+                    {% if formset.empty_form.DELETE %}<label class="wholesale-delete-line">{{ formset.empty_form.DELETE }} Remove line</label>{% endif %}
+                </div></template>
+            </section>
+            <script>
+                (() => {
+                    const container = document.querySelector("[data-line-list]");
+                    const template = document.querySelector("[data-empty-line]");
+                    const total = document.getElementById("id_lines-TOTAL_FORMS");
+                    document.querySelector("[data-add-line]")?.addEventListener("click", () => {
+                        const index = Number(total.value);
+                        container.insertAdjacentHTML("beforeend", template.innerHTML.replaceAll("__prefix__", index));
+                        total.value = String(index + 1);
+                    });
+                })();
+            </script>
+        {% endif %}
+        <div class="wholesale-form-actions"><a href="{% if bill %}{% url 'wholesale:bill_detail' bill.pk %}{% else %}{% url 'wholesale:payables' %}{% endif %}" class="wholesale-button wholesale-button-secondary">Cancel</a><button class="wholesale-button wholesale-button-primary" type="submit">Save invoice</button></div>
+    </form>
+</div>
+{% endblock %}

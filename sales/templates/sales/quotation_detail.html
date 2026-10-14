@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ quotation.quotation_number }} | {{ user.business.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/hardware-quotations.css' %}">{% endblock %}
+{% block content %}
+<div class="hardware-quote-detail-page">
+    <p class="hardware-eyebrow"><a href="{% url 'sales:quotations' %}">Quotations</a><i class="fas fa-chevron-right" aria-hidden="true"></i>{{ quotation.quotation_number }}</p>
+    <header class="hardware-quote-detail-header">
+        <div><span class="hardware-quote-status status-{{ quotation.status|lower }}">{{ quotation.get_status_display }}</span><h1>{{ quotation.quotation_number }}</h1><p>Created {{ quotation.created_at|date:"j F Y, g:i A" }}{% if quotation.created_by %} by {{ quotation.created_by.get_full_name|default:quotation.created_by.email }}{% endif %}</p></div>
+        <div class="hardware-quote-detail-actions">
+            {% if quotation.status == "DRAFT" %}<form method="post" action="{% url 'sales:quotation_action' quotation.id %}">{% csrf_token %}<input type="hidden" name="action" value="send"><button type="submit" class="hardware-quote-secondary-button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Mark as sent</button></form>{% endif %}
+            {% if quotation.status == "SENT" %}<form method="post" action="{% url 'sales:quotation_action' quotation.id %}">{% csrf_token %}<input type="hidden" name="action" value="accept"><button type="submit" class="hardware-quote-primary-link"><i class="fas fa-check" aria-hidden="true"></i> Accept quotation</button></form>{% endif %}
+            {% if quotation.status == "DRAFT" or quotation.status == "SENT" or quotation.status == "ACCEPTED" %}<form method="post" action="{% url 'sales:quotation_action' quotation.id %}">{% csrf_token %}<input type="hidden" name="action" value="decline"><button type="submit" class="hardware-quote-secondary-button is-danger">Decline</button></form>{% endif %}
+            {% if quotation.status == "ACCEPTED" %}<a class="hardware-quote-primary-link" href="{% url 'sales:quotation_convert' quotation.id %}"><i class="fas fa-cash-register" aria-hidden="true"></i> Convert to POS sale</a>{% endif %}
+            {% if quotation.status == "CONVERTED" and quotation.converted_sale %}<a class="hardware-quote-primary-link" href="{% url 'sales:detail' quotation.converted_sale.id %}"><i class="fas fa-receipt" aria-hidden="true"></i> View sale</a>{% endif %}
+        </div>
+    </header>
+
+    {% if quotation.valid_until and quotation.valid_until < today %}<div class="hardware-quotation-expired" role="status"><i class="fas fa-clock" aria-hidden="true"></i>This quotation passed its validity date on {{ quotation.valid_until|date:"j F Y" }}.</div>{% endif %}
+
+    <section class="hardware-quote-detail-grid">
+        <article class="hardware-quote-card hardware-quote-customer-card">
+            <p class="hardware-eyebrow">Prepared for</p><h2>{{ quotation.customer_name|default:"Walk-in customer" }}</h2>
+            {% if quotation.customer_phone %}<p><i class="fas fa-phone" aria-hidden="true"></i>{{ quotation.customer_phone }}</p>{% endif %}
+            {% if quotation.customer_email %}<p><i class="fas fa-envelope" aria-hidden="true"></i>{{ quotation.customer_email }}</p>{% endif %}
+            <p><i class="fas fa-calendar" aria-hidden="true"></i>{% if quotation.valid_until %}Valid until {{ quotation.valid_until|date:"j F Y" }}{% else %}No expiry date{% endif %}</p>
+            {% if quotation.notes %}<div class="hardware-quote-notes"><strong>Notes / terms</strong><p>{{ quotation.notes|linebreaksbr }}</p></div>{% endif %}
+        </article>
+        <article class="hardware-quote-card hardware-quote-items-card">
+            <header class="hardware-quote-section-heading"><div><p class="hardware-eyebrow">Project estimate</p><h2>Quoted materials</h2></div><span>{{ quotation.items.count }} line{{ quotation.items.count|pluralize }}</span></header>
+            <div class="hardware-quote-table-wrap"><table class="hardware-quote-table">
+                <thead><tr><th>Material</th><th>Quantity</th><th>Unit price</th><th>Line total</th></tr></thead>
+                <tbody>{% for item in quotation.items.all %}<tr><td><strong>{{ item.product_name }}</strong><small>{{ item.product_sku|default:"No SKU" }}</small></td><td>{{ item.quantity }} {{ item.unit }}</td><td>{{ user.business.currency }} {{ item.unit_price|floatformat:2 }}</td><td class="hardware-quote-amount">{{ user.business.currency }} {{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</tbody>
+            </table></div>
+            <div class="hardware-quote-totals"><div><span>Subtotal</span><strong>{{ user.business.currency }} {{ quotation.subtotal|floatformat:2 }}</strong></div>{% if quotation.discount %}<div><span>Discount</span><strong>− {{ user.business.currency }} {{ quotation.discount|floatformat:2 }}</strong></div>{% endif %}<div class="is-total"><span>Quotation total</span><strong>{{ user.business.currency }} {{ quotation.total|floatformat:2 }}</strong></div></div>
+        </article>
+    </section>
+</div>
+{% endblock %}

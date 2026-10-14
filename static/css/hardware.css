@@ -1,0 +1,111 @@
+.hardware-app-shell {
+    --hardware-ink: #17251e;
+    --hardware-muted: #728078;
+    --hardware-border: #e4e9e5;
+    --hardware-green: #176543;
+    --hardware-green-dark: #104b32;
+    --hardware-page: #f5f7f4;
+    display: flex;
+    min-height: 100vh;
+    background: var(--hardware-page);
+    color: var(--hardware-ink);
+    font-family: Inter, sans-serif;
+}
+
+.hardware-app-shell *,
+.hardware-app-shell *::before,
+.hardware-app-shell *::after { box-sizing: border-box; }
+.hardware-sidebar { position: sticky; top: 0; display: flex; width: 250px; height: 100vh; flex: 0 0 250px; flex-direction: column; padding: 18px 14px 12px; border-right: 1px solid var(--hardware-border); background: #fff; }
+.hardware-brand { display: flex; min-height: 55px; align-items: center; gap: 11px; padding: 2px 8px 14px; margin-bottom: 5px; border-bottom: 1px solid var(--hardware-border); color: var(--hardware-ink); text-decoration: none; }
+.hardware-brand-mark { display: grid; width: 38px; height: 38px; flex: 0 0 38px; place-items: center; border-radius: 11px; background: #e6f1e8; color: var(--hardware-green); font-size: 17px; }
+.hardware-brand strong, .hardware-brand small { display: block; }.hardware-brand strong { font-size: 14px; font-weight: 800; letter-spacing: -.03em; }.hardware-brand small { max-width: 165px; margin-top: 3px; overflow: hidden; color: var(--hardware-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.hardware-nav { min-height: 0; flex: 1; overflow-y: auto; padding: 0 2px; }
+.hardware-nav-label { padding: 11px 10px 4px; margin: 4px 0 2px; color: #939d96; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.hardware-nav-link { position: relative; display: flex; min-height: 34px; align-items: center; gap: 10px; padding: 6px 10px; margin: 2px 0; border-radius: 8px; color: #516057; font-size: 11px; font-weight: 550; text-decoration: none; transition: background .16s ease, color .16s ease; }
+.hardware-nav-link > i { width: 16px; color: #7b8980; font-size: 12px; text-align: center; }
+.hardware-nav-link:hover { background: #f1f5f1; color: var(--hardware-green-dark); }
+.hardware-nav-link.is-active { background: #e8f2ea; color: var(--hardware-green-dark); font-weight: 700; }
+.hardware-nav-link.is-active > i { color: var(--hardware-green); }
+.hardware-nav-link kbd { margin-left: auto; padding: 2px 4px; border: 1px solid #dfe7e0; border-radius: 4px; color: #829087; font: 9px Inter, sans-serif; }
+.hardware-nav-link small { margin-left: auto; color: #a1aaa4; font-size: 9px; }
+.hardware-nav-link.is-disabled { color: #879188; cursor: not-allowed; }
+.hardware-sidebar-account { display: flex; min-width: 0; align-items: center; gap: 8px; padding: 11px 5px 1px; margin-top: 8px; border-top: 1px solid var(--hardware-border); }
+.hardware-avatar { display: grid; width: 32px; height: 32px; flex: 0 0 32px; place-items: center; overflow: hidden; border-radius: 50%; background: #e6f1e8; color: var(--hardware-green); font-size: 11px; font-weight: 800; text-decoration: none; }
+.hardware-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.hardware-account-name { min-width: 0; flex: 1; }.hardware-account-name strong, .hardware-account-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hardware-account-name strong { font-size: 10px; }.hardware-account-name small { margin-top: 2px; color: var(--hardware-muted); font-size: 9px; }
+.hardware-sidebar-account > a:last-child { padding: 7px; border-radius: 7px; color: var(--hardware-muted); }.hardware-sidebar-account > a:last-child:hover { background: #e8f2ea; color: var(--hardware-green); }
+.hardware-workspace { min-width: 0; min-height: 100vh; flex: 1; }
+.hardware-topbar { position: sticky; top: 0; z-index: 30; display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 15px; padding: 9px clamp(16px, 2.8vw, 34px); border-bottom: 1px solid var(--hardware-border); background: rgb(255 255 255 / 96%); backdrop-filter: blur(10px); }
+.hardware-topbar-title, .hardware-topbar-actions { display: flex; min-width: 0; align-items: center; gap: 13px; }.hardware-topbar-title > div > span, .hardware-topbar-title > div > strong { display: block; }.hardware-topbar-title > div > span { color: var(--hardware-muted); font-size: 10px; }.hardware-topbar-title > div > strong { margin-top: 2px; font-size: 13px; }
+.hardware-menu-button { display: none; border: 0; background: transparent; color: var(--hardware-green); font-size: 19px; cursor: pointer; }
+.hardware-topbar-pos { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; border-radius: 8px; background: var(--hardware-green); color: #fff; font-size: 10px; font-weight: 700; text-decoration: none; }.hardware-topbar-pos:hover { background: var(--hardware-green-dark); color: #fff; }
+.hardware-main { min-width: 0; min-height: calc(100vh - 64px); }
+.hardware-content { width: min(100%, 1530px); padding: 25px clamp(16px, 2.6vw, 36px) 38px; margin: 0 auto; }
+.hardware-welcome { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }.hardware-welcome h1 { margin: 4px 0 3px; color: #183a2b; font-size: clamp(23px, 2.2vw, 31px); font-weight: 800; letter-spacing: -.045em; line-height: 1.18; }.hardware-welcome > div:first-child > p:last-child { margin: 7px 0 0; color: var(--hardware-muted); font-size: 12px; }
+.hardware-eyebrow { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--hardware-green); font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }.hardware-date { padding-left: 8px; margin-left: 3px; border-left: 1px solid #d7e0d8; color: #89938b; font-size: 9px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.hardware-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22a06b; box-shadow: 0 0 0 3px #e4f4ea; }.hardware-live-status { color: #75847a; font-size: 9px; font-weight: 600; }.hardware-live-status.is-live { color: #1b7a4d; }.hardware-live-status.is-offline { color: #b47721; }
+.hardware-welcome-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; }.hardware-button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none; }.hardware-button-primary { background: var(--hardware-green); color: #fff; box-shadow: 0 5px 12px rgb(23 101 67 / 15%); }.hardware-button-primary:hover { background: var(--hardware-green-dark); color: #fff; }.hardware-button kbd { padding: 2px 4px; border-radius: 3px; background: rgb(255 255 255 / 18%); color: #fff; font: 9px Inter, sans-serif; }
+.hardware-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 13px; }.hardware-kpi { position: relative; min-width: 0; min-height: 144px; padding: 17px 17px 13px; border: 1px solid var(--hardware-border); border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgb(25 45 32 / 3%); }.hardware-kpi > div > span, .hardware-kpi > div > small { display: block; }.hardware-kpi > div > span { color: #35463b; font-size: 11px; font-weight: 700; }.hardware-kpi > div > small { margin-top: 3px; color: #8a958d; font-size: 9px; }.hardware-kpi > i { position: absolute; top: 14px; right: 15px; display: grid; width: 31px; height: 31px; place-items: center; border-radius: 9px; background: #edf5ee; color: var(--hardware-green); font-size: 13px; }.hardware-kpi > strong { display: block; margin-top: 13px; overflow: hidden; color: #183a2b; font-size: clamp(19px, 2vw, 25px); font-weight: 800; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }.hardware-kpi > a { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; color: #63806d; font-size: 9px; font-weight: 650; text-decoration: none; }.hardware-kpi > a:hover { color: var(--hardware-green); }.hardware-kpi > a i { font-size: 8px; }.hardware-kpi-sales { border-top: 3px solid var(--hardware-green); }.hardware-kpi-alert > i { background: #fff2de; color: #ba7517; }.hardware-kpi-alert > strong { color: #9b6113; }.hardware-kpi-credit > i { background: #f0edfb; color: #6a59a7; }
+.hardware-shortcuts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }.hardware-shortcuts > a { position: relative; display: grid; min-height: 81px; grid-template-columns: 36px 1fr; grid-template-rows: auto auto; align-content: center; column-gap: 10px; padding: 12px 13px; border: 1px solid var(--hardware-border); border-radius: 10px; background: #fff; color: var(--hardware-ink); text-decoration: none; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }.hardware-shortcuts > a:hover { transform: translateY(-2px); border-color: #bfd5c5; box-shadow: 0 6px 16px rgb(25 45 32 / 6%); }.hardware-shortcuts > a > span { display: grid; width: 34px; height: 34px; grid-row: span 2; place-items: center; border-radius: 9px; background: #edf5ee; color: var(--hardware-green); font-size: 13px; }.hardware-shortcuts > a > strong { align-self: end; font-size: 10px; }.hardware-shortcuts > a > small { align-self: start; margin-top: 3px; color: #8a958d; font-size: 8px; }.hardware-shortcuts .shortcut-arrow { position: absolute; top: 15px; right: 13px; color: #9aa59d; font-size: 9px; }.hardware-shortcuts .hardware-shortcut-primary { border-color: #d7e8db; background: #edf5ee; }.hardware-shortcut-primary > span { background: #dcecdf; }
+.hardware-dashboard-columns { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 13px; }.hardware-panel { min-width: 0; padding: 17px; border: 1px solid var(--hardware-border); border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgb(25 45 32 / 3%); }.hardware-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #edf0ed; }.hardware-panel-heading h2 { margin: 3px 0 0; color: #1c3528; font-size: 15px; font-weight: 800; letter-spacing: -.025em; }.hardware-panel-heading > div > p:last-child:not(.hardware-eyebrow) { margin: 4px 0 0; color: #849088; font-size: 9px; }.hardware-panel-heading > a { flex: 0 0 auto; color: var(--hardware-green); font-size: 9px; font-weight: 700; text-decoration: none; }.hardware-panel-heading > a i { margin-left: 3px; font-size: 8px; }
+.hardware-stock-row { display: grid; min-height: 58px; grid-template-columns: 31px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; border-bottom: 1px solid #f0f2f0; }.hardware-stock-row:last-child { border-bottom: 0; }.hardware-stock-icon, .hardware-sale-icon { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: #fff3e2; color: #ba7517; font-size: 12px; }.hardware-stock-icon.is-empty { background: #fdeaea; color: #bb4141; }.hardware-stock-name { min-width: 0; }.hardware-stock-name strong, .hardware-stock-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hardware-stock-name strong { color: #314439; font-size: 10px; }.hardware-stock-name small { margin-top: 3px; color: #929c95; font-size: 8px; }.hardware-stock-level { color: #9b6113; font-size: 9px; font-weight: 750; white-space: nowrap; }.hardware-stock-level.is-empty { color: #b43f3f; }.hardware-stock-reorder { color: #929c95; font-size: 8px; white-space: nowrap; }
+.hardware-sale-row { display: grid; min-height: 58px; grid-template-columns: 31px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-bottom: 1px solid #f0f2f0; color: inherit; text-decoration: none; }.hardware-sale-row:last-child { border-bottom: 0; }.hardware-sale-icon { background: #edf5ee; color: var(--hardware-green); }.hardware-sale-name { min-width: 0; }.hardware-sale-name strong, .hardware-sale-name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hardware-sale-name strong { color: #314439; font-size: 10px; }.hardware-sale-name small { margin-top: 3px; color: #929c95; font-size: 8px; }.hardware-sale-amount { color: #263e30; font-size: 10px; font-weight: 750; text-align: right; white-space: nowrap; }.hardware-sale-amount small { display: block; margin-top: 3px; color: #8d9890; font-size: 8px; font-weight: 500; }
+.hardware-empty-state { display: flex; min-height: 156px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #8a958d; text-align: center; }.hardware-empty-state > i { margin-bottom: 3px; color: #4e966d; font-size: 19px; }.hardware-empty-state strong { color: #3a4e40; font-size: 11px; }.hardware-empty-state span { font-size: 9px; }
+.hardware-bottom-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 13px; }.hardware-note-card { display: grid; min-height: 112px; grid-template-columns: 34px 1fr; align-items: start; gap: 11px; padding: 15px; border: 1px solid #e8e4f6; border-radius: 11px; background: linear-gradient(110deg, #f7f5ff, #fff 70%); }.hardware-note-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 9px; background: #eeeafb; color: #6b59a8; }.hardware-note-card h2 { margin: 4px 0; color: #2a3044; font-size: 12px; font-weight: 800; }.hardware-note-card > div > p:last-child { margin: 0; color: #7e8293; font-size: 9px; }.hardware-note-card > a { grid-column: 2; margin-top: 1px; color: #6654a2; font-size: 9px; font-weight: 750; text-decoration: none; }.hardware-note-card > a i { margin-left: 4px; font-size: 8px; }.hardware-note-finance { border-color: #e4ebe6; background: linear-gradient(110deg, #edf5ef, #fff 70%); }.hardware-note-finance .hardware-note-icon { background: #dcecdf; color: var(--hardware-green); }.hardware-note-finance > a { color: var(--hardware-green); }
+.hardware-sidebar-backdrop { display: none; }
+
+@media (max-width: 1100px) {
+    .hardware-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hardware-shortcuts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .hardware-stock-row { grid-template-columns: 31px minmax(0, 1fr) auto; }.hardware-stock-reorder { display: none; }
+}
+@media (max-width: 780px) {
+    .hardware-sidebar { position: fixed; z-index: 60; left: 0; width: min(280px, 86vw); height: 100dvh; transform: translateX(-102%); transition: transform .2s ease; box-shadow: 8px 0 25px rgb(20 40 27 / 12%); }.hardware-app-shell.is-menu-open .hardware-sidebar { transform: translateX(0); }.hardware-sidebar-backdrop { position: fixed; z-index: 50; inset: 0; display: none; border: 0; background: rgb(20 33 25 / 40%); }.hardware-app-shell.is-menu-open .hardware-sidebar-backdrop { display: block; }.hardware-menu-button { display: grid; width: 34px; height: 34px; place-items: center; }.hardware-topbar { min-height: 58px; }.hardware-main { min-height: calc(100vh - 58px); }
+    .hardware-content { padding-top: 20px; }.hardware-welcome { align-items: flex-start; flex-direction: column; }.hardware-welcome-actions { width: 100%; justify-content: space-between; }.hardware-dashboard-columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+    .hardware-topbar-pos span { display: none; }.hardware-topbar-pos { width: 34px; justify-content: center; padding: 0; }.hardware-kpi-grid { gap: 8px; }.hardware-kpi { min-height: 130px; padding: 13px; }.hardware-kpi > div > small { max-width: 130px; }.hardware-kpi > i { top: 10px; right: 10px; width: 27px; height: 27px; }.hardware-shortcuts { gap: 8px; }.hardware-shortcuts > a { min-height: 76px; grid-template-columns: 30px 1fr; gap: 8px; padding: 10px; }.hardware-shortcuts > a > span { width: 30px; height: 30px; }.hardware-shortcuts > a > strong { padding-right: 7px; font-size: 9px; }.hardware-shortcuts > a > small { font-size: 7px; }.hardware-bottom-grid { grid-template-columns: 1fr; }.hardware-stock-row { gap: 8px; }.hardware-stock-level { font-size: 8px; }
+}
+
+.hardware-nav-label { font-size: 10px; }
+.hardware-nav-link { min-height: 37px; font-size: 12px; }
+.hardware-nav-link > i { font-size: 13px; }
+.hardware-nav-link kbd, .hardware-nav-link small { font-size: 10px; }
+.hardware-brand small { font-size: 11px; }
+.hardware-account-name strong { font-size: 11px; }
+.hardware-account-name small { font-size: 10px; }
+.hardware-user-menu { position: relative; display: inline-flex; flex: 0 0 auto; }
+.hardware-account-toggle { display: inline-flex; min-height: 38px; align-items: center; gap: 8px; padding: 3px 9px 3px 4px; border: 1px solid var(--hardware-border); border-radius: 22px; background: #fff; color: #34483a; cursor: pointer; }
+.hardware-account-toggle:focus-visible { outline: 2px solid var(--hardware-green); outline-offset: 2px; }
+.hardware-account-toggle .hardware-avatar { width: 29px; height: 29px; flex-basis: 29px; }
+.hardware-account-toggle-name { max-width: 145px; overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.hardware-account-toggle > i { color: #839087; font-size: 9px; }
+.hardware-user-menu .electronics-account-popover { color: #1a2b3c; }
+
+.hardware-content .hardware-welcome h1 { font-size: clamp(21px, 2vw, 27px); }
+.hardware-content .hardware-welcome > div:first-child > p:last-child { font-size: 11px; }
+.hardware-content .hardware-kpi > div > span { font-size: 10px; }
+.hardware-content .hardware-kpi > div > small { font-size: 8px; }
+.hardware-content .hardware-kpi > strong { font-size: clamp(18px, 1.8vw, 23px); }
+.hardware-content .hardware-kpi > a { font-size: 8px; }
+.hardware-content .hardware-shortcuts > a > strong { font-size: 9px; }
+.hardware-content .hardware-shortcuts > a > small { font-size: 7px; }
+.hardware-content .hardware-panel-heading h2 { font-size: 14px; }
+.hardware-content .hardware-panel-heading > div > p:last-child:not(.hardware-eyebrow),
+.hardware-content .hardware-panel-heading > a { font-size: 9px; }
+.hardware-content .hardware-stock-name strong,
+.hardware-content .hardware-sale-name strong { font-size: 9px; }
+.hardware-content .hardware-stock-name small,
+.hardware-content .hardware-sale-name small,
+.hardware-content .hardware-stock-level,
+.hardware-content .hardware-stock-reorder,
+.hardware-content .hardware-sale-amount { font-size: 9px; }
+.hardware-content .hardware-note-card h2 { font-size: 11px; }
+.hardware-content .hardware-note-card > div > p:last-child,
+.hardware-content .hardware-note-card > a { font-size: 9px; }
+
+@media (max-width: 520px) {
+    .hardware-account-toggle { gap: 5px; padding-right: 7px; }
+    .hardware-account-toggle-name { max-width: 80px; font-size: 10px; }
+    .hardware-nav-link { min-height: 39px; font-size: 12px; }
+}

@@ -1,7 +1,10 @@
 from django import template
+from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 
 from analytics.models import BusinessInsight
+from ai_engine.models import AIInsight
 from inventory.models import InventoryAlert
 
 
@@ -28,6 +31,12 @@ def dashboard_notifications(context):
         is_read=False,
         is_dismissed=False,
     )
+    ai_insights = AIInsight.objects.filter(
+        business=business,
+        status="active",
+    ).filter(
+        Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+    )
     active_alerts = InventoryAlert.objects.filter(business=business, status="ACTIVE")
     insight_url = f"{reverse('ai_engine:home')}#insights" if can_view_ai_insights else None
     alert_url = reverse("inventory:alerts") if can_view_inventory_alerts else None
@@ -39,8 +48,23 @@ def dashboard_notifications(context):
             "icon": "fa-lightbulb",
             "url": insight_url,
         }
-        for insight in unread_insights.order_by("-generated_at")[:5]
+        for insight in unread_insights.order_by("-generated_at")
     ]
+    items.extend(
+        {
+            "title": insight.title,
+            "message": " ".join(
+                part for part in (
+                    insight.observation,
+                    insight.interpretation,
+                ) if part
+            ),
+            "timestamp": insight.created_at,
+            "icon": "fa-lightbulb",
+            "url": insight_url,
+        }
+        for insight in ai_insights.order_by("-created_at")
+    )
     items.extend(
         {
             "title": alert.product.name,
@@ -49,13 +73,13 @@ def dashboard_notifications(context):
             "icon": "fa-triangle-exclamation",
             "url": alert_url,
         }
-        for alert in active_alerts.select_related("product").order_by("-created_at")[:5]
+        for alert in active_alerts.select_related("product").order_by("-created_at")
     )
     items.sort(key=lambda item: item["timestamp"], reverse=True)
 
     return {
-        "items": items[:5],
-        "unread_count": unread_insights.count() + active_alerts.count(),
+        "items": items,
+        "unread_count": unread_insights.count() + ai_insights.count() + active_alerts.count(),
         "can_view_inventory_alerts": can_view_inventory_alerts,
         "can_view_ai_insights": can_view_ai_insights,
     }

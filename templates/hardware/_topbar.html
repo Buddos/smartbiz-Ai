@@ -1,0 +1,24 @@
+{% load dashboard_notifications %}
+<header class="hardware-topbar">
+    <div class="hardware-topbar-title">
+        <button class="hardware-menu-button" type="button" data-hardware-menu aria-controls="hardwareSidebar" aria-expanded="false" aria-label="Open navigation"><i class="fas fa-bars" aria-hidden="true"></i></button>
+        <div><span>{{ user.business.name }}</span><strong>{% if request.resolver_match.url_name == 'create' %}{% if request.GET.mode == 'invoice' or request.POST.mode == 'invoice' %}Invoices{% else %}Point of sale{% endif %}{% elif request.resolver_match.url_name == 'quotation_detail' or request.resolver_match.url_name == 'quotations' %}Quotations{% elif request.resolver_match.url_name == 'list' %}{% if request.GET.delivery %}Deliveries{% else %}Orders{% endif %}{% elif request.resolver_match.url_name == 'credit' %}Credit ledger{% elif request.resolver_match.url_name == 'suppliers' %}Suppliers &amp; purchase orders{% elif request.resolver_match.app_name == 'products' %}Products &amp; pricing{% elif request.resolver_match.app_name == 'inventory' %}Stock control{% elif request.resolver_match.app_name == 'expenses' %}Expenses{% elif request.resolver_match.app_name == 'analytics' %}Analytics{% elif request.resolver_match.app_name == 'ai_engine' %}SmartBiz AI{% else %}Hardware dashboard{% endif %}</strong></div>
+    </div>
+    <div class="hardware-topbar-actions">
+        {% dashboard_notifications %}
+        <div class="hardware-user-menu electronics-account-menu" data-dashboard-account-menu>
+            <button class="hardware-account-toggle" type="button" aria-label="Open account menu" aria-expanded="false" data-dashboard-account-toggle>
+                <span class="hardware-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</span>
+                <span class="hardware-account-toggle-name">{{ user.get_full_name|default:user.email }}</span>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="electronics-account-popover" data-dashboard-account-popover hidden>
+                <div class="electronics-account-summary"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></div>
+                {% if user.role == 'OWNER' or user.role == 'ADMIN' or user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield" aria-hidden="true"></i>Business admin</a>{% endif %}
+                <a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>
+                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user" aria-hidden="true"></i>Profile</a>
+                <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Log out</a>
+            </div>
+        </div>
+    </div>
+</header>

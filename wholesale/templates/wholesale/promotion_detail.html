@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}{{ promotion.name }} | Promotions{% endblock %}
+{% block content %}
+<div class="wholesale-content wholesale-module">
+    <header class="wholesale-page-heading"><div><p class="wholesale-eyebrow"><a href="{% url 'wholesale:promotions' %}">Promotions</a> · campaign</p><h1>{{ promotion.name }} <span class="wholesale-status is-{{ promotion_status|lower }}">{{ promotion_status|title }}</span></h1><p>{{ promotion.description|default:"No description added." }}</p></div><div class="wholesale-heading-actions"><a class="wholesale-button wholesale-button-secondary" href="{% url 'wholesale:promotion_edit' promotion.pk %}">Edit</a>
+        <form method="post" action="{% url 'wholesale:promotion_action' promotion.pk %}">{% csrf_token %}{% if promotion_status == 'ACTIVE' %}<button class="wholesale-button wholesale-button-secondary" name="action" value="pause">Pause</button>{% elif promotion_status == 'PAUSED' %}<button class="wholesale-button wholesale-button-secondary" name="action" value="resume">Resume</button>{% endif %}{% if promotion_status != 'DRAFT' and promotion_status != 'ENDED' %}<button class="wholesale-button wholesale-button-danger" name="action" value="end">End promotion</button>{% endif %}<button class="wholesale-button wholesale-button-secondary" name="action" value="duplicate">Duplicate</button>{% if promotion_status == 'DRAFT' %}<button class="wholesale-button wholesale-button-danger" name="action" value="delete">Delete draft</button>{% endif %}</form>
+    </div></header>
+    <section class="wholesale-kpi-grid">
+        <article class="wholesale-kpi"><span>Tracked revenue</span><strong><small>{{ request.user.business.currency }}</small><b>{{ revenue|floatformat:2 }}</b></strong><em>Attributed redemptions</em></article>
+        <article class="wholesale-kpi"><span>Units redeemed</span><strong>{{ units_moved }}</strong><em>Eligible units recorded</em></article>
+        <article class="wholesale-kpi"><span>Promotion type</span><strong class="wholesale-kpi-text">{{ promotion.get_promotion_type_display }}</strong><em>{% if promotion.discount_percent %}{{ promotion.discount_percent|floatformat:"-2" }}% discount{% elif promotion.discount_amount %}{{ request.user.business.currency }} {{ promotion.discount_amount|floatformat:2 }} discount{% else %}Custom rules{% endif %}</em></article>
+        <article class="wholesale-kpi"><span>Campaign dates</span><strong class="wholesale-kpi-text">{{ promotion.starts_at|date:"j M Y" }}</strong><em>{% if promotion.ends_at %}through {{ promotion.ends_at|date:"j M Y" }}{% else %}No end date{% endif %}</em></article>
+    </section>
+    <div class="wholesale-two-column">
+        <section class="wholesale-panel"><div class="wholesale-panel-heading"><div><p>Offer rules</p><h2>Eligibility</h2></div></div>
+            <dl class="wholesale-definition-list">
+                <div><dt>Products</dt><dd>{% for product in promotion.products.all %}{{ product.name }}{% if not forloop.last %}, {% endif %}{% empty %}All products{% endfor %}</dd></div>
+                <div><dt>Customer tiers</dt><dd>{{ promotion.customer_tiers|default:"All tiers" }}</dd></div>
+                <div><dt>Minimum quantity</dt><dd>{{ promotion.min_quantity }}</dd></div>
+                <div><dt>Minimum order value</dt><dd>{{ request.user.business.currency }} {{ promotion.min_order_value|floatformat:2 }}</dd></div>
+                <div><dt>Usage limit per customer</dt><dd>{{ promotion.max_uses_per_customer|default:"Unlimited" }}</dd></div>
+                <div><dt>Total usage limit</dt><dd>{{ promotion.max_total_uses|default:"Unlimited" }}</dd></div>
+                <div><dt>Notification preferences</dt><dd>{% if promotion.notify_in_app %}In-app{% endif %}{% if promotion.notify_sms %}{% if promotion.notify_in_app %}, {% endif %}SMS{% endif %}{% if promotion.notify_email %}{% if promotion.notify_in_app or promotion.notify_sms %}, {% endif %}Email{% endif %}{% if not promotion.notify_in_app and not promotion.notify_sms and not promotion.notify_email %}None{% endif %}</dd></div>
+            </dl>
+        </section>
+        <section class="wholesale-panel"><div class="wholesale-panel-heading"><div><p>Sales context</p><h2>Product movement</h2></div></div>
+            {% if products %}<div class="wholesale-table-scroll"><table class="wholesale-table"><thead><tr><th>Product</th><th>Campaign units</th><th>Campaign revenue</th><th>Prior-period units</th></tr></thead><tbody>{% for row in products %}<tr><td>{{ row.product.name }}</td><td>{{ row.promo_units }}</td><td>{{ request.user.business.currency }} {{ row.promo_revenue|floatformat:2 }}</td><td>{{ row.baseline_units }}</td></tr>{% endfor %}</tbody></table></div><p class="wholesale-note">Product movement is sales during the campaign window, not necessarily attributed promotion redemptions. Uplift is not estimated.</p>{% else %}<p class="wholesale-empty">No products are specifically selected for this promotion.</p>{% endif %}
+        </section>
+    </div>
+    <section class="wholesale-panel wholesale-module-panel"><div class="wholesale-panel-heading"><div><p>Tracked performance</p><h2>Redemptions</h2></div></div><div class="wholesale-table-scroll"><table class="wholesale-table"><thead><tr><th>Date</th><th>Sale</th><th>Customer</th><th>Units</th><th>Discount</th><th>Revenue</th></tr></thead><tbody>{% for redemption in redemptions %}<tr><td>{{ redemption.redeemed_at|date:"j M Y H:i" }}</td><td>{{ redemption.sale }}</td><td>{{ redemption.customer_name|default:"Walk-in customer" }}</td><td>{{ redemption.eligible_quantity }}</td><td>{{ request.user.business.currency }} {{ redemption.discount_amount|floatformat:2 }}</td><td>{{ request.user.business.currency }} {{ redemption.revenue|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6" class="wholesale-empty">No sales have been attributed to this promotion yet.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+{% endblock %}

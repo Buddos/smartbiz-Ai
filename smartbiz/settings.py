@@ -11,8 +11,6 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-this-in-production")
 DEBUG = os.environ.get("DEBUG", "True").lower() in ("true", "1", "t")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
@@ -65,6 +63,7 @@ INSTALLED_APPS = [
     "reports.apps.ReportsConfig",
     "electronics.apps.ElectronicsConfig",
     "retail.apps.RetailConfig",
+    "wholesale.apps.WholesaleConfig",
     "restaurant.apps.RestaurantConfig",
     "realtime.apps.RealtimeConfig",
 ]

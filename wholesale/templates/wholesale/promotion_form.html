@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Wholesale{% endblock %}
+{% block content %}
+<div class="wholesale-content wholesale-module">
+    <header class="wholesale-page-heading"><div><p class="wholesale-eyebrow"><a href="{% url 'wholesale:promotions' %}">Promotions</a> · setup</p><h1>{{ page_title }}</h1><p>Set offer rules, eligible products, customer tiers, and campaign dates.</p></div></header>
+    <form method="post" class="wholesale-panel wholesale-form-panel">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="wholesale-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="wholesale-form-grid">
+            {% for field in form %}
+                <div class="wholesale-form-field{% if field.name == 'description' or field.name == 'products' or field.name == 'customer_tiers' %} is-wide{% endif %}{% if field.field.widget.input_type == 'checkbox' %} is-check{% endif %}">
+                    {% if field.field.widget.input_type == 'checkbox' %}<label class="wholesale-check-label">{{ field }}<span>{{ field.label }}</span></label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+                    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                    {% for error in field.errors %}<small class="wholesale-error">{{ error }}</small>{% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+        <p class="wholesale-note">Notification selections are saved as campaign preferences; this page does not send SMS, email, or in-app messages.</p>
+        <div class="wholesale-form-actions"><a href="{% if promotion %}{% url 'wholesale:promotion_detail' promotion.pk %}{% else %}{% url 'wholesale:promotions' %}{% endif %}" class="wholesale-button wholesale-button-secondary">Cancel</a><button name="submit_action" value="draft" class="wholesale-button wholesale-button-secondary" type="submit">{{ submit_label|default:"Save promotion" }}</button><button name="submit_action" value="activate" class="wholesale-button wholesale-button-primary" type="submit">Save and activate</button></div>
+    </form>
+</div>
+{% endblock %}

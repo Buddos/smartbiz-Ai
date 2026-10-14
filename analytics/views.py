@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
 from django.db.models import Q, Sum, Count, Avg, F, Max, Min
+from django.db.models.functions import TruncDate
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -22,7 +23,7 @@ from .models import DashboardWidget, BusinessMetric, BusinessInsight, ExportLog
 
 from accounts.decorators import business_required, role_required
 from accounts.models import UserActivity
-from ai_engine.gemini import GeminiError, generate_ai_engine_review
+from ai_engine.services import run_intelligence_pipeline
 from businesses.capabilities import (
     capabilities_for_business,
     dashboard_capabilities_for_business,
@@ -55,6 +56,13 @@ def dashboard_view(request):
             "today": timezone.localdate(),
             "restaurant_dashboard": get_restaurant_dashboard_data(business),
         })
+
+    if business.business_type == "WHOLESALE":
+        wholesale_dashboard = get_wholesale_dashboard_data(business)
+        return render(request, "analytics/wholesale_dashboard.html", {
+            "title": "Wholesale Dashboard",
+            "wholesale_dashboard": wholesale_dashboard,
+        })
     
     # Date range (last 30 days)
     end_date = timezone.now().date()
@@ -75,6 +83,36 @@ def dashboard_view(request):
         from electronics.views import electronics_dashboard_view
 
         return electronics_dashboard_view(request, context)
+
+    if business.business_type == "HARDWARE":
+        hardware_today_sales = Sale.objects.filter(
+            business=business,
+            sale_date__date=timezone.localdate(),
+            order_status="COMPLETED",
+        )
+        open_credit = Sale.objects.filter(
+            business=business,
+            payment_method="CREDIT",
+            balance_due__gt=0,
+        )
+        context["hardware_dashboard"] = {
+            "today_revenue": hardware_today_sales.aggregate(total=Sum("total"))["total"] or 0,
+            "today_transactions": hardware_today_sales.count(),
+            "open_orders": Sale.objects.filter(
+                business=business,
+                order_status__in=["PENDING", "PROCESSING"],
+            ).count(),
+            "receivables": open_credit.aggregate(total=Sum("balance_due"))["total"] or 0,
+            "credit_customers": open_credit.exclude(
+                customer__isnull=True
+            ).values("customer_id").distinct().count(),
+            "low_stock_products": Product.objects.filter(
+                business=business,
+                is_active=True,
+                current_stock__lte=models.F("reorder_level"),
+            ).select_related("category").order_by("current_stock", "name")[:6],
+        }
+        return render(request, "hardware/dashboard.html", context)
 
     if business.business_type == "RETAIL":
         from retail.views import retail_dashboard_view
@@ -184,6 +222,147 @@ def restaurant_dashboard_data_api(request):
     if business.business_type != "RESTAURANT":
         return JsonResponse({"error": "Restaurant dashboard data is unavailable."}, status=404)
     return JsonResponse(get_restaurant_dashboard_data(business))
+
+
+def get_wholesale_dashboard_data(business):
+    """Build the wholesale overview from this business's live sales and stock records."""
+    today = timezone.localdate()
+    week_start = today - timedelta(days=6)
+    trend_start = today - timedelta(days=29)
+    active_sales = Sale.objects.filter(business=business).exclude(
+        order_status__in=["CANCELLED", "RETURNED"],
+    )
+    today_sales = active_sales.filter(sale_date__date=today)
+    today_summary = today_sales.aggregate(
+        revenue=Sum("total"),
+        orders=Count("id"),
+    )
+    outstanding_sales = active_sales.filter(balance_due__gt=0)
+    aged_sales = outstanding_sales.filter(sale_date__date__lt=today - timedelta(days=30))
+    products = Product.objects.filter(business=business, is_active=True)
+
+    daily_totals = {
+        row["day"]: row["total"]
+        for row in active_sales.filter(
+            sale_date__date__gte=trend_start,
+            sale_date__date__lte=today,
+        ).annotate(day=TruncDate("sale_date")).values("day").annotate(
+            total=Sum("total"),
+        )
+    }
+    sales_trend = [
+        {
+            "date": (trend_start + timedelta(days=offset)).isoformat(),
+            "label": (trend_start + timedelta(days=offset)).strftime("%d %b"),
+            "revenue": daily_totals.get(trend_start + timedelta(days=offset), 0),
+        }
+        for offset in range(30)
+    ]
+
+    top_customers = list(
+        active_sales.filter(
+            sale_date__date__gte=week_start,
+            sale_date__date__lte=today,
+            customer__isnull=False,
+        ).values("customer_id", "customer__name").annotate(
+            revenue=Sum("total"),
+            orders=Count("id"),
+        ).order_by("-revenue")[:5]
+    )
+    recent_orders = [
+        {
+            "number": sale.sale_number,
+            "customer": sale.customer_name or (
+                sale.customer.name if sale.customer_id else "Walk-in"
+            ),
+            "status": sale.get_order_status_display(),
+            "status_code": sale.order_status.lower(),
+            "total": sale.total,
+            "url": reverse("sales:detail", args=[sale.id]),
+        }
+        for sale in active_sales.select_related("customer").order_by("-sale_date")[:6]
+    ]
+    low_stock_items = list(
+        products.filter(current_stock__lte=F("reorder_level")).order_by(
+            "current_stock", "name",
+        ).values("name", "current_stock", "reorder_level")[:5]
+    )
+    stock_value = products.aggregate(
+        total=Sum(F("current_stock") * F("purchase_price")),
+    )["total"] or 0
+
+    aging_ranges = (
+        ("0–30 days", 0, 30),
+        ("31–60 days", 31, 60),
+        ("61–90 days", 61, 90),
+        ("90+ days", 91, None),
+    )
+    ar_aging = []
+    for label, min_days, max_days in aging_ranges:
+        age_query = outstanding_sales.filter(
+            sale_date__date__lte=today - timedelta(days=min_days),
+        )
+        if max_days is not None:
+            age_query = age_query.filter(
+                sale_date__date__gte=today - timedelta(days=max_days),
+            )
+        elif min_days == 0:
+            age_query = outstanding_sales.filter(
+                sale_date__date__gte=today - timedelta(days=30),
+            )
+        summary = age_query.aggregate(
+            amount=Sum("balance_due"),
+            customers=Count("customer", distinct=True),
+        )
+        ar_aging.append({
+            "label": label,
+            "amount": summary["amount"] or 0,
+            "customers": summary["customers"],
+        })
+
+    overdue_total = sum((row["amount"] for row in ar_aging[1:]), 0)
+    return {
+        "currency": business.currency,
+        "today_sales": today_summary["revenue"] or 0,
+        "orders_today": today_summary["orders"] or 0,
+        "outstanding_ar": outstanding_sales.aggregate(
+            total=Sum("balance_due"),
+        )["total"] or 0,
+        "overdue_ar": overdue_total,
+        "overdue_customers": aged_sales.filter(
+            customer__isnull=False,
+        ).values("customer_id").distinct().count(),
+        "pending_orders": active_sales.filter(
+            order_status__in=["PENDING", "PROCESSING"],
+        ).count(),
+        "out_for_delivery": active_sales.filter(order_status="SHIPPED").count(),
+        "delivered_today": active_sales.filter(
+            order_status="DELIVERED",
+            sale_date__date=today,
+        ).count(),
+        "low_stock_skus": products.filter(
+            current_stock__lte=F("reorder_level"),
+        ).count(),
+        "stock_value": stock_value,
+        "sales_trend": sales_trend,
+        "top_customers": top_customers,
+        "recent_orders": recent_orders,
+        "ar_aging": ar_aging,
+        "low_stock_items": low_stock_items,
+        "last_updated": timezone.localtime(),
+    }
+
+
+@login_required
+@business_required
+@role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
+@never_cache
+def wholesale_dashboard_data_api(request):
+    """Return current wholesale dashboard data for live refreshes."""
+    business = request.user.business
+    if business.business_type != "WHOLESALE":
+        return JsonResponse({"error": "Wholesale dashboard data is unavailable."}, status=404)
+    return JsonResponse(get_wholesale_dashboard_data(business))
 
 
 @login_required
@@ -806,16 +985,18 @@ def calculate_growth(business, start_date, end_date, metric_type):
 @business_required
 @role_required(["OWNER", "MANAGER", "ADMIN", "SUPER_ADMIN"])
 def generate_insights_view(request):
-    """Generate current business insights through the AI engine and Gemini."""
+    """Generate current business insights through the SmartBiz AI engine."""
     business = request.user.business
-    try:
-        insights_generated, review = generate_ai_engine_review(business)
-    except GeminiError as exc:
-        messages.error(request, f'Gemini insight generation failed: {exc}')
-    else:
+    insights_generated = run_intelligence_pipeline(business)
+    if insights_generated:
         messages.success(
             request,
-            f'Generated {len(insights_generated)} data-based alerts and refreshed the Gemini business review: {review.title}',
+            f'Generated {len(insights_generated)} new data-based business insights.',
+        )
+    else:
+        messages.info(
+            request,
+            'Your AI insights are up to date. New insights appear when business data changes.',
         )
     return redirect('analytics:dashboard')
 

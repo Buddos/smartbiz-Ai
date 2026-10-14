@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Hardware dashboard | {{ user.business.name }}{% endblock %}
+{% block content %}
+<div class="hardware-content" data-hardware-live="dashboard">
+    <section class="hardware-welcome">
+        <div>
+            <p class="hardware-eyebrow"><span class="hardware-live-dot"></span> Live hardware desk <span class="hardware-date">{{ today|date:"l, j F Y" }}</span></p>
+            <h1>Good {% now "H" as current_hour %}{% if current_hour < "12" %}morning{% elif current_hour < "17" %}afternoon{% else %}evening{% endif %}, {{ user.first_name|default:user.email }}</h1>
+            <p>Counter sales, stock health, and customer balances — all in one place.</p>
+        </div>
+        <div class="hardware-welcome-actions">
+            <span class="hardware-live-status" data-live-status aria-live="polite">Connecting to live updates…</span>
+            <a class="hardware-button hardware-button-primary" href="{% url 'sales:create' %}"><i class="fas fa-bolt" aria-hidden="true"></i> Open POS <kbd>F9</kbd></a>
+        </div>
+    </section>
+
+    <section class="hardware-kpi-grid" aria-label="Live shop performance">
+        <article class="hardware-kpi hardware-kpi-sales"><div><span>Sales today</span><small>Completed transactions</small></div><i class="fas fa-arrow-trend-up" aria-hidden="true"></i><strong>{{ user.business.currency }} {{ hardware_dashboard.today_revenue|floatformat:0 }}</strong><a href="{% url 'sales:list' %}">View orders <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+        <article class="hardware-kpi"><div><span>Orders in progress</span><small>Awaiting completion</small></div><i class="fas fa-clipboard-list" aria-hidden="true"></i><strong>{{ hardware_dashboard.open_orders }}</strong><a href="{% url 'sales:list' %}">Open orders <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+        <article class="hardware-kpi hardware-kpi-alert"><div><span>Stock alerts</span><small>At or below reorder level</small></div><i class="fas fa-triangle-exclamation" aria-hidden="true"></i><strong>{{ low_stock_count|add:out_of_stock_count }}</strong><a href="{% url 'inventory:dashboard' %}">Review stock <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+        <article class="hardware-kpi hardware-kpi-credit"><div><span>Accounts receivable</span><small>{{ hardware_dashboard.credit_customers }} customers with a balance</small></div><i class="fas fa-wallet" aria-hidden="true"></i><strong>{{ user.business.currency }} {{ hardware_dashboard.receivables|floatformat:0 }}</strong><a href="{% url 'retail:credit' %}">Open credit ledger <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+    </section>
+
+    <section class="hardware-shortcuts" aria-label="Quick actions">
+        <a class="hardware-shortcut-primary" href="{% url 'sales:create' %}"><span><i class="fas fa-cash-register" aria-hidden="true"></i></span><strong>Start a sale</strong><small>Search stock, add to cart, checkout</small><i class="fas fa-arrow-right shortcut-arrow" aria-hidden="true"></i></a>
+        <a href="{% url 'products:list' %}"><span><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span><strong>Product catalog</strong><small>{{ total_products }} active products</small><i class="fas fa-arrow-right shortcut-arrow" aria-hidden="true"></i></a>
+        <a href="{% url 'retail:suppliers' %}#purchase-orders"><span><i class="fas fa-dolly" aria-hidden="true"></i></span><strong>Replenish stock</strong><small>Suppliers and purchase orders</small><i class="fas fa-arrow-right shortcut-arrow" aria-hidden="true"></i></a>
+        <a href="{% url 'customers:list' %}"><span><i class="fas fa-user-group" aria-hidden="true"></i></span><strong>Customer accounts</strong><small>Contractors and walk-ins</small><i class="fas fa-arrow-right shortcut-arrow" aria-hidden="true"></i></a>
+        <a href="{% url 'sales:quotations' %}"><span><i class="fas fa-file-signature" aria-hidden="true"></i></span><strong>Project quotations</strong><small>Create and track estimates</small><i class="fas fa-arrow-right shortcut-arrow" aria-hidden="true"></i></a>
+    </section>
+
+    <div class="hardware-dashboard-columns">
+        <section class="hardware-panel hardware-stock-panel">
+            <header class="hardware-panel-heading">
+                <div><p class="hardware-eyebrow">Inventory</p><h2>Stock to watch</h2><p>Products that need attention before the next sale.</p></div>
+                <a href="{% url 'inventory:dashboard' %}">Manage stock <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            </header>
+            {% for product in hardware_dashboard.low_stock_products %}
+                <article class="hardware-stock-row">
+                    <span class="hardware-stock-icon {% if product.current_stock == 0 %}is-empty{% else %}is-low{% endif %}"><i class="fas {% if product.current_stock == 0 %}fa-circle-xmark{% else %}fa-box-open{% endif %}" aria-hidden="true"></i></span>
+                    <span class="hardware-stock-name"><strong>{{ product.name }}</strong><small>{{ product.sku }}{% if product.category %} · {{ product.category.name }}{% endif %}</small></span>
+                    <span class="hardware-stock-level {% if product.current_stock == 0 %}is-empty{% endif %}">{% if product.current_stock == 0 %}Out of stock{% else %}{{ product.current_stock }} left{% endif %}</span>
+                    <span class="hardware-stock-reorder">Reorder at {{ product.reorder_level }}</span>
+                </article>
+            {% empty %}
+                <div class="hardware-empty-state"><i class="fas fa-circle-check" aria-hidden="true"></i><strong>Stock looks good</strong><span>No active products are below their reorder level.</span></div>
+            {% endfor %}
+        </section>
+
+        <section class="hardware-panel hardware-sales-panel">
+            <header class="hardware-panel-heading">
+                <div><p class="hardware-eyebrow">Counter activity</p><h2>Recent orders</h2><p>{{ hardware_dashboard.today_transactions }} completed today</p></div>
+                <a href="{% url 'sales:list' %}">All orders <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            </header>
+            {% for sale in recent_sales %}
+                <a class="hardware-sale-row" href="{% url 'sales:detail' sale.id %}">
+                    <span class="hardware-sale-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>
+                    <span class="hardware-sale-name"><strong>{{ sale.sale_number }}</strong><small>{% if sale.customer_name %}{{ sale.customer_name }}{% elif sale.customer %}{{ sale.customer.name }}{% else %}Walk-in{% endif %} · {{ sale.sale_date|date:"g:i A" }}</small></span>
+                    <span class="hardware-sale-amount">{{ user.business.currency }} {{ sale.total|floatformat:0 }}<small>{{ sale.get_payment_status_display }}</small></span>
+                </a>
+            {% empty %}
+                <div class="hardware-empty-state"><i class="fas fa-receipt" aria-hidden="true"></i><strong>No orders yet</strong><span>Your completed and in-progress orders will appear here.</span></div>
+            {% endfor %}
+        </section>
+    </div>
+
+    <section class="hardware-bottom-grid">
+        <article class="hardware-note-card"><span class="hardware-note-icon"><i class="fas fa-lightbulb" aria-hidden="true"></i></span><div><p class="hardware-eyebrow">SmartBiz AI</p><h2>Shop insights, ready when you are</h2><p>Generate recommendations from your sales, product, and inventory activity.</p></div><a href="{% url 'ai_engine:home' %}#insights">Explore AI insights <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+        <article class="hardware-note-card hardware-note-finance"><span class="hardware-note-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span><div><p class="hardware-eyebrow">Shop finances</p><h2>Track the bigger picture</h2><p>Review expenses, sales performance, and customer balances.</p></div><a href="{% url 'analytics:dashboard' %}">Open analytics <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+    </section>
+</div>
+{% endblock %}

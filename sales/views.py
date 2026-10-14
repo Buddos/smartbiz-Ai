@@ -19,14 +19,31 @@ from django.http import JsonResponse, HttpResponse
 from django.db import models, transaction
 from django.db.models import Q, Sum, Count, Avg, Max
 from django.utils import timezone
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 import csv
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from .models import Sale, SaleItem, Payment, Return
-from .forms import BarberSaleItemFormSet, SaleForm, SaleItemFormSet, PaymentForm, ReturnForm, SaleSearchForm
+from .models import (
+    HardwareQuotation,
+    HardwareQuotationItem,
+    Sale,
+    SaleItem,
+    Payment,
+    Return,
+)
+from .forms import (
+    BarberSaleItemFormSet,
+    HardwareQuotationForm,
+    HardwareQuotationItemFormSet,
+    SaleForm,
+    SaleItemFormSet,
+    PaymentForm,
+    ReturnForm,
+    SaleSearchForm,
+)
 from products.models import Category, Product
 from customers.models import Customer
 from accounts.models import User, UserActivity
@@ -49,6 +66,164 @@ def _sale_metadata_from_form(form, existing=None):
     return metadata
 
 # === Sale Views ===
+
+@login_required
+@business_required
+@permission_required("record_sales")
+def hardware_quotations_view(request):
+    if request.user.business.business_type != "HARDWARE":
+        messages.error(request, "Quotations are available in the Hardware Shop workspace.")
+        return redirect("dashboard")
+
+    business = request.user.business
+    form = HardwareQuotationForm(business=business)
+    item_formset = HardwareQuotationItemFormSet(
+        prefix="items", form_kwargs={"business": business}
+    )
+    if request.method == "POST":
+        form = HardwareQuotationForm(request.POST, business=business)
+        item_formset = HardwareQuotationItemFormSet(
+            request.POST, prefix="items", form_kwargs={"business": business}
+        )
+        if form.is_valid() and item_formset.is_valid():
+            lines = [
+                line for line in item_formset.cleaned_data
+                if line and line.get("product") and not line.get("DELETE")
+            ]
+            subtotal = sum(
+                (line["quantity"] * line["unit_price"] for line in lines),
+                Decimal("0"),
+            )
+            discount = form.cleaned_data.get("discount") or Decimal("0")
+            if discount > subtotal:
+                form.add_error("discount", "Discount cannot exceed the quotation subtotal.")
+            else:
+                with transaction.atomic():
+                    quotation = form.save(commit=False)
+                    quotation.business = business
+                    quotation.created_by = request.user
+                    quotation.subtotal = subtotal
+                    quotation.total = subtotal - discount
+                    quotation.discount = discount
+                    if quotation.customer:
+                        quotation.customer_name = quotation.customer.name
+                        quotation.customer_phone = quotation.customer.phone or quotation.customer_phone
+                        quotation.customer_email = quotation.customer.email or quotation.customer_email
+                    quotation.save()
+                    HardwareQuotationItem.objects.bulk_create([
+                        HardwareQuotationItem(
+                            quotation=quotation,
+                            product=line["product"],
+                            product_name=line["product"].name,
+                            product_sku=line["product"].sku,
+                            unit=line["product"].unit,
+                            quantity=line["quantity"],
+                            unit_price=line["unit_price"],
+                        )
+                        for line in lines
+                    ])
+                messages.success(request, f"Quotation {quotation.quotation_number} created.")
+                return redirect("sales:quotation_detail", quotation_id=quotation.id)
+
+    quotations = HardwareQuotation.objects.filter(
+        business=business
+    ).select_related("customer", "created_by").order_by("-created_at")
+    quotation_products = list(
+        Product.objects.filter(business=business, is_active=True)
+        .order_by("name")
+        .values("id", "name", "sku", "unit", "selling_price")
+    )
+    status_filter = request.GET.get("status", "")
+    if status_filter in {choice[0] for choice in HardwareQuotation.STATUS_CHOICES}:
+        quotations = quotations.filter(status=status_filter)
+    return render(request, "sales/quotations.html", {
+        "title": "Quotations",
+        "form": form,
+        "item_formset": item_formset,
+        "quotations": Paginator(quotations, 20).get_page(request.GET.get("page")),
+        "status_filter": status_filter,
+        "status_choices": HardwareQuotation.STATUS_CHOICES,
+        "quotation_count": HardwareQuotation.objects.filter(business=business).count(),
+        "quotation_products": quotation_products,
+    })
+
+
+@login_required
+@business_required
+@permission_required("record_sales")
+def hardware_quotation_detail_view(request, quotation_id):
+    quotation = get_object_or_404(
+        HardwareQuotation.objects.select_related("customer", "created_by", "converted_sale")
+        .prefetch_related("items"),
+        id=quotation_id,
+        business=request.user.business,
+    )
+    if request.user.business.business_type != "HARDWARE":
+        messages.error(request, "Quotations are available in the Hardware Shop workspace.")
+        return redirect("dashboard")
+    return render(request, "sales/quotation_detail.html", {
+        "title": quotation.quotation_number,
+        "quotation": quotation,
+        "today": timezone.localdate(),
+    })
+
+
+@require_POST
+@login_required
+@business_required
+@permission_required("record_sales")
+def hardware_quotation_action_view(request, quotation_id):
+    if request.user.business.business_type != "HARDWARE":
+        messages.error(request, "Quotations are available in the Hardware Shop workspace.")
+        return redirect("dashboard")
+    with transaction.atomic():
+        quotation = get_object_or_404(
+            HardwareQuotation.objects.select_for_update(),
+            id=quotation_id,
+            business=request.user.business,
+        )
+        action = request.POST.get("action")
+        transitions = {
+            "send": ({"DRAFT"}, "SENT"),
+            "accept": ({"SENT"}, "ACCEPTED"),
+            "decline": ({"DRAFT", "SENT", "ACCEPTED"}, "DECLINED"),
+        }
+        transition = transitions.get(action)
+        if transition is None or quotation.status not in transition[0]:
+            messages.error(request, "This quotation can no longer be changed that way.")
+        elif (
+            action == "accept"
+            and quotation.valid_until
+            and quotation.valid_until < timezone.localdate()
+        ):
+            messages.error(request, "This quotation has expired and cannot be accepted.")
+        else:
+            quotation.status = transition[1]
+            quotation.save(update_fields=["status", "updated_at"])
+            messages.success(request, f"Quotation {quotation.quotation_number} marked {quotation.get_status_display().lower()}.")
+    return redirect("sales:quotation_detail", quotation_id=quotation_id)
+
+
+@login_required
+@business_required
+@permission_required("record_sales")
+def hardware_quotation_convert_view(request, quotation_id):
+    quotation = get_object_or_404(
+        HardwareQuotation,
+        id=quotation_id,
+        business=request.user.business,
+    )
+    if request.user.business.business_type != "HARDWARE":
+        messages.error(request, "Quotations are available in the Hardware Shop workspace.")
+        return redirect("dashboard")
+    if quotation.status != "ACCEPTED":
+        messages.error(request, "Accept this quotation before converting it to a sale.")
+        return redirect("sales:quotation_detail", quotation_id=quotation.id)
+    if quotation.valid_until and quotation.valid_until < timezone.localdate():
+        messages.error(request, "This quotation has expired and cannot be converted.")
+        return redirect("sales:quotation_detail", quotation_id=quotation.id)
+    return redirect(f"{reverse('sales:create')}?quotation={quotation.id}")
+
 
 @login_required
 @business_required
@@ -115,6 +290,10 @@ def sale_list_view(request):
         sales = sales.filter(created_by_id=cashier_id)
     if request.GET.get("order_status"):
         sales = sales.filter(order_status=request.GET["order_status"])
+
+    delivery_filter = business.business_type == "HARDWARE" and request.GET.get("delivery") == "1"
+    if delivery_filter:
+        sales = sales.filter(Q(delivery_address__gt="") | Q(delivery_date__isnull=False))
     
     # Default ordering
     sales = sales.select_related("customer", "created_by").prefetch_related("sale_items").order_by('-sale_date')
@@ -168,7 +347,8 @@ def sale_list_view(request):
         'cashier_filter': cashier_id,
         'order_status_filter': request.GET.get("order_status", ""),
         'order_status_choices': Sale.ORDER_STATUS_CHOICES,
-        'title': 'Sales',
+        'title': 'Deliveries' if delivery_filter else 'Sales',
+        'delivery_filter': delivery_filter,
     })
 
 @login_required
@@ -180,9 +360,32 @@ def sale_create_view(request):
     invoice_mode = request.GET.get('mode') == 'invoice' or request.POST.get('mode') == 'invoice'
     active_appointment = None
     appointment_id_value = ""
+    quotation_id_value = request.POST.get("quotation_id", request.GET.get("quotation", "")).strip()
+    active_quotation = None
+    active_promotions = []
+    selected_promotion_id = request.POST.get("promotion_id", "").strip()
+    if business.business_type == "WHOLESALE":
+        from wholesale.models import WholesalePromotion
+
+        now = timezone.now()
+        active_promotions = list(
+            WholesalePromotion.objects.filter(
+                business=business,
+                status__in=["ACTIVE", "SCHEDULED"],
+                starts_at__lte=now,
+            )
+            .filter(
+                Q(ends_at__isnull=True)
+                | Q(auto_expire=False)
+                | Q(ends_at__gte=now)
+            )
+            .prefetch_related("products")
+            .order_by("name")
+        )
     
     if request.method == 'POST':
         appointment_id_value = request.POST.get("appointment_id", "").strip()
+        quotation_id_value = request.POST.get("quotation_id", "").strip()
         form = SaleForm(request.POST, business=business)
         item_formset = BarberSaleItemFormSet if business.business_type == "BARBER" else SaleItemFormSet
         formset = item_formset(request.POST, business=business)
@@ -191,7 +394,68 @@ def sale_create_view(request):
             with transaction.atomic():
                 locked_products = {}
                 requested_quantities = {}
-                if business.business_type == "ELECTRONICS":
+                if quotation_id_value:
+                    try:
+                        quotation_id = UUIDField().clean(quotation_id_value)
+                    except ValidationError:
+                        form.add_error(None, "This quotation link is invalid.")
+                    else:
+                        active_quotation = (
+                            HardwareQuotation.objects.select_for_update()
+                            .filter(id=quotation_id, business=business)
+                            .first()
+                        )
+                        if (
+                            business.business_type != "HARDWARE"
+                            or active_quotation is None
+                            or active_quotation.status != "ACCEPTED"
+                            or active_quotation.converted_sale_id is not None
+                            or (
+                                active_quotation.valid_until
+                                and active_quotation.valid_until < timezone.localdate()
+                            )
+                        ):
+                            form.add_error(None, "This quotation is no longer available for checkout.")
+                        elif not form.errors and formset.is_valid():
+                            quotation_items = list(active_quotation.items.all())
+                            submitted_lines = sorted(
+                                (
+                                    str(item_form.cleaned_data["product"].pk),
+                                    item_form.cleaned_data["quantity"],
+                                    item_form.cleaned_data["unit_price"],
+                                )
+                                for item_form in formset.forms
+                                if item_form.cleaned_data
+                                and not item_form.cleaned_data.get("DELETE", False)
+                            )
+                            quoted_lines = sorted(
+                                (
+                                    str(item.product_id),
+                                    item.quantity,
+                                    item.unit_price,
+                                )
+                                for item in quotation_items
+                            )
+                            customer = form.cleaned_data.get("customer")
+                            if (
+                                any(item.product_id is None for item in quotation_items)
+                                or submitted_lines != quoted_lines
+                                or (customer.id if customer else None) != active_quotation.customer_id
+                                or form.cleaned_data.get("customer_name", "")
+                                != active_quotation.customer_name
+                                or form.cleaned_data.get("customer_phone", "")
+                                != active_quotation.customer_phone
+                                or form.cleaned_data.get("customer_email", "")
+                                != active_quotation.customer_email
+                                or form.cleaned_data.get("discount", Decimal("0"))
+                                != active_quotation.discount
+                            ):
+                                form.add_error(
+                                    None,
+                                    "Checkout details must match the accepted quotation. "
+                                    "Reopen the quotation to start checkout again.",
+                                )
+                if business.business_type in {"ELECTRONICS", "HARDWARE"}:
                     for item_form in formset.forms:
                         if not item_form.cleaned_data or item_form.cleaned_data.get("DELETE", False):
                             continue
@@ -228,7 +492,7 @@ def sale_create_view(request):
                                 f"Only {product.current_stock} unit(s) remain; "
                                 f"{quantity} were requested across this cart.",
                             )
-                if business.business_type == "ELECTRONICS" and not form.errors and not any(formset.errors):
+                if business.business_type in {"ELECTRONICS", "HARDWARE"} and not form.errors and not any(formset.errors):
                     subtotal = sum(
                         (
                             item_form.cleaned_data["quantity"]
@@ -274,10 +538,170 @@ def sale_create_view(request):
                 if appointment_id and business.business_type not in {"BARBER", "SALON"}:
                     form.add_error(None, "Appointments can only be linked to barber or salon sales.")
 
+                promotion_application = None
+                if business.business_type == "WHOLESALE" and selected_promotion_id:
+                    try:
+                        promotion_id = UUIDField().clean(selected_promotion_id)
+                    except ValidationError:
+                        form.add_error(None, "Select a valid promotion.")
+                    else:
+                        promotion = (
+                            WholesalePromotion.objects.select_for_update()
+                            .filter(business=business, pk=promotion_id)
+                            .first()
+                        )
+                        promo_now = timezone.now()
+                        is_active_now = bool(
+                            promotion
+                            and promotion.status in {"ACTIVE", "SCHEDULED"}
+                            and promotion.starts_at <= promo_now
+                            and (
+                                not promotion.auto_expire
+                                or promotion.ends_at is None
+                                or promotion.ends_at >= promo_now
+                            )
+                        )
+                        if not is_active_now or promotion not in active_promotions:
+                            form.add_error(None, "This promotion is no longer active.")
+                        elif form.is_valid() and formset.is_valid():
+                            customer = form.cleaned_data.get("customer")
+                            if promotion.customer_tiers and (
+                                customer is None
+                                or customer.customer_tier.casefold()
+                                not in {tier.strip().casefold() for tier in promotion.tier_list}
+                            ):
+                                form.add_error(None, "This promotion is not available for this customer's tier.")
+                            elif promotion.weekdays_only and timezone.localdate().weekday() >= 5:
+                                form.add_error(None, "This promotion is only valid on weekdays.")
+                            elif promotion.weekends_only and timezone.localdate().weekday() < 5:
+                                form.add_error(None, "This promotion is only valid on weekends.")
+                            elif (
+                                promotion.max_total_uses is not None
+                                and promotion.redemptions.count() >= promotion.max_total_uses
+                            ):
+                                form.add_error(None, "This promotion has reached its redemption limit.")
+                            elif (
+                                promotion.exclude_existing_discounts
+                                and form.cleaned_data.get("discount", Decimal("0")) > 0
+                            ):
+                                form.add_error(None, "This promotion cannot be combined with another discount.")
+                            else:
+                                selected_forms = [
+                                    item_form for item_form in formset.forms
+                                    if item_form.cleaned_data
+                                    and not item_form.cleaned_data.get("DELETE", False)
+                                ]
+                                applicable_product_ids = set(
+                                    promotion.products.values_list("pk", flat=True)
+                                )
+                                eligible_forms = [
+                                    item_form for item_form in selected_forms
+                                    if not applicable_product_ids
+                                    or item_form.cleaned_data["product"].pk in applicable_product_ids
+                                ]
+                                eligible_quantity = sum(
+                                    item_form.cleaned_data["quantity"] for item_form in eligible_forms
+                                )
+                                eligible_subtotal = sum(
+                                    (
+                                        item_form.cleaned_data["quantity"]
+                                        * item_form.cleaned_data["unit_price"]
+                                        for item_form in eligible_forms
+                                    ),
+                                    Decimal("0"),
+                                )
+                                order_subtotal = sum(
+                                    (
+                                        item_form.cleaned_data["quantity"]
+                                        * item_form.cleaned_data["unit_price"]
+                                        for item_form in selected_forms
+                                    ),
+                                    Decimal("0"),
+                                )
+                                customer_name = (
+                                    customer.name if customer else form.cleaned_data.get("customer_name", "")
+                                )
+                                if customer:
+                                    customer_redemptions = promotion.redemptions.filter(
+                                        customer=customer
+                                    ).count()
+                                elif customer_name.strip():
+                                    customer_redemptions = promotion.redemptions.filter(
+                                        customer__isnull=True,
+                                        customer_name__iexact=customer_name,
+                                    ).count()
+                                else:
+                                    customer_redemptions = 0
+                                discount = Decimal("0")
+                                if promotion.max_uses_per_customer is not None and (
+                                    (customer is None and not customer_name.strip())
+                                    or customer_redemptions >= promotion.max_uses_per_customer
+                                ):
+                                    form.add_error(
+                                        None,
+                                        "A customer name is required for this promotion."
+                                        if customer is None and not customer_name.strip()
+                                        else "This customer has reached the promotion usage limit.",
+                                    )
+                                elif eligible_quantity < promotion.min_quantity:
+                                    form.add_error(None, "The order does not meet this promotion's minimum quantity.")
+                                elif order_subtotal < promotion.min_order_value:
+                                    form.add_error(None, "The order does not meet this promotion's minimum value.")
+                                elif eligible_subtotal <= 0:
+                                    form.add_error(None, "The order has no products covered by this promotion.")
+                                elif promotion.promotion_type == "BUY_X_GET_Y":
+                                    if promotion.free_quantity < 1:
+                                        form.add_error(None, "This promotion has no free quantity configured.")
+                                    else:
+                                        free_units = (
+                                            eligible_quantity
+                                            // (promotion.min_quantity + promotion.free_quantity)
+                                        ) * promotion.free_quantity
+                                        if promotion.max_free_per_order:
+                                            free_units = min(free_units, promotion.max_free_per_order)
+                                        for item_form in sorted(
+                                            eligible_forms,
+                                            key=lambda entry: entry.cleaned_data["unit_price"],
+                                        ):
+                                            item_quantity = item_form.cleaned_data["quantity"]
+                                            free_from_item = min(item_quantity, free_units)
+                                            discount += (
+                                                item_form.cleaned_data["unit_price"] * free_from_item
+                                            )
+                                            free_units -= free_from_item
+                                        if discount <= 0:
+                                            form.add_error(None, "The order does not qualify for a free item yet.")
+                                elif promotion.discount_percent:
+                                    discount = (
+                                        eligible_subtotal * promotion.discount_percent / Decimal("100")
+                                    ).quantize(Decimal("0.01"))
+                                elif promotion.discount_amount:
+                                    discount = min(eligible_subtotal, promotion.discount_amount)
+                                if not form.errors and not any(formset.errors):
+                                    discount += form.cleaned_data.get("discount", Decimal("0"))
+                                    if discount > order_subtotal:
+                                        form.add_error(None, "The total discount cannot exceed the sale subtotal.")
+                                    else:
+                                        promotion_application = {
+                                            "promotion": promotion,
+                                            "discount": discount - form.cleaned_data.get(
+                                                "discount", Decimal("0")
+                                            ),
+                                            "eligible_quantity": eligible_quantity,
+                                            "eligible_revenue": eligible_subtotal,
+                                            "customer": customer,
+                                            "customer_name": customer_name,
+                                        }
+
                 if not form.errors and not any(formset.errors):
                     sale = form.save(commit=False)
                     sale.business = business
                     sale.created_by = request.user
+                    if promotion_application:
+                        sale.discount = (
+                            form.cleaned_data.get("discount", Decimal("0"))
+                            + promotion_application["discount"]
+                        )
                     tax_settings = None
                     if business.business_type == "ELECTRONICS":
                         tax_settings = BusinessSettings.objects.filter(business=business).first()
@@ -293,12 +717,20 @@ def sale_create_view(request):
                             (request.user if request.user.role == "BARBER" else None)
                         )
                     sale.metadata = _sale_metadata_from_form(form, sale.metadata)
+                    if active_quotation:
+                        sale.metadata["quotation_number"] = active_quotation.quotation_number
                     if business.business_type == "SALON" and appointment and appointment.stylist_id:
                         sale.metadata["served_by"] = {
                             "id": str(appointment.stylist_id),
                             "name": appointment.stylist.get_full_name() or appointment.stylist.email,
                         }
                     sale.save()
+                    if active_quotation:
+                        active_quotation.status = "CONVERTED"
+                        active_quotation.converted_sale = sale
+                        active_quotation.save(
+                            update_fields=["status", "converted_sale", "updated_at"]
+                        )
 
                     formset.instance = sale
                     formset.save()
@@ -316,6 +748,23 @@ def sale_create_view(request):
                             )
                             item.save()
                     sale.recalculate()
+                    if promotion_application:
+                        from wholesale.models import WholesalePromotionRedemption
+
+                        WholesalePromotionRedemption.objects.create(
+                            business=business,
+                            promotion=promotion_application["promotion"],
+                            sale=sale,
+                            customer=promotion_application["customer"],
+                            customer_name=promotion_application["customer_name"],
+                            eligible_quantity=promotion_application["eligible_quantity"],
+                            revenue=max(
+                                promotion_application["eligible_revenue"]
+                                - promotion_application["discount"],
+                                Decimal("0"),
+                            ),
+                            discount_amount=promotion_application["discount"],
+                        )
                     if sale.payment_method in {"CASH", "M-PESA", "CARD", "BANK"} and sale.amount_paid == 0:
                         sale.amount_paid = sale.total
                         sale.save()
@@ -323,13 +772,13 @@ def sale_create_view(request):
                         if item_form.cleaned_data and not item_form.cleaned_data.get("DELETE", False):
                             product = item_form.cleaned_data["product"]
                             quantity = item_form.cleaned_data["quantity"]
-                            if business.business_type != "ELECTRONICS" and not (
+                            if business.business_type not in {"ELECTRONICS", "HARDWARE"} and not (
                                 business.business_type == "SALON"
                                 and product.metadata.get("salon_service")
                             ):
                                 product.current_stock = max(0, product.current_stock - quantity)
                                 product.save()
-                    if business.business_type == "ELECTRONICS":
+                    if business.business_type in {"ELECTRONICS", "HARDWARE"}:
                         for product_key, quantity in requested_quantities.items():
                             product = locked_products[product_key]
                             product.current_stock -= quantity
@@ -387,6 +836,31 @@ def sale_create_view(request):
                 ).select_related("customer", "stylist").prefetch_related("services").first()
     else:
         initial = {}
+        if quotation_id_value:
+            try:
+                quotation_uuid = UUIDField().clean(quotation_id_value)
+            except ValidationError:
+                raise Http404("This quotation link is invalid.")
+            active_quotation = get_object_or_404(
+                HardwareQuotation.objects.prefetch_related("items"),
+                id=quotation_uuid,
+                business=business,
+                status="ACCEPTED",
+                converted_sale__isnull=True,
+            )
+            if business.business_type != "HARDWARE":
+                raise Http404("This quotation is not available in this workspace.")
+            if active_quotation.valid_until and active_quotation.valid_until < timezone.localdate():
+                messages.error(request, "This quotation has expired and cannot be converted.")
+                return redirect("sales:quotation_detail", quotation_id=active_quotation.id)
+            initial = {
+                "customer": active_quotation.customer_id or "",
+                "customer_name": active_quotation.customer_name,
+                "customer_phone": active_quotation.customer_phone,
+                "customer_email": active_quotation.customer_email,
+                "discount": active_quotation.discount,
+                "notes": active_quotation.notes,
+            }
         if business.business_type == "BARBER":
             appointments = Appointment.objects.filter(
                 business=business,
@@ -464,6 +938,15 @@ def sale_create_view(request):
         form = SaleForm(business=business, initial=initial)
         item_formset = BarberSaleItemFormSet if business.business_type == "BARBER" else SaleItemFormSet
         initial_items = []
+        if active_quotation:
+            initial_items = [
+                {
+                    "product": item.product.name if item.product_id else item.product_name,
+                    "quantity": item.quantity,
+                    "unit_price": item.unit_price,
+                }
+                for item in active_quotation.items.all()
+            ]
         if business.business_type == "SALON" and active_appointment:
             services = list(active_appointment.services.filter(
                 business=business,
@@ -534,7 +1017,17 @@ def sale_create_view(request):
     ).order_by("name")
     if business.business_type != "RESTAURANT":
         quick_products = quick_products[:24]
-    return render(request, sale_template['entry_template'], {
+    hardware_products = (
+        Product.objects.filter(business=business, is_active=True)
+        .select_related("category")
+        .order_by("name")
+        if business.business_type == "HARDWARE"
+        else Product.objects.none()
+    )
+    entry_template = sale_template['entry_template']
+    if business.business_type == "HARDWARE" and invoice_mode:
+        entry_template = "sales/entries/hardware_invoice.html"
+    return render(request, entry_template, {
         'form': form,
         'formset': formset,
         'title': 'Create Invoice' if invoice_mode else sale_template['title'],
@@ -542,6 +1035,17 @@ def sale_create_view(request):
         'sale_template': sale_template,
         'quick_products': quick_products,
         'electronics_products': electronics_products,
+        'hardware_products': hardware_products,
+        'hardware_categories': (
+            Category.objects.filter(
+                business=business,
+                is_active=True,
+                products__is_active=True,
+                products__business=business,
+            ).distinct().order_by("name")
+            if business.business_type == "HARDWARE"
+            else Category.objects.none()
+        ),
         'recent_electronics_products': recent_electronics_products,
         'frequent_electronics_products': frequent_electronics_products,
         'electronics_categories': (
@@ -562,6 +1066,9 @@ def sale_create_view(request):
         },
         'active_appointment': active_appointment,
         'appointment_id_value': appointment_id_value,
+        'quotation_id_value': quotation_id_value,
+        'active_promotions': active_promotions,
+        'selected_promotion_id': selected_promotion_id,
     })
 
 @login_required

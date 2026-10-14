@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Sales - SmartBiz AI{% endblock %}
+{% block title %}{{ title|default:"Sales" }} - SmartBiz AI{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
@@ -11,9 +11,9 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
             <div>
                 <h1 class="text-2xl font-bold text-primary-700">
-                    <i class="fas fa-receipt text-primary-500 mr-2"></i>Sales
+                    <i class="fas {% if delivery_filter %}fa-truck-fast{% else %}fa-receipt{% endif %} text-primary-500 mr-2"></i>{{ title|default:"Sales" }}
                 </h1>
-                <p class="text-gray-600">Manage your sales transactions</p>
+                <p class="text-gray-600">{% if delivery_filter %}Orders with a delivery address or scheduled delivery date{% else %}Manage your sales transactions{% endif %}</p>
             </div>
             <div class="mt-4 sm:mt-0 flex flex-wrap gap-2">
                 <a href="{% url 'sales:export' %}?{{ request.GET.urlencode }}" class="btn-outline inline-flex items-center">
@@ -53,6 +53,7 @@
         <!-- Search and Filter -->
         <div class="card mb-6">
             <form method="GET" class="space-y-4">
+                {% if delivery_filter %}<input type="hidden" name="delivery" value="1">{% endif %}
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <div class="relative">

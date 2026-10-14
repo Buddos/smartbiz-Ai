@@ -1,0 +1,27 @@
+{% load dashboard_notifications %}
+<header class="wholesale-topbar">
+    <div class="wholesale-topbar-title">
+        <button class="wholesale-menu-button" type="button" data-toggle-menu aria-label="Open navigation" aria-controls="wholesaleSidebar" aria-expanded="false"><i class="fas fa-bars" aria-hidden="true"></i></button>
+        <div><span>{{ request.user.business.name }}</span><strong>Wholesale workspace</strong></div>
+    </div>
+    <div class="wholesale-topbar-actions">
+        <span class="wholesale-live-state"><i aria-hidden="true"></i><span data-live-status>Ready</span></span>
+        {% dashboard_notifications %}
+        <div class="wholesale-account-menu electronics-account-menu" data-dashboard-account-menu>
+            <button class="wholesale-topbar-avatar" type="button" aria-label="Open account menu" aria-expanded="false" data-dashboard-account-toggle>
+                {% if request.user.profile_picture %}<img src="{{ request.user.profile_picture.url }}" alt="">{% else %}{{ request.user.first_name|default:request.user.email|first|upper }}{% endif %}
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="electronics-account-popover wholesale-account-popover" data-dashboard-account-popover hidden>
+                <div class="electronics-account-summary">
+                    <strong>{{ request.user.get_full_name|default:request.user.email }}</strong>
+                    <small>{{ request.user.get_role_display }}</small>
+                </div>
+                {% if request.user.role == 'OWNER' or request.user.role == 'ADMIN' or request.user.role == 'SUPER_ADMIN' %}<a href="{% url 'business_admin' %}"><i class="fas fa-user-shield" aria-hidden="true"></i>Business admin dashboard</a>{% endif %}
+                <a href="{% url 'accounts:settings' %}"><i class="fas fa-gear" aria-hidden="true"></i>Settings</a>
+                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user" aria-hidden="true"></i>Profile</a>
+                <a href="{% url 'accounts:logout' %}"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Log out</a>
+            </div>
+        </div>
+    </div>
+</header>

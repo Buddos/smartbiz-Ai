@@ -41,3 +41,19 @@ def restaurant_business_shell_for(request):
         and request.resolver_match.url_name != "business_admin"
         and request.GET.get("from") != "admin"
     )
+
+
+@register.simple_tag
+def wholesale_business_shell_for(request):
+    user = getattr(request, "user", None)
+    business = getattr(user, "business", None)
+    match = getattr(request, "resolver_match", None)
+    return bool(
+        user
+        and user.is_authenticated
+        and business
+        and business.business_type == "WHOLESALE"
+        and match
+        and match.url_name != "business_admin"
+        and request.GET.get("from") != "admin"
+    )

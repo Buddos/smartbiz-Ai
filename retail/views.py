@@ -71,6 +71,17 @@ def _drawer_totals(session, as_of=None):
     return cash_sales, cash_out, session.opening_balance + cash_sales - cash_out
 
 
+def stock_workflow_workspace_required(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        business = request.user.business
+        if business is None or business.business_type not in {"RETAIL", "WHOLESALE", "HARDWARE"}:
+            messages.error(request, "This stock workflow is only available to retail, wholesale, and hardware businesses.")
+            return redirect("dashboard")
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
 @login_required
 @business_required
 @retail_workspace_required
@@ -159,7 +170,7 @@ def retail_dashboard_view(request):
 
 @login_required
 @business_required
-@retail_workspace_required
+@stock_workflow_workspace_required
 def supplier_list_view(request):
     business = request.user.business
     supplier_form = RetailSupplierForm(prefix="supplier")
@@ -220,7 +231,7 @@ def supplier_list_view(request):
 
 @login_required
 @business_required
-@retail_workspace_required
+@stock_workflow_workspace_required
 @require_POST
 def purchase_order_receive_view(request, order_id):
     business = request.user.business
@@ -357,7 +368,7 @@ def cash_drawer_view(request):
 
 @login_required
 @business_required
-@retail_workspace_required
+@stock_workflow_workspace_required
 def credit_view(request):
     business = request.user.business
     if request.method == "POST":

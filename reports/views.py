@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, F, Sum
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -14,16 +15,31 @@ from ai_engine.models import AIInsight, AIRecommendation
 from .models import Report
 
 
-def _period(request):
+def _period(request, *, required=False):
     end = timezone.now().date()
     start = end - timedelta(days=30)
     raw_start = request.GET.get("start")
     raw_end = request.GET.get("end")
-    if raw_start:
-        start = timezone.datetime.fromisoformat(raw_start).date()
-    if raw_end:
-        end = timezone.datetime.fromisoformat(raw_end).date()
+    if required and (not raw_start or not raw_end):
+        raise ValueError("Select both a start date and an end date.")
+    try:
+        if raw_start:
+            start = _parse_period_date(raw_start)
+        if raw_end:
+            end = _parse_period_date(raw_end)
+    except ValueError:
+        raise ValueError("Report dates must be valid dates.") from None
+    if start > end:
+        raise ValueError("The start date must be on or before the end date.")
     return start, end
+
+
+def _parse_period_date(value):
+    try:
+        return timezone.datetime.fromisoformat(value).date()
+    except ValueError:
+        legacy_value = value.replace("Sept.", "Sep.")
+        return timezone.datetime.strptime(legacy_value, "%b. %d, %Y").date()
 
 
 def _build_summary(business, start, end):
@@ -57,7 +73,10 @@ def _build_summary(business, start, end):
 @role_required(["OWNER", "MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
 @permission_required('export_reports')
 def report_list_view(request):
-    start, end = _period(request)
+    try:
+        start, end = _period(request)
+    except ValueError as error:
+        return HttpResponseBadRequest(str(error))
     reports = Report.objects.filter(business=request.user.business)
     return render(request, "reports/list.html", {
         "reports": reports,
@@ -72,7 +91,10 @@ def report_list_view(request):
 @role_required(["OWNER", "MANAGER", "ACCOUNTANT", "ADMIN", "SUPER_ADMIN"])
 @permission_required('export_reports')
 def report_generate_view(request):
-    start, end = _period(request)
+    try:
+        start, end = _period(request, required=True)
+    except ValueError as error:
+        return HttpResponseBadRequest(str(error))
     report_type = request.GET.get("type", "PERFORMANCE")
     if report_type not in dict(Report.REPORT_TYPES):
         report_type = "PERFORMANCE"

@@ -1,0 +1,41 @@
+{% load static %}
+<aside class="hardware-sidebar" id="hardwareSidebar" aria-label="Hardware shop navigation">
+    <a class="hardware-brand" href="{% url 'dashboard' %}">
+        <span class="hardware-brand-mark"><i class="fas fa-screwdriver-wrench" aria-hidden="true"></i></span>
+        <span><strong>SmartBiz</strong><small>{{ user.business.name }}</small></span>
+    </a>
+    <nav class="hardware-nav">
+        <p class="hardware-nav-label">Main</p>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}"><i class="fas fa-house" aria-hidden="true"></i><span>Dashboard</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'create' and request.GET.mode != 'invoice' %}is-active{% endif %}" href="{% url 'sales:create' %}"><i class="fas fa-cash-register" aria-hidden="true"></i><span>POS</span><kbd>F9</kbd></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'list' and not request.GET.delivery %}is-active{% endif %}" href="{% url 'sales:list' %}"><i class="fas fa-clipboard-list" aria-hidden="true"></i><span>Orders</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'create' and request.GET.mode == 'invoice' %}is-active{% endif %}" href="{% url 'sales:create' %}?mode=invoice"><i class="fas fa-file-invoice" aria-hidden="true"></i><span>Invoices</span></a>
+        <a class="hardware-nav-link {% if request.GET.delivery %}is-active{% endif %}" href="{% url 'sales:list' %}?delivery=1"><i class="fas fa-truck-fast" aria-hidden="true"></i><span>Deliveries</span></a>
+
+        <p class="hardware-nav-label">Sales</p>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'quotations' or request.resolver_match.url_name == 'quotation_detail' %}is-active{% endif %}" href="{% url 'sales:quotations' %}"><i class="fas fa-pen-to-square" aria-hidden="true"></i><span>Quotations</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'customers' %}is-active{% endif %}" href="{% url 'customers:list' %}"><i class="fas fa-users" aria-hidden="true"></i><span>Customers</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'credit' %}is-active{% endif %}" href="{% url 'retail:credit' %}"><i class="fas fa-book-open" aria-hidden="true"></i><span>Credit Ledger</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'products' %}is-active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-tags" aria-hidden="true"></i><span>Price Lists</span></a>
+
+        <p class="hardware-nav-label">Inventory</p>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'products' %}is-active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-box-open" aria-hidden="true"></i><span>Products</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'inventory' %}is-active{% endif %}" href="{% url 'inventory:dashboard' %}"><i class="fas fa-warehouse" aria-hidden="true"></i><span>Stock</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'suppliers' %}is-active{% endif %}" href="{% url 'retail:suppliers' %}"><i class="fas fa-industry" aria-hidden="true"></i><span>Suppliers</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'suppliers' %}is-active{% endif %}" href="{% url 'retail:suppliers' %}#purchase-orders"><i class="fas fa-dolly" aria-hidden="true"></i><span>Purchase Orders</span></a>
+
+        <p class="hardware-nav-label">Finance</p>
+        <a class="hardware-nav-link {% if request.resolver_match.url_name == 'credit' %}is-active{% endif %}" href="{% url 'retail:credit' %}"><i class="fas fa-hand-holding-dollar" aria-hidden="true"></i><span>Accounts Receivable</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'expenses' %}is-active{% endif %}" href="{% url 'expenses:list' %}"><i class="fas fa-receipt" aria-hidden="true"></i><span>Expenses</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'analytics' %}is-active{% endif %}" href="{% url 'analytics:dashboard' %}"><i class="fas fa-chart-column" aria-hidden="true"></i><span>Analytics</span></a>
+
+        <p class="hardware-nav-label">SmartBiz AI</p>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name != 'assistant' %}is-active{% endif %}" href="{% url 'ai_engine:home' %}#insights"><i class="fas fa-lightbulb" aria-hidden="true"></i><span>AI Insights</span></a>
+        <a class="hardware-nav-link {% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'assistant' %}is-active{% endif %}" href="{% url 'ai_engine:assistant' %}"><i class="fas fa-comment-dots" aria-hidden="true"></i><span>AI Assistant</span></a>
+    </nav>
+    <div class="hardware-sidebar-account">
+        <span class="hardware-avatar">{% if user.profile_picture %}<img src="{{ user.profile_picture.url }}" alt="">{% else %}{{ user.first_name|default:user.email|first|upper }}{% endif %}</span>
+        <span class="hardware-account-name"><strong>{{ user.get_full_name|default:user.email }}</strong><small>{{ user.get_role_display }}</small></span>
+        <a href="{% url 'accounts:settings' %}" aria-label="Personal settings"><i class="fas fa-gear" aria-hidden="true"></i></a>
+    </div>
+</aside>

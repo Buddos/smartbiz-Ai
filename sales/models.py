@@ -437,10 +437,10 @@ class Return(models.Model):
             models.Index(fields=['business', 'return_number']),
             models.Index(fields=['sale', 'status']),
         ]
-    
+
     def __str__(self):
         return f"{self.return_number} - {self.sale.sale_number}"
-    
+
     def save(self, *args, **kwargs):
         if not self.return_number:
             prefix = "RET"
@@ -450,5 +450,100 @@ class Return(models.Model):
                 return_date__date=timezone.now().date()
             ).count() + 1
             self.return_number = f"{prefix}-{date_str}-{str(count).zfill(4)}"
-        
+
         super().save(*args, **kwargs)
+
+
+class HardwareQuotation(models.Model):
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("SENT", "Sent"),
+        ("ACCEPTED", "Accepted"),
+        ("DECLINED", "Declined"),
+        ("CONVERTED", "Converted to sale"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="hardware_quotations"
+    )
+    quotation_number = models.CharField(max_length=40, unique=True, db_index=True)
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hardware_quotations",
+    )
+    customer_name = models.CharField(max_length=200, blank=True)
+    customer_phone = models.CharField(max_length=30, blank=True)
+    customer_email = models.EmailField(blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="DRAFT")
+    valid_until = models.DateField(null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    converted_sale = models.OneToOneField(
+        Sale,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_hardware_quotation",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="hardware_quotations_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["business", "status"]),
+            models.Index(fields=["business", "created_at"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.quotation_number:
+            self.quotation_number = (
+                f"QUO-{timezone.localdate():%Y%m%d}-{uuid.uuid4().hex[:6].upper()}"
+            )
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.quotation_number
+
+
+class HardwareQuotationItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    quotation = models.ForeignKey(
+        HardwareQuotation, on_delete=models.CASCADE, related_name="items"
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="hardware_quotation_items",
+    )
+    product_name = models.CharField(max_length=200)
+    product_sku = models.CharField(max_length=50, blank=True)
+    unit = models.CharField(max_length=20, default="PCS")
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    unit_price = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    @property
+    def line_total(self):
+        return self.quantity * self.unit_price
+
+    def __str__(self):
+        return f"{self.product_name} x {self.quantity}"

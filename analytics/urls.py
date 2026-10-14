@@ -26,4 +26,9 @@ urlpatterns = [
         views.restaurant_dashboard_data_api,
         name='restaurant_dashboard_data',
     ),
+    path(
+        'api/wholesale-dashboard/',
+        views.wholesale_dashboard_data_api,
+        name='wholesale_dashboard_data',
+    ),
 ]

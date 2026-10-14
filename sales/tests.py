@@ -1,7 +1,9 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from barber.models import Appointment, BarberService, Chair
@@ -66,6 +68,455 @@ class SaleCreateFlowTests(TestCase):
 		self.assertEqual(sale.metadata['transaction_code'], 'TEST-CASH-001')
 		self.assertEqual(sale.metadata['served_by']['id'], str(user.id))
 		self.assertEqual(product.__class__.objects.get(pk=product.pk).current_stock, 9)
+
+
+class HardwarePointOfSaleTests(TestCase):
+	def setUp(self):
+		self.business = Business.objects.create(
+			name='Northside Hardware',
+			business_type='HARDWARE',
+			email='hardware@example.com',
+			phone_number='0700000000',
+		)
+		self.user = User.objects.create_user(
+			email='hardware-owner@example.com',
+			password='test-password',
+			first_name='Hardware',
+			role='OWNER',
+			business=self.business,
+		)
+		self.product = Product.objects.create(
+			business=self.business,
+			name='Galvanized roofing nails',
+			sku='NAIL-001',
+			selling_price=120,
+			current_stock=8,
+			created_by=self.user,
+		)
+		self.client.force_login(self.user)
+
+	def test_hardware_pos_renders_live_catalog_and_cart(self):
+		response = self.client.get(reverse('sales:create'))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, 'sales/entries/hardware.html')
+		self.assertContains(response, 'Galvanized roofing nails')
+		self.assertContains(response, '8 available')
+		self.assertContains(response, 'Your cart')
+		self.assertContains(response, 'Complete sale')
+		self.assertContains(response, 'data-hardware-live="checkout"')
+		self.assertContains(response, 'id="hardwareCartLineTemplate"')
+		content = response.content.decode()
+		self.assertLess(
+			content.index('id="hardwareCatalogTitle"'),
+			content.index('id="hardwareCartCount"'),
+		)
+
+	def test_hardware_invoice_has_a_distinct_entry_page(self):
+		response = self.client.get(reverse('sales:create'), {'mode': 'invoice'})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertTemplateUsed(response, 'sales/entries/hardware_invoice.html')
+		self.assertContains(response, 'Create an invoice')
+		self.assertContains(response, 'Invoice items')
+		self.assertContains(response, 'Create invoice')
+		self.assertNotContains(response, 'id="hardwareCatalogTitle"')
+		self.assertNotContains(response, 'id="hardwareProductGrid"')
+
+	def test_hardware_invoice_creates_invoice_record_and_reduces_stock(self):
+		response = self.client.post(reverse('sales:create'), {
+			'mode': 'invoice',
+			'customer': '',
+			'customer_name': 'Walk-in Customer',
+			'customer_phone': '',
+			'customer_email': '',
+			'payment_method': 'CASH',
+			'discount': '20',
+			'transaction_code': '',
+			'notes': 'Invoice for counter pickup',
+			'delivery_address': '',
+			'delivery_date': '',
+			'sale_items-TOTAL_FORMS': '1',
+			'sale_items-INITIAL_FORMS': '0',
+			'sale_items-MIN_NUM_FORMS': '1',
+			'sale_items-MAX_NUM_FORMS': '1000',
+			'sale_items-0-product': self.product.name,
+			'sale_items-0-quantity': '2',
+			'sale_items-0-unit_price': '120',
+		})
+
+		sale = Sale.objects.get(business=self.business)
+		self.assertRedirects(response, reverse('sales:detail', kwargs={'sale_id': sale.id}))
+		self.assertEqual(sale.total, Decimal('220.00'))
+		self.assertEqual(sale.notes, 'Invoice for counter pickup')
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, 6)
+
+	def test_hardware_pos_checkout_records_sale_and_reduces_stock(self):
+		response = self.client.post(reverse('sales:create'), {
+			'customer': '',
+			'customer_name': 'Walk-in Customer',
+			'customer_phone': '',
+			'customer_email': '',
+			'payment_method': 'CASH',
+			'discount': '0',
+			'transaction_code': '',
+			'notes': '',
+			'delivery_address': '',
+			'delivery_date': '',
+			'sale_items-TOTAL_FORMS': '1',
+			'sale_items-INITIAL_FORMS': '0',
+			'sale_items-MIN_NUM_FORMS': '1',
+			'sale_items-MAX_NUM_FORMS': '1000',
+			'sale_items-0-product': self.product.name,
+			'sale_items-0-quantity': '2',
+			'sale_items-0-unit_price': '120',
+		})
+
+		sale = Sale.objects.get(business=self.business)
+		self.assertRedirects(response, reverse('sales:detail', kwargs={'sale_id': sale.id}))
+		self.product.refresh_from_db()
+		self.assertEqual(sale.total, Decimal('240.00'))
+		self.assertEqual(self.product.current_stock, 6)
+
+	def test_hardware_pos_rejects_quantities_above_current_stock(self):
+		response = self.client.post(reverse('sales:create'), {
+			'customer': '',
+			'customer_name': 'Walk-in Customer',
+			'customer_phone': '',
+			'customer_email': '',
+			'payment_method': 'CASH',
+			'discount': '0',
+			'transaction_code': '',
+			'notes': '',
+			'delivery_address': '',
+			'delivery_date': '',
+			'sale_items-TOTAL_FORMS': '1',
+			'sale_items-INITIAL_FORMS': '0',
+			'sale_items-MIN_NUM_FORMS': '1',
+			'sale_items-MAX_NUM_FORMS': '1000',
+			'sale_items-0-product': self.product.name,
+			'sale_items-0-quantity': '9',
+			'sale_items-0-unit_price': '120',
+		})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(Sale.objects.filter(business=self.business).count(), 0)
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, 8)
+		self.assertContains(response, 'Only 8 unit(s) remain; 9 were requested across this cart.')
+
+	def test_hardware_pos_rejects_discount_above_the_cart_subtotal(self):
+		response = self.client.post(reverse('sales:create'), {
+			'customer': '',
+			'customer_name': 'Walk-in Customer',
+			'customer_phone': '',
+			'customer_email': '',
+			'payment_method': 'CASH',
+			'discount': '121',
+			'transaction_code': '',
+			'notes': '',
+			'delivery_address': '',
+			'delivery_date': '',
+			'sale_items-TOTAL_FORMS': '1',
+			'sale_items-INITIAL_FORMS': '0',
+			'sale_items-MIN_NUM_FORMS': '1',
+			'sale_items-MAX_NUM_FORMS': '1000',
+			'sale_items-0-product': self.product.name,
+			'sale_items-0-quantity': '1',
+			'sale_items-0-unit_price': '120',
+		})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(Sale.objects.filter(business=self.business).count(), 0)
+		self.assertContains(response, 'Discount cannot exceed the sale subtotal.')
+
+	def test_hardware_deliveries_page_only_shows_sales_with_delivery_details(self):
+		Sale.objects.create(
+			business=self.business,
+			sale_number='HARDWARE-DELIVERY',
+			delivery_address='14 Market Road',
+			created_by=self.user,
+		)
+		Sale.objects.create(
+			business=self.business,
+			sale_number='HARDWARE-COUNTER',
+			created_by=self.user,
+		)
+
+		response = self.client.get(reverse('sales:list'), {'delivery': '1'})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.context['title'], 'Deliveries')
+		self.assertRegex(response.content.decode(), r'(?s)<h1[^>]*>.*?Deliveries.*?</h1>')
+		self.assertEqual(response.context['page_obj'].paginator.count, 1)
+		self.assertEqual(response.context['page_obj'][0].sale_number, 'HARDWARE-DELIVERY')
+
+
+class HardwareQuotationFlowTests(TestCase):
+	def setUp(self):
+		self.business = Business.objects.create(
+			name='Northside Hardware',
+			business_type='HARDWARE',
+			email='hardware@example.com',
+			phone_number='0700000000',
+		)
+		self.user = User.objects.create_user(
+			email='hardware-owner@example.com',
+			password='test-password',
+			first_name='Hardware',
+			role='OWNER',
+			business=self.business,
+		)
+		self.product = Product.objects.create(
+			business=self.business,
+			name='Cement 32.5N',
+			sku='CEM-325',
+			unit='BAG',
+			selling_price=750,
+			current_stock=12,
+			created_by=self.user,
+		)
+		self.customer = Customer.objects.create(
+			business=self.business,
+			name='BuildRight Contractors',
+			phone='0712345678',
+			email='buyer@example.com',
+		)
+		self.client.force_login(self.user)
+
+	def quotation_payload(self, **overrides):
+		payload = {
+			'customer': str(self.customer.id),
+			'customer_name': 'BuildRight Contractors',
+			'customer_phone': self.customer.phone,
+			'customer_email': self.customer.email,
+			'valid_until': '',
+			'discount': '100',
+			'notes': 'Deliver to site',
+			'items-TOTAL_FORMS': '1',
+			'items-INITIAL_FORMS': '0',
+			'items-MIN_NUM_FORMS': '1',
+			'items-MAX_NUM_FORMS': '100',
+			'items-0-product': str(self.product.id),
+			'items-0-quantity': '4',
+			'items-0-unit_price': '700',
+		}
+		payload.update(overrides)
+		return payload
+
+	def test_project_pipeline_is_shown_before_new_quotation_form(self):
+		response = self.client.get(reverse('sales:quotations'))
+
+		self.assertEqual(response.status_code, 200)
+		content = response.content.decode()
+		self.assertLess(
+			content.index('Project pipeline'),
+			content.index('id="new-quotation"'),
+		)
+
+	def test_quote_creation_snapshots_lines_and_calculates_discounted_total(self):
+		response = self.client.post(
+			reverse('sales:quotations'),
+			self.quotation_payload(),
+		)
+
+		from .models import HardwareQuotation
+		quotation = HardwareQuotation.objects.get(business=self.business)
+		item = quotation.items.get()
+		self.assertRedirects(
+			response,
+			reverse('sales:quotation_detail', kwargs={'quotation_id': quotation.id}),
+		)
+		self.assertEqual(quotation.subtotal, Decimal('2800.00'))
+		self.assertEqual(quotation.discount, Decimal('100.00'))
+		self.assertEqual(quotation.total, Decimal('2700.00'))
+		self.assertEqual(item.product_name, self.product.name)
+		self.assertEqual(item.product_sku, self.product.sku)
+		self.assertEqual(item.line_total, Decimal('2800.00'))
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, 12)
+
+	def test_quote_form_rejects_foreign_business_products(self):
+		other_business = Business.objects.create(
+			name='Other Hardware',
+			business_type='HARDWARE',
+			email='other@example.com',
+			phone_number='0700000001',
+		)
+		other_owner = User.objects.create_user(
+			email='other-owner@example.com',
+			password='test-password',
+			role='OWNER',
+			business=other_business,
+		)
+		foreign_product = Product.objects.create(
+			business=other_business,
+			name='Foreign product',
+			sku='OTHER-001',
+			selling_price=10,
+			current_stock=5,
+			created_by=other_owner,
+		)
+
+		response = self.client.post(
+			reverse('sales:quotations'),
+			self.quotation_payload(**{'items-0-product': str(foreign_product.id)}),
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertFalse(response.context['item_formset'].is_valid())
+		self.assertFalse(self.business.hardware_quotations.exists())
+
+	def test_discount_cannot_exceed_quote_subtotal(self):
+		response = self.client.post(
+			reverse('sales:quotations'),
+			self.quotation_payload(discount='2801'),
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertFalse(self.business.hardware_quotations.exists())
+		self.assertContains(response, 'Discount cannot exceed the quotation subtotal.')
+
+	def test_expired_quotation_cannot_be_accepted_or_converted(self):
+		from .models import HardwareQuotation
+		quotation = HardwareQuotation.objects.create(
+			business=self.business,
+			customer=self.customer,
+			customer_name=self.customer.name,
+			status='SENT',
+			valid_until=timezone.localdate() - timedelta(days=1),
+			created_by=self.user,
+		)
+
+		response = self.client.post(
+			reverse('sales:quotation_action', kwargs={'quotation_id': quotation.id}),
+			{'action': 'accept'},
+		)
+		self.assertRedirects(
+			response,
+			reverse('sales:quotation_detail', kwargs={'quotation_id': quotation.id}),
+		)
+		quotation.refresh_from_db()
+		self.assertEqual(quotation.status, 'SENT')
+
+		response = self.client.get(
+			reverse('sales:quotation_convert', kwargs={'quotation_id': quotation.id})
+		)
+		self.assertRedirects(
+			response,
+			reverse('sales:quotation_detail', kwargs={'quotation_id': quotation.id}),
+		)
+		self.assertEqual(self.business.sales.count(), 0)
+
+	def test_quotation_transitions_to_accepted_and_converts_to_sale_once(self):
+		from .models import HardwareQuotation
+		quotation = HardwareQuotation.objects.create(
+			business=self.business,
+			customer=self.customer,
+			customer_name=self.customer.name,
+			customer_phone=self.customer.phone,
+			customer_email=self.customer.email,
+			status='SENT',
+			subtotal=Decimal('2800.00'),
+			discount=Decimal('100.00'),
+			total=Decimal('2700.00'),
+			created_by=self.user,
+		)
+		quotation.items.create(
+			product=self.product,
+			product_name=self.product.name,
+			product_sku=self.product.sku,
+			unit=self.product.unit,
+			quantity=4,
+			unit_price=Decimal('700.00'),
+		)
+		detail_url = reverse('sales:quotation_detail', kwargs={'quotation_id': quotation.id})
+		response = self.client.post(
+			reverse('sales:quotation_action', kwargs={'quotation_id': quotation.id}),
+			{'action': 'accept'},
+		)
+		self.assertRedirects(response, detail_url)
+		quotation.refresh_from_db()
+		self.assertEqual(quotation.status, 'ACCEPTED')
+
+		convert_response = self.client.get(
+			reverse('sales:quotation_convert', kwargs={'quotation_id': quotation.id})
+		)
+		self.assertRedirects(
+			convert_response,
+			f"{reverse('sales:create')}?quotation={quotation.id}",
+		)
+		pos_response = self.client.get(
+			reverse('sales:create'),
+			{'quotation': str(quotation.id)},
+		)
+		self.assertEqual(pos_response.status_code, 200)
+		self.assertContains(pos_response, 'name="quotation_id"')
+		self.assertContains(pos_response, 'value="700.00"')
+
+		edited_quote_response = self.client.post(
+			reverse('sales:create'),
+			{
+				'quotation_id': str(quotation.id),
+				'customer': str(self.customer.id),
+				'customer_name': self.customer.name,
+				'customer_phone': self.customer.phone,
+				'customer_email': self.customer.email,
+				'payment_method': 'CASH',
+				'discount': '100',
+				'transaction_code': '',
+				'notes': 'Deliver to site',
+				'delivery_address': '',
+				'delivery_date': '',
+				'sale_items-TOTAL_FORMS': '1',
+				'sale_items-INITIAL_FORMS': '0',
+				'sale_items-MIN_NUM_FORMS': '1',
+				'sale_items-MAX_NUM_FORMS': '1000',
+				'sale_items-0-product': self.product.name,
+				'sale_items-0-quantity': '4',
+				'sale_items-0-unit_price': '701',
+			},
+		)
+		self.assertEqual(edited_quote_response.status_code, 200)
+		self.assertContains(edited_quote_response, 'Checkout details must match the accepted quotation.')
+		self.assertFalse(self.business.sales.exists())
+		quotation.refresh_from_db()
+		self.assertEqual(quotation.status, 'ACCEPTED')
+
+		sale_response = self.client.post(
+			reverse('sales:create'),
+			{
+				'quotation_id': str(quotation.id),
+				'customer': str(self.customer.id),
+				'customer_name': self.customer.name,
+				'customer_phone': self.customer.phone,
+				'customer_email': self.customer.email,
+				'payment_method': 'CASH',
+				'discount': '100',
+				'transaction_code': '',
+				'notes': 'Deliver to site',
+				'delivery_address': '',
+				'delivery_date': '',
+				'sale_items-TOTAL_FORMS': '1',
+				'sale_items-INITIAL_FORMS': '0',
+				'sale_items-MIN_NUM_FORMS': '1',
+				'sale_items-MAX_NUM_FORMS': '1000',
+				'sale_items-0-product': self.product.name,
+				'sale_items-0-quantity': '4',
+				'sale_items-0-unit_price': '700',
+			},
+		)
+
+		from .models import Sale
+		sale = Sale.objects.get(business=self.business)
+		self.assertRedirects(sale_response, reverse('sales:detail', kwargs={'sale_id': sale.id}))
+		quotation.refresh_from_db()
+		self.product.refresh_from_db()
+		self.assertEqual(quotation.status, 'CONVERTED')
+		self.assertEqual(quotation.converted_sale_id, sale.id)
+		self.assertEqual(sale.total, Decimal('2700.00'))
+		self.assertEqual(self.product.current_stock, 8)
 
 
 class RestaurantOrderFlowTests(TestCase):

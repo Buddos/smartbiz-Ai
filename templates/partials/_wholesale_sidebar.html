@@ -1,0 +1,45 @@
+<aside class="wholesale-sidebar" id="wholesaleSidebar" aria-label="Wholesale navigation">
+    <a class="wholesale-brand" href="{% url 'dashboard' %}">
+        <span class="wholesale-brand-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>
+        <span><strong>{{ request.user.business.name }}</strong><small>Wholesale workspace</small></span>
+    </a>
+    <nav class="wholesale-nav">
+        <p class="wholesale-nav-section">Main</p>
+        <a class="wholesale-nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}" href="{% url 'dashboard' %}"{% if request.resolver_match.url_name == 'dashboard' %} aria-current="page"{% endif %}><i class="fas fa-house" aria-hidden="true"></i>Dashboard</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'list' and request.GET.order_status == 'PENDING' %} active{% endif %}" href="{% url 'sales:list' %}?order_status=PENDING"><i class="fas fa-clipboard-list" aria-hidden="true"></i>Orders</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'list' and request.GET.invoice == '1' %} active{% endif %}" href="{% url 'sales:list' %}?invoice=1"><i class="fas fa-file-invoice" aria-hidden="true"></i>Invoices</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'sales' and request.GET.order_status == 'SHIPPED' %} active{% endif %}" href="{% url 'sales:list' %}?order_status=SHIPPED"><i class="fas fa-truck" aria-hidden="true"></i>Deliveries</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'customers' %} active{% endif %}" href="{% url 'customers:list' %}"><i class="fas fa-users" aria-hidden="true"></i>Customers</a>
+
+        <p class="wholesale-nav-section">Sales</p>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'sales' and request.resolver_match.url_name == 'create' %} active{% endif %}" href="{% url 'sales:create' %}"><i class="fas fa-cart-plus" aria-hidden="true"></i>New Order</a>
+        {% if request.user.role == 'OWNER' or request.user.role == 'ADMIN' or request.user.role == 'SUPER_ADMIN' %}
+            <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'accounts' and request.resolver_match.url_name|slice:':4' == 'user' %} active{% endif %}" href="{% url 'accounts:users_list' %}"><i class="fas fa-user-tie" aria-hidden="true"></i>Sales Reps</a>
+        {% else %}
+            <span class="wholesale-nav-link is-disabled" aria-disabled="true" title="Available to business owners and administrators"><i class="fas fa-user-tie" aria-hidden="true"></i>Sales Reps</span>
+        {% endif %}
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'products' %} active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-tags" aria-hidden="true"></i>Price Lists</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'wholesale' and 'promotion' in request.resolver_match.url_name %} active{% endif %}" href="{% url 'wholesale:promotions' %}"><i class="fas fa-percent" aria-hidden="true"></i>Promotions</a>
+
+        <p class="wholesale-nav-section">Procurement</p>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'products' %} active{% endif %}" href="{% url 'products:list' %}"><i class="fas fa-box" aria-hidden="true"></i>Products</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'inventory' %} active{% endif %}" href="{% url 'inventory:dashboard' %}"><i class="fas fa-warehouse" aria-hidden="true"></i>Warehouse</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'retail' and request.resolver_match.url_name == 'suppliers' %} active{% endif %}" href="{% url 'retail:suppliers' %}#order-form"><i class="fas fa-ship" aria-hidden="true"></i>Purchase Orders</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'retail' and request.resolver_match.url_name == 'suppliers' %} active{% endif %}" href="{% url 'retail:suppliers' %}#supplier-form"><i class="fas fa-industry" aria-hidden="true"></i>Suppliers</a>
+
+        <p class="wholesale-nav-section">Finance</p>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'retail' and request.resolver_match.url_name == 'credit' %} active{% endif %}" href="{% url 'retail:credit' %}"><i class="fas fa-money-bill-transfer" aria-hidden="true"></i>Accounts Receivable</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'wholesale' and 'bill' in request.resolver_match.url_name or request.resolver_match.app_name == 'wholesale' and request.resolver_match.url_name == 'payables' or request.resolver_match.app_name == 'wholesale' and request.resolver_match.url_name == 'batch_schedule' %} active{% endif %}" href="{% url 'wholesale:payables' %}"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i>Accounts Payable</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'expenses' %} active{% endif %}" href="{% url 'expenses:list' %}"><i class="fas fa-wallet" aria-hidden="true"></i>Expenses</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'analytics' and request.resolver_match.url_name != 'dashboard' %} active{% endif %}" href="{% url 'analytics:financial' %}"><i class="fas fa-chart-column" aria-hidden="true"></i>Analytics</a>
+
+        <p class="wholesale-nav-section">SmartBiz AI</p>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name != 'assistant' %} active{% endif %}" href="{% url 'ai_engine:home' %}"><i class="fas fa-lightbulb" aria-hidden="true"></i>AI Insights</a>
+        <a class="wholesale-nav-link{% if request.resolver_match.app_name == 'ai_engine' and request.resolver_match.url_name == 'assistant' %} active{% endif %}" href="{% url 'ai_engine:assistant' %}"><i class="fas fa-comment-dots" aria-hidden="true"></i>AI Assistant</a>
+    </nav>
+    <div class="wholesale-sidebar-user">
+        <span class="wholesale-avatar">{% if request.user.profile_picture %}<img src="{{ request.user.profile_picture.url }}" alt="">{% else %}{{ request.user.first_name|default:request.user.email|first|upper }}{% endif %}</span>
+        <span><strong>{{ request.user.get_full_name|default:request.user.email }}</strong><small>{{ request.user.get_role_display }}</small></span>
+        <a href="{% url 'accounts:settings' %}" aria-label="Account settings"><i class="fas fa-gear" aria-hidden="true"></i></a>
+    </div>
+</aside>

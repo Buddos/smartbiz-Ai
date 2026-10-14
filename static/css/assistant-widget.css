@@ -1,0 +1,119 @@
+.assistant-widget {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 120;
+}
+
+.assistant-widget-launcher {
+    display: grid;
+    width: 60px;
+    height: 60px;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #16865d, #0b6848);
+    box-shadow: 0 8px 24px rgb(10 77 59 / 30%);
+    color: #fff;
+    cursor: pointer;
+    font-size: 23px;
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.assistant-widget-launcher:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 11px 28px rgb(10 77 59 / 38%);
+}
+
+.assistant-widget-launcher:focus-visible,
+.assistant-widget-close:focus-visible {
+    outline: 3px solid #8ee4b5;
+    outline-offset: 3px;
+}
+
+.assistant-widget-panel {
+    position: absolute;
+    right: 0;
+    bottom: 76px;
+    display: flex;
+    width: min(390px, calc(100vw - 32px));
+    height: min(660px, calc(100vh - 120px));
+    min-height: 380px;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #dfe9e3;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 18px 56px rgb(18 40 30 / 23%);
+}
+
+.assistant-widget-panel[hidden] {
+    display: none;
+}
+
+.assistant-widget-header {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    background: linear-gradient(112deg, #12392f, #186d50);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.assistant-widget-header > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.assistant-widget-header > span > i {
+    color: #baf1d0;
+}
+
+.assistant-widget-close {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+
+.assistant-widget-close:hover {
+    background: rgb(255 255 255 / 14%);
+}
+
+.assistant-widget-frame {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    border: 0;
+    background: #f8faf9;
+}
+
+@media (max-width: 520px) {
+    .assistant-widget {
+        right: 16px;
+        bottom: 16px;
+    }
+
+    .assistant-widget-launcher {
+        width: 56px;
+        height: 56px;
+    }
+
+    .assistant-widget-panel {
+        position: fixed;
+        right: 12px;
+        bottom: 84px;
+        width: calc(100vw - 24px);
+        height: min(680px, calc(100dvh - 108px));
+    }
+}

@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Promotions | {{ request.user.business.name }}{% endblock %}
+{% block content %}
+<div class="wholesale-content wholesale-module">
+    <header class="wholesale-page-heading">
+        <div><p class="wholesale-eyebrow">Sales · trade offers</p><h1>Promotions <span class="wholesale-count">{{ total_count }}</span></h1><p>Manage bulk discounts, volume deals, and customer tier offers.</p></div>
+        <div class="wholesale-heading-actions"><form method="get" class="wholesale-inline-search"><input name="q" value="{{ search }}" type="search" placeholder="Search promotions" aria-label="Search promotions"><button class="wholesale-button wholesale-button-secondary" type="submit"><i class="fas fa-search" aria-hidden="true"></i>Search</button></form><a href="{% url 'wholesale:promotions' %}?export=csv" class="wholesale-button wholesale-button-secondary"><i class="fas fa-download" aria-hidden="true"></i>Export</a><a href="{% url 'wholesale:promotion_create' %}" class="wholesale-button wholesale-button-primary"><i class="fas fa-plus" aria-hidden="true"></i>New promotion</a></div>
+    </header>
+
+    <section class="wholesale-kpi-grid" aria-label="Promotion metrics">
+        <article class="wholesale-kpi"><span>Active promotions</span><strong>{{ active_count }}</strong><em>Running now</em><i class="fas fa-tags" aria-hidden="true"></i></article>
+        <article class="wholesale-kpi"><span>Promo revenue</span><strong><small>{{ request.user.business.currency }}</small><b>{{ promotion_revenue|floatformat:2 }}</b></strong><em>Tracked redemptions · last 30 days</em><i class="fas fa-coins" aria-hidden="true"></i></article>
+        <article class="wholesale-kpi"><span>Average uplift</span><strong>—</strong><em>Available as sales are attributed</em><i class="fas fa-chart-line" aria-hidden="true"></i></article>
+        <article class="wholesale-kpi"><span>Best performer</span><strong class="wholesale-kpi-text">{% if best_performer %}{{ best_performer.name }}{% else %}No tracked results{% endif %}</strong><em>By tracked redemption revenue</em><i class="fas fa-trophy" aria-hidden="true"></i></article>
+    </section>
+
+    <form method="get" class="wholesale-filter-bar">
+        <label>Status<select name="status"><option value="">All statuses</option>{% for value,label in promotion_statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>Type<select name="type"><option value="">All types</option>{% for value,label in promotion_types %}<option value="{{ value }}" {% if type_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        <label>Customer tier<input name="tier" value="{{ tier_filter }}" placeholder="All tiers"></label>
+        <label>Search<input name="q" value="{{ search }}" placeholder="Name or product"></label>
+        <button class="wholesale-button wholesale-button-primary" type="submit">Apply filters</button>
+    </form>
+
+    <form method="post" action="{% url 'wholesale:promotion_bulk_action' %}" class="wholesale-panel wholesale-module-panel">
+        {% csrf_token %}
+        <div class="wholesale-panel-heading"><div><p>Campaigns</p><h2>Wholesale promotions</h2></div><div class="wholesale-bulk-controls"><label for="promotion-bulk-action">With selected</label><select id="promotion-bulk-action" name="action"><option value="pause">Pause</option><option value="resume">Resume</option><option value="end">End</option></select><button type="submit" class="wholesale-button wholesale-button-secondary">Apply</button></div></div>
+        <div class="wholesale-table-scroll"><table class="wholesale-table wholesale-data-table"><thead><tr><th><span class="sr-only">Select</span></th><th>Name</th><th>Type</th><th>Applies to</th><th>Offer</th><th>Tiers</th><th>Duration</th><th>Revenue</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {% for promotion,status in rows %}
+                <tr class="wholesale-promo-row is-{{ status|lower }}">
+                    <td><input type="checkbox" name="promotion_ids" value="{{ promotion.pk }}" aria-label="Select {{ promotion.name }}"></td>
+                    <td><a href="{% url 'wholesale:promotion_detail' promotion.pk %}"><strong>{{ promotion.name }}</strong></a><small>{{ promotion.description|default:"No internal description"|truncatechars:72 }}</small></td>
+                    <td>{{ promotion.get_promotion_type_display }}</td>
+                    <td>{% for product in promotion.products.all %}{{ product.name }}{% if not forloop.last %}, {% endif %}{% empty %}All products{% endfor %}</td>
+                    <td>{% if promotion.discount_percent %}{{ promotion.discount_percent|floatformat:"-2" }}% off{% elif promotion.discount_amount %}{{ request.user.business.currency }} {{ promotion.discount_amount|floatformat:2 }} off{% elif promotion.free_quantity %}+{{ promotion.free_quantity }} free{% else %}Rules{% endif %}</td>
+                    <td>{{ promotion.customer_tiers|default:"All" }}</td>
+                    <td>{{ promotion.starts_at|date:"j M Y" }}{% if promotion.ends_at %}<small>to {{ promotion.ends_at|date:"j M Y" }}</small>{% else %}<small>Ongoing</small>{% endif %}</td>
+                    <td>{{ request.user.business.currency }} {{ promotion.tracked_revenue|default_if_none:0|floatformat:2 }}</td>
+                    <td><span class="wholesale-status is-{{ status|lower }}">{{ status|title }}</span></td>
+                    <td class="wholesale-row-actions"><a href="{% url 'wholesale:promotion_detail' promotion.pk %}">View</a><a href="{% url 'wholesale:promotion_edit' promotion.pk %}">Edit</a></td>
+                </tr>
+            {% empty %}<tr><td colspan="10" class="wholesale-empty">No promotions match these filters. Create a promotion to start a trade campaign.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </form>
+    <p class="wholesale-note">Revenue and redemption metrics only include promotions linked to recorded sales. SMS and email notices are saved as campaign preferences; delivery requires a configured messaging provider.</p>
+</div>
+{% endblock %}

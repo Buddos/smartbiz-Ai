@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create invoice | {{ user.business.name }}{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/hardware-invoice.css' %}">{% endblock %}
+
+{% block content %}
+<div class="hardware-invoice-page">
+    <header class="hardware-invoice-header">
+        <div>
+            <p class="hardware-eyebrow"><a href="{% url 'dashboard' %}">Dashboard</a><i class="fas fa-chevron-right" aria-hidden="true"></i><a href="{% url 'sales:list' %}">Sales</a><i class="fas fa-chevron-right" aria-hidden="true"></i>Invoices</p>
+            <h1>Create an invoice</h1>
+            <p>Prepare a customer-ready billing record with itemized materials, payment details, and delivery information.</p>
+        </div>
+        <a class="hardware-invoice-back" href="{% url 'sales:list' %}"><i class="fas fa-file-invoice" aria-hidden="true"></i> Invoices &amp; orders</a>
+    </header>
+
+    <form method="post" class="hardware-invoice-form" id="hardwareInvoiceForm" data-currency="{{ user.business.currency|escape }}">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="invoice">
+        {% if quotation_id_value %}<input type="hidden" name="quotation_id" value="{{ quotation_id_value }}">{% endif %}
+        {% if appointment_id_value %}<input type="hidden" name="appointment_id" value="{{ appointment_id_value }}">{% endif %}
+        {% if form.non_field_errors or form.errors or formset.non_form_errors %}
+            <div class="hardware-invoice-errors" role="alert">
+                <strong><i class="fas fa-circle-exclamation" aria-hidden="true"></i> Review the invoice details.</strong>
+                {% for error in form.non_field_errors %}<span>{{ error }}</span>{% endfor %}
+                {% for errors in form.errors.values %}{% for error in errors %}<span>{{ error }}</span>{% endfor %}{% endfor %}
+                {% for error in formset.non_form_errors %}<span>{{ error }}</span>{% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="hardware-invoice-card">
+            <header class="hardware-invoice-section-heading">
+                <span class="hardware-invoice-step">01</span>
+                <div><p class="hardware-eyebrow">Billing details</p><h2>Who is this invoice for?</h2></div>
+            </header>
+            <div class="hardware-invoice-customer-grid">
+                <label class="hardware-invoice-field hardware-invoice-saved-customer">Saved customer{{ form.customer }}{% for error in form.customer.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                <label class="hardware-invoice-field">Customer name{{ form.customer_name }}{% for error in form.customer_name.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                <label class="hardware-invoice-field">Phone{{ form.customer_phone }}{% for error in form.customer_phone.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                <label class="hardware-invoice-field">Email{{ form.customer_email }}{% for error in form.customer_email.errors %}<small>{{ error }}</small>{% endfor %}</label>
+            </div>
+        </section>
+
+        <section class="hardware-invoice-card">
+            <header class="hardware-invoice-section-heading hardware-invoice-items-heading">
+                <span class="hardware-invoice-step">02</span>
+                <div><p class="hardware-eyebrow">Invoice items</p><h2>Materials and charges</h2><p>Enter a catalog product name or SKU, then confirm its quantity and unit price.</p></div>
+                <button class="hardware-invoice-add-item" type="button" id="hardwareInvoiceAddItem"><i class="fas fa-plus" aria-hidden="true"></i> Add item</button>
+            </header>
+            {{ formset.management_form }}
+            <datalist id="hardwareInvoiceProducts">
+                {% for product in hardware_products %}<option value="{{ product.name }}" data-sku="{{ product.sku }}" data-price="{{ product.selling_price }}"></option><option value="{{ product.sku }}" data-price="{{ product.selling_price }}"></option>{% endfor %}
+            </datalist>
+            <div class="hardware-invoice-item-list" id="hardwareInvoiceItems">
+                {% for item_form in formset %}
+                    <article class="hardware-invoice-item" data-invoice-item>
+                        {{ item_form.id }}{{ item_form.DELETE }}
+                        <label class="hardware-invoice-field invoice-product-field"><span>Product / SKU</span>{{ item_form.product }}{% for error in item_form.product.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                        <label class="hardware-invoice-field invoice-quantity-field"><span>Quantity</span>{{ item_form.quantity }}{% for error in item_form.quantity.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                        <label class="hardware-invoice-field invoice-price-field"><span>Unit price</span>{{ item_form.unit_price }}{% for error in item_form.unit_price.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                        <div class="hardware-invoice-line-total"><span>Line total</span><strong data-invoice-line-total>{{ user.business.currency }} 0.00</strong></div>
+                        <button class="hardware-invoice-remove-item" type="button" data-invoice-remove aria-label="Remove invoice item"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                    </article>
+                {% endfor %}
+            </div>
+            <template id="hardwareInvoiceItemTemplate">
+                <article class="hardware-invoice-item" data-invoice-item>
+                    {{ formset.empty_form.id }}{{ formset.empty_form.DELETE }}
+                    <label class="hardware-invoice-field invoice-product-field"><span>Product / SKU</span>{{ formset.empty_form.product }}<small data-invoice-error hidden></small></label>
+                    <label class="hardware-invoice-field invoice-quantity-field"><span>Quantity</span>{{ formset.empty_form.quantity }}<small data-invoice-error hidden></small></label>
+                    <label class="hardware-invoice-field invoice-price-field"><span>Unit price</span>{{ formset.empty_form.unit_price }}<small data-invoice-error hidden></small></label>
+                    <div class="hardware-invoice-line-total"><span>Line total</span><strong data-invoice-line-total>{{ user.business.currency }} 0.00</strong></div>
+                    <button class="hardware-invoice-remove-item" type="button" data-invoice-remove aria-label="Remove invoice item"><i class="fas fa-trash-can" aria-hidden="true"></i></button>
+                </article>
+            </template>
+            <div class="hardware-invoice-summary">
+                <span>Invoice subtotal <small>Discount is applied below.</small></span>
+                <strong id="hardwareInvoiceSubtotal">{{ user.business.currency }} 0.00</strong>
+            </div>
+        </section>
+
+        <section class="hardware-invoice-lower-grid">
+            <section class="hardware-invoice-card">
+                <header class="hardware-invoice-section-heading">
+                    <span class="hardware-invoice-step">03</span>
+                    <div><p class="hardware-eyebrow">Payment &amp; delivery</p><h2>Settle or deliver</h2></div>
+                </header>
+                <div class="hardware-invoice-payment-grid">
+                    <label class="hardware-invoice-field">Payment method{{ form.payment_method }}{% for error in form.payment_method.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label class="hardware-invoice-field">Payment reference{{ form.transaction_code }}{% for error in form.transaction_code.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label class="hardware-invoice-field invoice-delivery-address">Delivery address{{ form.delivery_address }}{% for error in form.delivery_address.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label class="hardware-invoice-field">Delivery date{{ form.delivery_date }}{% for error in form.delivery_date.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                    <label class="hardware-invoice-field invoice-notes">Notes / terms{{ form.notes }}{% for error in form.notes.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                </div>
+            </section>
+            <aside class="hardware-invoice-card hardware-invoice-total-card">
+                <p class="hardware-eyebrow">Amount due</p>
+                <label class="hardware-invoice-field">Discount{{ form.discount }}{% for error in form.discount.errors %}<small>{{ error }}</small>{% endfor %}</label>
+                <div class="hardware-invoice-final-total"><span>Total due</span><strong id="hardwareInvoiceTotal">{{ user.business.currency }} 0.00</strong></div>
+                <p class="hardware-invoice-stock-note"><i class="fas fa-circle-info" aria-hidden="true"></i> Inventory updates when you create the invoice.</p>
+                <button class="hardware-invoice-submit" type="submit"><span><i class="fas fa-file-circle-plus" aria-hidden="true"></i> Create invoice</span><strong id="hardwareInvoiceSubmitTotal">{{ user.business.currency }} 0.00</strong></button>
+            </aside>
+        </section>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/hardware-invoice.js' %}" defer></script>{% endblock %}

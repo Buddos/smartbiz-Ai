@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Wholesale Dashboard | {{ request.user.business.name }}{% endblock %}
+{% block content %}
+<div class="wholesale-content" data-wholesale-dashboard data-api-url="{% url 'analytics:wholesale_dashboard_data' %}" data-refresh-ms="30000">
+            <section class="wholesale-page-heading">
+                <div><p class="wholesale-eyebrow">Business overview</p><h1>Good {{ request.user.first_name|default:"day" }}, here’s your wholesale snapshot</h1><p>Orders, cash flow, customer balances, and stock at a glance.</p></div>
+                <div class="wholesale-heading-actions">
+                    <a href="{% url 'analytics:generate_insights' %}" class="wholesale-button wholesale-button-secondary"><i class="fas fa-bolt" aria-hidden="true"></i>Generate insights</a>
+                    <a href="{% url 'reports:list' %}" class="wholesale-button wholesale-button-primary"><i class="fas fa-file-lines" aria-hidden="true"></i>Reports</a>
+                </div>
+            </section>
+
+            <section class="wholesale-kpi-grid" aria-label="Today's sales and accounts receivable">
+                <article class="wholesale-kpi"><span>Today’s sales</span><strong><small>{{ wholesale_dashboard.currency }}</small><b data-metric="today_sales">{{ wholesale_dashboard.today_sales|floatformat:2 }}</b></strong><em>Sales recorded today</em><i class="fas fa-coins" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi"><span>Orders today</span><strong data-metric="orders_today">{{ wholesale_dashboard.orders_today }}</strong><em><b data-metric="delivered_today">{{ wholesale_dashboard.delivered_today }}</b> delivered today</em><i class="fas fa-clipboard-check" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi"><span>Outstanding AR</span><strong><small>{{ wholesale_dashboard.currency }}</small><b data-metric="outstanding_ar">{{ wholesale_dashboard.outstanding_ar|floatformat:2 }}</b></strong><em>Unpaid active invoices</em><i class="fas fa-hand-holding-dollar" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi is-alert"><span>Overdue AR</span><strong><small>{{ wholesale_dashboard.currency }}</small><b data-metric="overdue_ar">{{ wholesale_dashboard.overdue_ar|floatformat:2 }}</b></strong><em><b data-metric="overdue_customers">{{ wholesale_dashboard.overdue_customers }}</b> customers · invoice age 31+ days</em><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></article>
+            </section>
+
+            <section class="wholesale-kpi-grid wholesale-kpi-grid-secondary" aria-label="Order and inventory operations">
+                <article class="wholesale-kpi"><span>Pending orders</span><strong data-metric="pending_orders">{{ wholesale_dashboard.pending_orders }}</strong><em>Awaiting fulfillment</em><i class="fas fa-hourglass-half" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi"><span>Out for delivery</span><strong data-metric="out_for_delivery">{{ wholesale_dashboard.out_for_delivery }}</strong><em>Orders marked shipped</em><i class="fas fa-truck-fast" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi"><span>Low-stock SKUs</span><strong data-metric="low_stock_skus">{{ wholesale_dashboard.low_stock_skus }}</strong><em>At or below reorder level</em><i class="fas fa-box-open" aria-hidden="true"></i></article>
+                <article class="wholesale-kpi"><span>Stock value</span><strong><small>{{ wholesale_dashboard.currency }}</small><b data-metric="stock_value">{{ wholesale_dashboard.stock_value|floatformat:2 }}</b></strong><em>At purchase cost</em><i class="fas fa-warehouse" aria-hidden="true"></i></article>
+            </section>
+
+            <section class="wholesale-dashboard-grid">
+                <article class="wholesale-panel wholesale-trend-panel">
+                    <div class="wholesale-panel-heading"><div><p>Performance</p><h2>Sales trend</h2></div><span>Last 30 days</span></div>
+                    <div class="wholesale-trend-chart"><svg viewBox="0 0 600 160" preserveAspectRatio="none" role="img" aria-label="Daily sales trend for the last 30 days"><defs><linearGradient id="wholesaleTrendFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#16815d" stop-opacity=".22"/><stop offset="100%" stop-color="#16815d" stop-opacity="0"/></linearGradient></defs><polygon data-trend-fill points="0,150 600,150"></polygon><polyline data-trend-line points="0,150 600,150"></polyline></svg></div>
+                    <div class="wholesale-trend-labels"><span>{{ wholesale_dashboard.sales_trend.0.label }}</span><span>{{ wholesale_dashboard.sales_trend.14.label }}</span><span>{{ wholesale_dashboard.sales_trend.29.label }}</span></div>
+                </article>
+                <article class="wholesale-panel">
+                    <div class="wholesale-panel-heading"><div><p>Customer sales</p><h2>Top customers this week</h2></div><a href="{% url 'customers:list' %}">View all</a></div>
+                    <div class="wholesale-ranked-list" data-top-customers>
+                        {% for customer in wholesale_dashboard.top_customers %}<div class="wholesale-ranked-row"><span class="wholesale-rank">{{ forloop.counter }}</span><strong>{{ customer.customer__name }}</strong><b>{{ wholesale_dashboard.currency }} {{ customer.revenue|floatformat:2 }}</b></div>
+                        {% empty %}<p class="wholesale-empty">No customer sales recorded this week.</p>{% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            <section class="wholesale-dashboard-grid">
+                <article class="wholesale-panel">
+                    <div class="wholesale-panel-heading"><div><p>Order activity</p><h2>Live order feed</h2></div><a href="{% url 'sales:list' %}">All orders</a></div>
+                    <div class="wholesale-table-scroll"><table class="wholesale-table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th>Total</th></tr></thead><tbody data-recent-orders>
+                        {% for order in wholesale_dashboard.recent_orders %}<tr><td><a href="{{ order.url }}">{{ order.number }}</a></td><td>{{ order.customer }}</td><td><span class="wholesale-status is-{{ order.status_code }}">{{ order.status }}</span></td><td>{{ wholesale_dashboard.currency }} {{ order.total|floatformat:2 }}</td></tr>
+                        {% empty %}<tr><td colspan="4" class="wholesale-empty">No orders have been recorded yet.</td></tr>{% endfor %}
+                    </tbody></table></div>
+                </article>
+                <article class="wholesale-panel">
+                    <div class="wholesale-panel-heading"><div><p>Receivables</p><h2>AR aging</h2></div><a href="{% url 'retail:credit' %}">Manage AR</a></div>
+                    <div class="wholesale-aging-list" data-ar-aging>
+                        {% for bucket in wholesale_dashboard.ar_aging %}<div class="wholesale-aging-row"><div><span>{{ bucket.label }}</span><strong>{{ wholesale_dashboard.currency }} {{ bucket.amount|floatformat:2 }}</strong></div><div class="wholesale-aging-track"><span style="width:0" data-aging-bar></span></div><small>{{ bucket.customers }} customers · invoice age</small></div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </section>
+
+            <section class="wholesale-dashboard-grid wholesale-dashboard-grid-bottom">
+                <article class="wholesale-panel">
+                    <div class="wholesale-panel-heading"><div><p>Inventory</p><h2>Stock watch</h2></div><a href="{% url 'inventory:dashboard' %}">Open warehouse</a></div>
+                    <div class="wholesale-stock-list" data-low-stock>
+                        {% for product in wholesale_dashboard.low_stock_items %}<div><span class="wholesale-stock-warning"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></span><strong>{{ product.name }}</strong><small>{{ product.current_stock }} left · reorder at {{ product.reorder_level }}</small></div>
+                        {% empty %}<p class="wholesale-empty">No active products are at or below their reorder level.</p>{% endfor %}
+                    </div>
+                </article>
+                <article class="wholesale-panel wholesale-alert-panel">
+                    <div class="wholesale-panel-heading"><div><p>Follow-up</p><h2>Business alerts</h2></div></div>
+                    <a class="wholesale-alert-row" href="{% url 'retail:credit' %}"><span class="wholesale-alert-icon is-red"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i></span><span><strong>Receivables follow-up</strong><small><b data-metric="overdue_customers">{{ wholesale_dashboard.overdue_customers }}</b> customers have invoices aged over 30 days.</small></span><i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="wholesale-alert-row" href="{% url 'inventory:alerts' %}"><span class="wholesale-alert-icon is-amber"><i class="fas fa-box-open" aria-hidden="true"></i></span><span><strong>Stock replenishment</strong><small><b data-metric="low_stock_skus">{{ wholesale_dashboard.low_stock_skus }}</b> SKUs are at or below their reorder level.</small></span><i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </article>
+            </section>
+            <p class="wholesale-updated" aria-live="polite" data-last-updated>Updated {{ wholesale_dashboard.last_updated|date:"H:i:s" }}</p>
+</div>
+{% endblock %}

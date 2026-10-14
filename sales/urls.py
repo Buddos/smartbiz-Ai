@@ -7,6 +7,10 @@ urlpatterns = [
     # Sale URLs
     path('', views.sale_list_view, name='list'),
     path('create/', views.sale_create_view, name='create'),
+    path('quotations/', views.hardware_quotations_view, name='quotations'),
+    path('quotations/<uuid:quotation_id>/', views.hardware_quotation_detail_view, name='quotation_detail'),
+    path('quotations/<uuid:quotation_id>/action/', views.hardware_quotation_action_view, name='quotation_action'),
+    path('quotations/<uuid:quotation_id>/convert/', views.hardware_quotation_convert_view, name='quotation_convert'),
     path('<uuid:sale_id>/', views.sale_detail_view, name='detail'),
     path('<uuid:sale_id>/invoice.pdf', views.invoice_pdf_view, name='invoice_pdf'),
     path('<uuid:sale_id>/send-invoice/', views.send_invoice_view, name='send_invoice'),

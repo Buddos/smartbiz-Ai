@@ -3,7 +3,7 @@
 {% block content %}
 <div class="retail-content">
     <section class="retail-page-heading"><div><p class="retail-eyebrow">Inventory · purchasing</p><h1>Suppliers &amp; purchase orders</h1><p>Maintain vendor contacts and receive ordered products into live inventory.</p></div><div class="retail-heading-actions"><a href="#supplier-form" class="retail-button retail-button-secondary">Add supplier</a><a href="#order-form" class="retail-button retail-button-primary">New purchase order</a></div></section>
-    <section class="retail-panel" id="supplier-form"><div class="retail-section-heading"><div><h2>Add supplier</h2><p>Supplier records are scoped to this retail business.</p></div></div>
+    <section class="retail-panel" id="supplier-form"><div class="retail-section-heading"><div><h2>Add supplier</h2><p>Supplier records are scoped to this business.</p></div></div>
         <form method="post" class="retail-form-grid">{% csrf_token %}<input type="hidden" name="form_type" value="supplier">
             {% for field in supplier_form %}<label>{{ field.label }}{{ field }}{% for error in field.errors %}<small class="retail-form-error">{{ error }}</small>{% endfor %}</label>{% endfor %}
             <button class="retail-button retail-button-primary" type="submit">Save supplier</button>
@@ -30,7 +30,7 @@
             <button class="retail-button retail-button-primary full-width" type="submit">Create purchase order</button>
         </form>{% endif %}
     </section>
-    <section class="retail-panel retail-panel-spaced"><div class="retail-section-heading"><div><h2>Purchase orders</h2><p>Recent purchasing activity and receiving status.</p></div></div>
+    <section class="retail-panel retail-panel-spaced" id="purchase-orders"><div class="retail-section-heading"><div><h2>Purchase orders</h2><p>Recent purchasing activity and receiving status.</p></div></div>
         <div class="retail-table-wrap"><table class="retail-table"><thead><tr><th>PO #</th><th>Supplier</th><th>Created</th><th>Products</th><th>Total</th><th>Status / action</th></tr></thead><tbody>
             {% for order in orders %}<tr><td><strong>{{ order.order_number }}</strong></td><td>{{ order.supplier.name }}</td><td>{{ order.created_at|date:"j M Y" }}</td><td>{% for item in order.items.all %}<small>{{ item.product.name }} · {{ item.quantity }}</small>{% endfor %}</td><td>{{ user.business.currency }} {{ order.total|floatformat:2 }}</td><td><span class="retail-status">{{ order.get_status_display }}</span>{% if order.status == "DRAFT" or order.status == "SENT" or order.status == "PARTIAL" %}<form method="post" action="{% url 'retail:purchase_order_receive' order.id %}">{% csrf_token %}<button class="retail-table-action" type="submit">Receive stock</button></form>{% endif %}</td></tr>
             {% empty %}<tr><td colspan="6" class="retail-empty">No purchase orders recorded.</td></tr>{% endfor %}

@@ -1,6 +1,7 @@
 {% load static dashboard_notifications business_layout %}
 {% generic_business_shell_for request as generic_business_shell %}
 {% restaurant_business_shell_for request as restaurant_business_shell %}
+{% wholesale_business_shell_for request as wholesale_business_shell %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +19,8 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <script>
         tailwind.config = {
@@ -106,7 +108,7 @@
     <style>
         :root {
             --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
             --fw-regular: 400;
             --fw-medium: 500;
             --fw-semibold: 600;
@@ -288,6 +290,14 @@
     {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' %}
     <link rel="stylesheet" href="{% static 'css/retail.css' %}">
     {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'HARDWARE' %}
+    <link rel="stylesheet" href="{% static 'css/retail.css' %}">
+    <link rel="stylesheet" href="{% static 'css/hardware.css' %}">
+    {% endif %}
+    {% if wholesale_business_shell %}
+    <link rel="stylesheet" href="{% static 'css/wholesale-dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/retail.css' %}">
+    {% endif %}
     {% if restaurant_business_shell %}
     <link rel="stylesheet" href="{% static 'css/restaurant.css' %}">
     {% endif %}
@@ -302,6 +312,9 @@
     {% endif %}
     <link rel="stylesheet" href="{% static 'css/dashboard-notifications.css' %}">
     <link rel="stylesheet" href="{% static 'css/dashboard-account-menu.css' %}">
+    {% if user.is_authenticated and user.business and request.resolver_match.url_name != 'assistant' %}
+    <link rel="stylesheet" href="{% static 'css/assistant-widget.css' %}">
+    {% endif %}
     {% block extra_css %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/dashboard-readable.css' %}">
 </head>
@@ -312,6 +325,21 @@
         <div class="retail-workspace">
             {% include 'retail/_topbar.html' %}
             <div class="retail-main">
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'HARDWARE' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
+    <div class="hardware-app-shell" data-hardware-shell>
+        {% include 'hardware/_sidebar.html' %}
+        <button class="hardware-sidebar-backdrop" type="button" data-hardware-close aria-label="Close navigation"></button>
+        <div class="hardware-workspace">
+            {% include 'hardware/_topbar.html' %}
+            <div class="hardware-main">
+    {% endif %}
+    {% if wholesale_business_shell %}
+    <div class="wholesale-shell">
+        {% include 'partials/_wholesale_sidebar.html' %}
+        <button class="wholesale-backdrop" type="button" data-close-menu aria-label="Close navigation"></button>
+        <div class="wholesale-workspace">
+            {% include 'partials/_wholesale_topbar.html' %}
     {% endif %}
     {% if user.is_authenticated and user.business and user.business.business_type == 'ELECTRONICS' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
     <div class="electronics-app-shell dashboard-readable">
@@ -330,7 +358,7 @@
         <div class="salon-workspace">
             {% if user.business.business_type == 'BARBER' %}{% include 'partials/_barber_topbar.html' %}{% else %}{% include 'partials/_salon_topbar.html' %}{% endif %}
     {% endif %}
-    <main class="{% if user.is_authenticated and user.business and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}dashboard-readable{% if user.business.business_type == 'ELECTRONICS' %} electronics-main{% endif %}{% endif %}">
+    <main class="{% if user.is_authenticated and user.business and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}dashboard-readable{% if user.business.business_type == 'ELECTRONICS' %} electronics-main{% endif %}{% if wholesale_business_shell %} wholesale-page-main{% endif %}{% endif %}">
         <!-- Messages -->
         {% if messages %}
             <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md w-full">
@@ -365,6 +393,10 @@
         </div></div>
         {% endif %}
     </main>
+        {% if wholesale_business_shell %}
+            </div>
+        </div>
+        {% endif %}
     {% if generic_business_shell %}
         </div>
     </div>
@@ -375,6 +407,40 @@
     {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
             </div>
         </div>
+    </div>
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'HARDWARE' and request.resolver_match.url_name != 'business_admin' and request.GET.from != 'admin' %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated and user.business and request.resolver_match.url_name != 'assistant' %}
+    <div class="assistant-widget" data-assistant-widget>
+        <section class="assistant-widget-panel" id="assistantWidgetPanel" data-assistant-widget-panel hidden aria-label="SmartBiz AI assistant">
+            <header class="assistant-widget-header">
+                <span><i class="fas fa-sparkles" aria-hidden="true"></i> SmartBiz AI</span>
+                <button class="assistant-widget-close" type="button" data-assistant-widget-close aria-label="Close AI assistant">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </header>
+            <iframe
+                class="assistant-widget-frame"
+                data-smartbiz-assistant-frame
+                data-src="https://heartful-design-ai.lovable.app/"
+                title="SmartBiz AI assistant"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="clipboard-write"></iframe>
+        </section>
+        <button
+            class="assistant-widget-launcher"
+            type="button"
+            data-assistant-widget-toggle
+            aria-expanded="false"
+            aria-controls="assistantWidgetPanel"
+            aria-label="Open AI assistant">
+            <i class="fas fa-comment-dots" aria-hidden="true"></i>
+        </button>
     </div>
     {% endif %}
     
@@ -392,6 +458,12 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+    {% if user.is_authenticated and user.business %}
+    <script src="{% static 'js/smartbiz-assistant-bridge.js' %}" defer></script>
+    {% endif %}
+    {% if user.is_authenticated and user.business and request.resolver_match.url_name != 'assistant' %}
+    <script src="{% static 'js/assistant-widget.js' %}" defer></script>
+    {% endif %}
     {% if generic_business_shell %}
     <script src="{% static 'js/salon.js' %}" defer></script>
     {% endif %}
@@ -402,6 +474,14 @@
     <script src="{% static 'js/dashboard-account-menu.js' %}" defer></script>
     {% if user.is_authenticated and user.business and user.business.business_type == 'RETAIL' %}
     <script src="{% static 'js/retail.js' %}" defer></script>
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'HARDWARE' %}
+    <script src="{% static 'js/hardware-live.js' %}" defer></script>
+    <script src="{% static 'js/retail.js' %}" defer></script>
+    {% endif %}
+    {% if user.is_authenticated and user.business and user.business.business_type == 'WHOLESALE' and request.GET.from != 'admin' %}
+    <script src="{% static 'js/retail.js' %}" defer></script>
+    <script src="{% static 'js/wholesale-dashboard.js' %}" defer></script>
     {% endif %}
     {% if restaurant_business_shell %}
     <script src="{% static 'js/restaurant.js' %}" defer></script>
